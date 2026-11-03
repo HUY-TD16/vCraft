@@ -1,5 +1,7 @@
 # Tài liệu dự án vCraft
 
+Đối tượng triển khai là làng gốm Bát Tràng: hộ sản xuất gốm, nghệ nhân, khách mua sỉ và khách tham quan. Phân loại sản phẩm, công đoạn nhật ký và ví dụ dùng chung được xác định trong [phạm vi dự án](01-project-brief/project-scope.md).
+
 Tài liệu được chia theo nội dung, từ đề bài đến thiết kế giao diện:
 
 | Thư mục | Nội dung |

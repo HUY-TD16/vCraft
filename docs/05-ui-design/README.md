@@ -1,6 +1,6 @@
 # Giao diện mẫu frontend
 
-Lưu thiết kế và tài liệu tham khảo phục vụ xây dựng giao diện frontend.
+Lưu thiết kế frontend cho làng gốm Bát Tràng, tập trung vào ảnh sản phẩm gốm, xưởng, công đoạn làm gốm, bản đồ tham quan và luồng mua sỉ. Nội dung mẫu dùng cốc, ấm chén, bát đĩa và bình gốm theo danh mục trong [phạm vi dự án](../01-project-brief/project-scope.md).
 
 ## Cách tổ chức khi có tài liệu
 

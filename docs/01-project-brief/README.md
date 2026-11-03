@@ -1,6 +1,6 @@
 # Đề bài
 
-Lưu đề bài gốc và các thông tin xác định phạm vi dự án.
+Lưu đề bài gốc và phạm vi triển khai tại làng gốm Bát Tràng. Giữ nguyên đề bài để đối chiếu; lựa chọn làng nghề và nội dung cụ thể nằm trong tài liệu phạm vi.
 
 ## Tài liệu
 

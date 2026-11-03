@@ -1,6 +1,6 @@
 # Kiến trúc
 
-Lưu thiết kế kỹ thuật và mối quan hệ giữa các thành phần hệ thống.
+Lưu thiết kế kỹ thuật cho vCraft tại làng gốm Bát Tràng. Các thành phần cần thể hiện quan hệ hộ/xưởng, sản phẩm gốm, lô và nhật ký, cùng yêu cầu báo giá và phần việc của từng hộ. Phạm vi phục vụ một làng nghề.
 
 ## Tài liệu dự kiến
 

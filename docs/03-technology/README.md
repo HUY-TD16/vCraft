@@ -1,6 +1,6 @@
 # Công nghệ
 
-Lưu danh sách công nghệ và hướng dẫn thiết lập môi trường phát triển.
+Lưu danh sách công nghệ và hướng dẫn thiết lập môi trường phát triển vCraft cho làng gốm Bát Tràng. Lựa chọn công nghệ cần đáp ứng bản đồ xưởng, ảnh sản phẩm gốm, nhật ký theo lô, QR và cập nhật báo giá đồng thời.
 
 ## Tài liệu dự kiến
 

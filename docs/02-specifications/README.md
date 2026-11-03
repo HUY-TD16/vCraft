@@ -1,12 +1,11 @@
 # Đặc tả
 
-Lưu các yêu cầu chi tiết được phân tích từ đề bài.
+Đặc tả nghiệp vụ cho làng gốm Bát Tràng: quản lý xưởng gốm, nhật ký theo lô, truy xuất QR và điều phối đơn mua buôn.
 
 ## Tài liệu
 
 - [business-rules.md](business-rules.md): quyền thao tác, quy tắc dữ liệu, báo giá, phân bổ đơn và chuyển trạng thái.
-- [use-cases.md](use-cases.md): mục lục 27 use case, quy ước chung và các luồng xuyên suốt.
-- [use-cases/](use-cases/): đặc tả theo nhóm tài khoản và danh mục, truy xuất, báo giá và phân bổ, thực hiện và hủy yêu cầu.
+- [use-cases.md](use-cases.md): đầy đủ 27 use case, quy ước chung, các luồng xuyên suốt và tình huống nghiệm thu trong một file.
 
 ## Tài liệu dự kiến
 
