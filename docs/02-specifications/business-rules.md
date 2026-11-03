@@ -24,6 +24,8 @@ Phân loại, quy cách, số lượng, đơn vị tính, thời hạn, khu vự
 
 ### Chính sách xác thực áp dụng BR-01
 
+Thiết kế phiên, băm mật khẩu, ma trận quyền và các biện pháp chống tấn công được quy định trong [bảo mật và phân quyền](security-and-access-control.md). Các giới hạn nghiệp vụ bên dưới vẫn áp dụng cho mọi API.
+
 - Cả ba vai trò dùng tên đăng nhập/mật khẩu. Tên đăng nhập 4–32 ký tự ASCII chữ, số, dấu chấm hoặc gạch dưới; bỏ khoảng trắng hai đầu và chuyển chữ thường trước kiểm tra tính duy nhất/đăng nhập. Không tự đổi tên đăng nhập. Buyer đăng ký tên hiển thị và số điện thoại liên hệ; số điện thoại chưa xác minh bằng OTP, không là căn cứ duy nhất để khôi phục tài khoản.
 - Mật khẩu thường 12–128 ký tự, cho phép khoảng trắng, không tự cắt/chuẩn hóa; xác nhận phải trùng và mật khẩu mới khác mật khẩu hiện tại. Mật khẩu được lưu bằng hàm băm chuyên dụng cho mật khẩu với salt; không lưu bản rõ hoặc ghi mật khẩu vào log. Lựa chọn thư viện/tham số thuộc thiết kế kỹ thuật.
 - Hệ thống sinh mật khẩu tạm ngẫu nhiên ít nhất 16 ký tự khi cấp Artisan hoặc đặt lại. Mật khẩu tạm hết hạn sau 24 giờ, hiển thị một lần để bàn giao riêng ngoài hệ thống, bắt buộc đổi trước khi truy cập nghiệp vụ. Admin ban đầu cũng phải đổi mật khẩu tạm được cấp lúc thiết lập. Mất hoặc hết hạn phải cấp lại; mật khẩu tạm trước bị vô hiệu hóa.

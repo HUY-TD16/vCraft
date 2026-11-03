@@ -4,6 +4,7 @@ Căn cứ: [phạm vi dự án](../01-project-brief/project-scope.md), [quy tắ
 
 ## 1. Quy ước chung
 
+- Mọi use case áp dụng [bảo mật và phân quyền](security-and-access-control.md): phiên đăng nhập, quyền trên bản ghi/trường, bảo vệ ảnh và kiểm tra đầu vào phải được thực thi ở máy chủ.
 - Bối cảnh chung là làng gốm Bát Tràng. Hộ/xưởng là hộ sản xuất gốm; sản phẩm và lô là sản phẩm gốm và lô của hộ. Phân loại, công đoạn mẫu và quy cách mua sỉ theo mục 1 của [phạm vi dự án](../01-project-brief/project-scope.md).
 - Khách là người xem công khai, không cần tài khoản. Buyer, Artisan và Admin phải đăng nhập để thực hiện nghiệp vụ tương ứng. Admin là đại diện Ban quản lý.
 - “Yêu cầu” là `QuoteRequest` xuyên suốt từ nháp đến giao hàng; sau khi chấp nhận không tạo thực thể đơn hàng riêng. “Phần việc” là `Allocation` của một hộ.

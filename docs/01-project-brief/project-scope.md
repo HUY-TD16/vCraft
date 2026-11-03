@@ -43,6 +43,7 @@ Hệ thống kiểm soát chuyển trạng thái và cập nhật đồng thời
 
 ## 4. Yêu cầu kỹ thuật và giao diện
 
+- Xác thực, quyền theo vai trò/bản ghi, dữ liệu riêng tư và phòng chống tấn công tuân theo [bảo mật và phân quyền](../02-specifications/security-and-access-control.md); có tiêu chí kiểm tra trước triển khai.
 - Tích hợp API hoặc thư viện bản đồ để hiển thị tọa độ và thông tin xưởng.
 - Hỗ trợ tải lên nhiều ảnh; backend tối ưu kích thước ảnh để phục vụ danh sách hàng trăm sản phẩm.
 - Giao diện chú trọng hình ảnh sản phẩm, xưởng và quá trình làm nghề.
