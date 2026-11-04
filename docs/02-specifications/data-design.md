@@ -8,7 +8,7 @@ Tài liệu này xác định thực thể, thuộc tính, quan hệ, ràng bu�
 
 ## 1. ERD theo nhóm chức năng
 
-Do số lượng thực thể lớn, ERD được chia thành 3 nhóm để dễ đọc.
+Do số lượng thực thể lớn, ERD được chia thành 3 nhóm để dễ đọc. Sơ đồ chỉ liệt kê thuộc tính chính; từ điển ở mục 2 và ràng buộc ở mục 4 là đặc tả đầy đủ. Các thực thể xuất hiện ở nhiều nhóm là cùng một bảng. Quan hệ ảnh đa hình kiểm tra trong giao dịch, không giả định có FK trực tiếp từ context_id đến nhiều bảng.
 
 ### 1.1. Nhóm Xác thực & Hộ sản xuất
 
@@ -59,6 +59,8 @@ erDiagram
     IMAGE {
         bigint id PK
         bigint uploaded_by FK
+        bigint quota_id FK
+        bigint reservation_id FK
         varchar context_type
         bigint context_id
         varchar storage_key UK
@@ -73,6 +75,13 @@ erDiagram
     ACCOUNT ||--o{ SESSION : "có phiên"
     CERTIFICATE o|--|| IMAGE : "minh chứng"
     ACCOUNT ||--o{ IMAGE : "tải lên"
+    ACCOUNT o|--o{ SECURITY_AUDIT_LOG : "thực hiện"
+    ACCOUNT ||--o{ SECURITY_AUDIT_LOG : "chịu tác động"
+    WORKSHOP o|--o| STORAGE_QUOTA : "quota hộ"
+    ACCOUNT o|--o| STORAGE_QUOTA : "quota ngoài hộ"
+    STORAGE_QUOTA ||--o{ UPLOAD_RESERVATION : "đặt trước"
+    STORAGE_QUOTA ||--o{ IMAGE : "tính dung lượng"
+    UPLOAD_RESERVATION ||--o| IMAGE : "xử lý thành công"
 ```
 
 ### 1.2. Nhóm Danh mục & Trưng bày
@@ -230,6 +239,8 @@ erDiagram
     SPLIT_PROPOSAL_ITEM {
         bigint id PK
         bigint proposal_id FK
+        bigint request_id FK
+        integer quote_version
         bigint workshop_id FK
         bigint quote_id FK
         integer allocated_quantity
@@ -250,6 +261,7 @@ erDiagram
         bigint delivered_by FK
         boolean admin_delivered
         text admin_delivery_reason
+        text admin_delivery_evidence
         timestamp admin_delivery_actual_at
         timestamp created_at
         timestamp updated_at
@@ -257,6 +269,7 @@ erDiagram
     ALLOCATION_BATCH {
         bigint id PK
         bigint allocation_id FK
+        bigint workshop_id FK
         bigint batch_id FK
         integer linked_quantity
         timestamp linked_at
@@ -265,6 +278,8 @@ erDiagram
     ALLOCATION_LOG {
         bigint id PK
         bigint allocation_id FK
+        varchar event_type
+        text evidence
         varchar prev_status
         varchar new_status
         bigint performed_by FK
@@ -275,6 +290,8 @@ erDiagram
     STATUS_LOG {
         bigint id PK
         bigint request_id FK
+        varchar event_type
+        text evidence
         varchar prev_status
         varchar new_status
         bigint performed_by FK
@@ -365,7 +382,7 @@ erDiagram
 | `id` | bigint | No | PK |
 | `workshop_id` | bigint | No | FK → Workshop |
 | `name` | varchar(200) | No | Tên chứng nhận |
-| `image_id` | bigint | No | FK → Image — ảnh minh chứng bắt buộc |
+| `image_id` | bigint | No | Unique FK → Image — ảnh minh chứng bắt buộc; chủ ảnh phải là Certificate này |
 | `created_at` | timestamp | No | UTC |
 
 > Không tự gắn nhãn chứng nhận khi thiếu chứng cứ. Không phải xác nhận chất lượng của Admin.
@@ -482,11 +499,11 @@ erDiagram
 | `spec` | text | Yes | Quy cách gốm (kích thước, màu men, họa tiết, đóng gói…) |
 | `quantity` | integer | Yes | Số lượng nguyên dương nếu nhập; bắt buộc khi gửi |
 | `unit` | varchar(10) | Yes | Enum: `piece` (chiếc), `set` (bộ) |
-| `unit_set_description` | text | Yes | Mô tả thành phần 1 bộ; bắt buộc khi `unit = set` |
+| `unit_set_description` | text | Yes | Mô tả thành phần 1 bộ; bắt buộc khi gửi và `unit = set` |
 | `status` | varchar(25) | No | Enum: `Draft Request`, `Sent to Artisans`, `Artisans Bidding`, `Buyer Accepted`, `In Production`, `Delivered` |
 | `delivery_mode` | varchar(20) | Yes | Enum: `at_workshop`, `at_buyer_address` |
-| `delivery_region` | varchar(200) | Yes | Tỉnh/thành phố + xã/phường (khái quát); bắt buộc khi `delivery_mode = at_buyer_address` |
-| `delivery_address` | text | Yes | Địa chỉ giao chi tiết; bắt buộc khi `delivery_mode = at_buyer_address` |
+| `delivery_region` | varchar(200) | Yes | Tỉnh/thành phố + xã/phường (khái quát); bắt buộc khi gửi và `delivery_mode = at_buyer_address` |
+| `delivery_address` | text | Yes | Địa chỉ giao chi tiết; bắt buộc khi gửi và `delivery_mode = at_buyer_address` |
 | `recipient_name` | varchar(200) | Yes | Tên người nhận; bắt buộc khi gửi |
 | `recipient_phone` | varchar(20) | Yes | SĐT người nhận; bắt buộc khi gửi |
 | `bidding_deadline` | timestamp | Yes | Hạn nhận báo giá; lưu UTC, hiển thị UTC+7; bắt buộc khi gửi |
@@ -574,6 +591,8 @@ erDiagram
 | `created_by` | bigint | No | FK → Account (Admin) |
 | `status` | varchar(10) | No | Enum: `proposed`, `accepted`, `expired` |
 | `version` | integer | No | Default 1 |
+| `expired_at` | timestamp | Yes | Thời điểm hết hiệu lực; nếu do hạn thì dùng hạn sớm nhất liên quan |
+| `expire_reason` | varchar(40) | Yes | Bắt buộc khi expired: `quote_changed`, `quote_withdrawn`, `quote_expired`, `workshop_suspended`, `replaced`, `buyer_rejected`, `request_accepted`, `request_cancelled` |
 | `reject_reason` | text | Yes | Lý do từ chối của Buyer; bắt buộc khi Buyer từ chối |
 | `rejected_by` | bigint | Yes | FK → Account (Buyer) |
 | `rejected_at` | timestamp | Yes | UTC |
@@ -634,6 +653,7 @@ erDiagram
 | Trường | Kiểu | Null | Ràng buộc / Mô tả |
 |--------|------|------|-------------------|
 | `id` | bigint | No | PK |
+| `workshop_id` | bigint | No | Hộ của phần việc/lô; dùng hai FK ghép tại mục 4.1 |
 | `allocation_id` | bigint | No | FK → Allocation |
 | `batch_id` | bigint | No | FK → Batch (cùng workshop) |
 | `linked_quantity` | integer | No | Nguyên dương; đóng góp vào tổng liên kết |
@@ -698,10 +718,12 @@ erDiagram
 | `reservation_id` | bigint | No | Unique FK → UploadReservation |
 | `width` | integer | No | Chiều rộng ảnh gốc (px) |
 | `height` | integer | No | Chiều cao ảnh gốc (px) |
+| `unreferenced_at` | timestamp | Yes | UTC bắt đầu không còn tham chiếu; ảnh mới chờ gắn lấy created_at, có tham chiếu thì null |
+| `storage_state` | varchar(15) | No | `ready`, `deleting`; chỉ ảnh ready được gắn/đọc; dọn lỗi giữ deleting để thử lại |
 | `is_attached` | boolean | No | Default false; đang được nội dung hiện hành tham chiếu; bỏ gắn không xóa chủ sở hữu |
 | `created_at` | timestamp | No | UTC |
 
-> Dọn ảnh không còn tham chiếu hiện hành/lịch sử sau 24 giờ không được tham chiếu (lưu `unreferenced_at`, timestamp nullable; null khi có tham chiếu). Không dọn ảnh được tham chiếu trong JournalHistoryImage. Một image_id chỉ thuộc một đối tượng; không chuyển chủ hoặc dùng chung cho đối tượng khác. Lịch sử chỉ tham chiếu ảnh cùng JournalEntry, không đổi context thành lịch sử. Quyền đọc phụ thuộc ngữ cảnh hiện hành/lịch sử của URL; ảnh hiện hành công khai không làm lịch sử công khai. Chỉ tạo Image khi xử lý thành công; khóa quota và đối tượng khi gắn/gỡ ảnh, không để dọn ảnh đua với tạo tham chiếu. Kho lưu trữ không có quyền truy cập công khai trực tiếp — mọi truy cập qua cổng kiểm tra quyền phía server (SEC-10).
+> Dọn ảnh không còn tham chiếu hiện hành/lịch sử sau 24 giờ không được tham chiếu (theo `unreferenced_at`). Không dọn ảnh được tham chiếu trong JournalHistoryImage. Một image_id chỉ thuộc một đối tượng; không chuyển chủ hoặc dùng chung cho đối tượng khác. Lịch sử chỉ tham chiếu ảnh cùng JournalEntry, không đổi context thành lịch sử. Quyền đọc phụ thuộc ngữ cảnh hiện hành/lịch sử của URL; ảnh hiện hành công khai không làm lịch sử công khai. Chỉ tạo Image khi xử lý thành công; khóa quota và đối tượng khi gắn/gỡ ảnh, không để dọn ảnh đua với tạo tham chiếu. Kho lưu trữ không có quyền truy cập công khai trực tiếp — mọi truy cập qua cổng kiểm tra quyền phía server (SEC-10).
 
 ---
 
@@ -744,12 +766,104 @@ erDiagram
 
 ---
 
+### 2.23. RecipientResponseHistory — Lịch sử phản hồi và báo giá
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `id` | bigint | No | PK |
+| `recipient_id` | bigint | No | FK → RequestRecipient |
+| `quote_id` | bigint | Yes | FK → Quote cùng request/workshop; null nếu chưa từng chào giá |
+| `event_type` | varchar(30) | No | `declined`, `quote_submitted`, `quote_updated`, `quote_withdrawn`, `quote_resubmitted`, `quote_accepted` |
+| `prev_status` | varchar(15) | No | Phản hồi trước thay đổi |
+| `new_status` | varchar(15) | No | Phản hồi sau thay đổi |
+| `reason` | text | Yes | Lý do từ chối/rút; rút bắt buộc có lý do |
+| `quote_snapshot` | jsonb | Yes | Bản chụp giá, số lượng, hạn chấp nhận/giao, trạng thái và version sau sự kiện báo giá |
+| `performed_by` | bigint | No | FK → Account; người thực hiện thật, kể cả Buyer khi chấp nhận |
+| `created_at` | timestamp | No | UTC do server ghi |
+
+> Chỉ ghi nối tiếp, không có API sửa/xóa. Ghi đồng thời với RequestRecipient/Quote; mọi lần tạo/sửa/rút/gửi lại/chốt Quote đều lưu bản chụp để tái dựng lịch sử. Trước khi xóa các trường rút hiện tại khi gửi lại, lịch sử lần rút phải đã được lưu. Artisan chỉ xem lịch sử phản hồi của mình; Buyer sở hữu/Admin xem theo quyền yêu cầu.
+
+---
+
+### 2.24. JournalHistoryImage — Ảnh trong phiên bản nhật ký
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `history_id` | bigint | No | FK → JournalEditHistory; thành phần PK |
+| `image_id` | bigint | No | FK → Image; thành phần PK |
+| `position` | integer | No | Thứ tự ảnh trước khi sửa, ≥ 0 |
+
+> PK `(history_id, image_id)`, UNIQUE `(history_id, position)`. Một phiên bản giữ ít nhất một ảnh. Khi sửa nhật ký đã công bố, khóa JournalEntry, tạo lịch sử nội dung và các tham chiếu ảnh trước sửa rồi cập nhật nội dung hiện hành trong cùng giao dịch. Kiểm tra Image có `context_type = journal_entry`, `context_id = history.journal_entry_id`; không chuyển chủ ảnh. FK chặn xóa ảnh có lịch sử tham chiếu. Chỉ Artisan chủ lô/Admin đọc lịch sử, kể cả khi cùng ảnh vẫn đang công khai ở nội dung hiện hành.
+
+---
+
+### 2.25. SecurityAuditLog — Nhật ký thay đổi bảo mật
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `id` | bigint | No | PK |
+| `actor_id` | bigint | Yes | FK → Account; null cho tác vụ hệ thống/thiết lập ban đầu |
+| `target_account_id` | bigint | No | FK → Account chịu tác động |
+| `event_type` | varchar(40) | No | Cấp tài khoản, đổi/đặt lại mật khẩu, khóa/mở khóa bảo mật, tạo/thu hồi phiên |
+| `reason` | text | Yes | Lý do/căn cứ xử lý; bắt buộc cho đặt lại và khóa thủ công theo SEC-05 |
+| `auth_version_before` | integer | Yes | Phiên bản trước sự kiện; null khi cấp mới |
+| `auth_version_after` | integer | No | Phiên bản sau sự kiện |
+| `created_at` | timestamp | No | UTC do server ghi |
+
+> Ghi cùng giao dịch với thay đổi bảo mật; lỗi ghi bắt buộc phải rollback. Không lưu mật khẩu tạm, hash mật khẩu, session token hay bản sao giấy tờ xác minh. Log chỉ đọc theo quyền vận hành bảo mật, không đưa vào lịch sử đơn cho Buyer/Artisan khác; không có API sửa/xóa. Log đăng nhập thất bại/rate-limit dùng kho log vận hành có giới hạn theo SEC-15, không tạo Account giả cho tên đăng nhập không tồn tại.
+
+---
+
+### 2.26. StorageQuota — Sổ dung lượng theo chủ quota
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `id` | bigint | No | PK |
+| `workshop_id` | bigint | Yes | Unique FK → Workshop; dùng cho ảnh thuộc hộ |
+| `account_id` | bigint | Yes | Unique FK → Account; chỉ cho ngữ cảnh ngoài hộ được phép upload |
+| `limit_bytes` | bigint | No | 2 GiB/hộ hoặc 1 GiB/tài khoản ngoài hộ theo SEC-14 |
+| `used_bytes` | bigint | No | Default 0; byte thực còn lưu của ảnh gốc nếu giữ, thumbnail, display, ảnh chờ gắn và lịch sử |
+| `reserved_bytes` | bigint | No | Default 0; tổng ngân sách upload chưa quyết toán |
+| `updated_at` | timestamp | No | UTC |
+
+> CHECK đúng một trong workshop_id/account_id khác null; các số byte không âm và `used_bytes + reserved_bytes <= limit_bytes`. Admin upload khởi tạo hộ tính vào quota hộ, không tính vào tài khoản Admin. Có quota không cấp thêm quyền upload. Dùng khóa hàng khi đặt trước/quyết toán; định kỳ đối soát với tệp thực tế. Mỗi tệp vật lý chỉ tính một lần dù có nhiều tham chiếu lịch sử; bản sao độc lập tính riêng.
+
+---
+
+### 2.27. UploadReservation — Giữ chỗ dung lượng upload
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `id` | bigint | No | PK |
+| `quota_id` | bigint | No | FK → StorageQuota |
+| `uploaded_by` | bigint | No | FK → Account |
+| `context_type` | varchar(30) | No | Ngữ cảnh đích được phép như Image |
+| `context_id` | bigint | Yes | Đối tượng đích; null chỉ khi chuẩn bị tạo đối tượng mới |
+| `budget_bytes` | bigint | No | Ngân sách tối đa, khởi điểm 16 MiB/ảnh |
+| `actual_bytes` | bigint | Yes | Byte thực sau xử lý; không vượt budget |
+| `status` | varchar(20) | No | `reserved`, `committed`, `cleanup_pending`, `released` |
+| `storage_prefix` | varchar(255) | No | Unique; vùng tệp riêng để đối soát/dọn cả tệp tạm |
+| `expires_at` | timestamp | No | Hạn xử lý/lease theo cấu hình timeout worker |
+| `created_at` | timestamp | No | UTC |
+| `updated_at` | timestamp | No | UTC |
+
+> Trước nhận tệp, đặt trước quota và dung lượng kho dùng chung nguyên tử. Worker không ghi vượt budget, kể cả tệp tạm/trung gian. Thành công: dọn tệp tạm, tạo Image, chuyển reservation sang committed và chuyển ngân sách sang byte thực cùng giao dịch DB. Không giữ khóa DB trong lúc xử lý ảnh. Thất bại/timeout: chuyển cleanup_pending, chỉ chuyển released và giải phóng ngân sách sau xác nhận dọn sạch. Dùng trạng thái/lease có điều kiện để worker cũ không commit sau khi tác vụ dọn đã nhận quyền xử lý. Dọn hoặc quyết toán lặp không cộng/trừ lần hai.
+
+> Kho tệp không tham gia transaction DB: giữ reservation khi chưa chắc đã dọn, đối soát theo storage_prefix sau crash. Mọi worker dùng chung bộ điều phối dung lượng; khóa kho trước rồi quota theo thứ tự cố định khi nhận/giải phóng ngân sách. Giữ trống tối thiểu `max(2 GiB, 10% dung lượng volume)` sau đặt trước; kiểm tra dung lượng thực và ngân sách chưa phản ánh vào tệp, không chỉ quota từng hộ. Không xóa ảnh đang được tham chiếu để nhận upload mới. Thiếu quota trả 409 `STORAGE_QUOTA_EXCEEDED`, thiếu dung lượng kho trả 503 `STORAGE_CAPACITY_LOW`.
+
+---
+
 ## 3. Sơ đồ trạng thái
 
 ### 3.1. QuoteRequest — Yêu cầu báo giá
 
 ```mermaid
 stateDiagram-v2
+    state "Draft Request" as Draft
+    state "Sent to Artisans" as Sent_to_Artisans
+    state "Artisans Bidding" as Artisans_Bidding
+    state "Buyer Accepted" as Buyer_Accepted
+    state "In Production" as In_Production
     [*] --> Draft : Buyer tạo nháp
 
     Draft --> Sent_to_Artisans : Buyer gửi\n[hợp lệ + có hộ nhận]
@@ -785,8 +899,8 @@ stateDiagram-v2
 
     not_started --> in_production : Artisan bắt đầu\n[request chua_huy]
 
-    in_production --> delivered : Artisan ghi nhận bàn giao\n[đã bàn giao đủ số lượng]
-    in_production --> delivered : Admin ghi nhận thay\n[có căn cứ + lý do + thời điểm thực tế]
+    in_production --> delivered : Artisan ghi nhận bàn giao\n[yêu cầu chưa hủy + bàn giao đủ số lượng]
+    in_production --> delivered : Admin ghi nhận thay\n[yêu cầu In Production chưa hủy\ncó căn cứ + lý do + thời điểm thực tế]
 
     note right of not_started
         Admin KHÔNG thể ghi nhận thay
@@ -894,7 +1008,7 @@ stateDiagram-v2
 
     proposed --> accepted : Buyer chấp nhận\n[báo giá còn đủ điều kiện]
 
-    proposed --> expired : Hộ bị tạm ngừng\nBáo giá bị rút\nHạn chấp nhận báo giá qua\nAdmin lập phương án mới\nBuyer từ chối [có lý do]
+    proposed --> expired : Hộ bị tạm ngừng\nBáo giá bị sửa hoặc rút\nHạn chấp nhận báo giá qua\nAdmin lập phương án mới\nBuyer từ chối [có lý do]\nYêu cầu hủy hoặc chốt trực tiếp
 
     note right of proposed
         Mỗi request chỉ có 1 proposed
@@ -910,52 +1024,61 @@ stateDiagram-v2
 
 ---
 
-## 4. Ràng buộc DB tổng hợp
+## 4. Ràng buộc dữ liệu và giao dịch
 
-| Ràng buộc | Mô tả |
-|-----------|-------|
-| `UNIQUE (account.username)` | Tên đăng nhập duy nhất sau lowercase+trim |
-| `UNIQUE (workshop.account_id)` | Mỗi hộ đúng 1 tài khoản Artisan |
-| `UNIQUE (batch.qr_token)` | QR token không trùng |
-| `UNIQUE (session.session_hash)` | Hash phiên không trùng |
-| `UNIQUE (request_recipient.request_id, workshop_id)` | Mỗi hộ xuất hiện 1 lần/yêu cầu |
-| `UNIQUE (quote.request_id, workshop_id)` | Mỗi hộ tối đa 1 báo giá/yêu cầu |
-| `UNIQUE (split_proposal_item.proposal_id, workshop_id)` | Mỗi hộ 1 lần trong phương án |
-| `UNIQUE (allocation_batch.allocation_id, batch_id)` | Mỗi lô gắn 1 lần/phần việc |
-| `CHECK quantity > 0` | Số lượng dương (Quote, Allocation, AllocationBatch) |
-| `CHECK unit_price > 0` | Đơn giá dương |
-| `CHECK price > 0` | Giá sản phẩm dương |
-| `CHECK max_quantity <= request.quantity` | Số lượng chào không vượt yêu cầu |
-| `SUM(split_proposal_item.allocated_quantity) = request.quantity` | Tổng phân bổ đúng bằng yêu cầu |
-| `SUM(allocation_batch.linked_quantity) <= allocation.quantity` | Tổng liên kết không vượt phần việc |
-| `CHECK latitude BETWEEN -90 AND 90` | Tọa độ hợp lệ |
-| `CHECK longitude BETWEEN -180 AND 180` | Tọa độ hợp lệ |
-| `CHECK allocation_batch.batch.workshop_id = allocation.workshop_id` | Lô phải cùng hộ |
+### 4.1. Ràng buộc khai báo ở DB
 
----
+| Cơ chế | Ràng buộc |
+|--------|-----------|
+| UNIQUE | Account.username sau lowercase/trim; Workshop.account_id; Batch.qr_token; Session.session_hash; Certificate.image_id |
+| UNIQUE | RequestRecipient(request_id, workshop_id); Quote(request_id, workshop_id); Allocation(request_id, workshop_id); Allocation.quote_id |
+| UNIQUE | SplitProposalItem(proposal_id, workshop_id); AllocationBatch(allocation_id, batch_id); phạm vi IdempotencyRecord tại mục 2.22 |
+| UNIQUE có điều kiện | SplitProposal(request_id) khi status = proposed; phương án hết hạn vẫn giữ bản ghi |
+| Khóa đích cho FK ghép | Quote(id, request_id, workshop_id); SplitProposal(id, request_id); Batch(id, workshop_id); Allocation(id, workshop_id) |
+| FK ghép | Quote(request_id, workshop_id) → RequestRecipient(request_id, workshop_id) |
+| FK ghép | SplitProposalItem(proposal_id, request_id) → SplitProposal(id, request_id); (quote_id, request_id, workshop_id) → Quote(id, request_id, workshop_id) |
+| FK ghép | Allocation(quote_id, request_id, workshop_id) → Quote(id, request_id, workshop_id) |
+| FK ghép | Product(batch_id, workshop_id) → Batch(id, workshop_id); AllocationBatch(allocation_id, workshop_id) → Allocation(id, workshop_id) và (batch_id, workshop_id) → Batch(id, workshop_id) |
+| CHECK cùng dòng | Enum trạng thái/vai trò, version > 0; quantity/max_quantity/allocated_quantity/linked_quantity > 0; price/unit_price > 0; tọa độ trong khoảng hợp lệ |
+| CHECK nháp có điều kiện | QuoteRequest.status khác Draft Request thì đủ các trường bắt buộc; khi còn nháp cho null nhưng giá trị đã nhập phải đúng kiểu/miền; các chuỗi bắt buộc không chỉ có khoảng trắng |
+| CHECK cùng dòng | Quote.bid_accept_deadline < committed_delivery_at; QuoteRequest.delivery_deadline > bidding_deadline + 24h khi đã gửi |
+| CHECK cùng dòng | cancelled_at/cancelled_by cùng null hoặc cùng có giá trị; nháp/Delivered không có dấu hủy; admin_delivered cần người, lý do, căn cứ và thời điểm thực tế |
+| FK/UNIQUE/CHECK ảnh | JournalHistoryImage và StorageQuota theo mục 2.24–2.27; kích thước byte không âm; storage key của từng biến thể duy nhất |
 
-## 5. Ghi chú thiết kế và điểm cần làm rõ khi implement
+Các điều kiện đọc bảng khác hoặc tính tổng nhiều dòng không được mô tả như SQL CHECK. Dùng FK ghép khi phù hợp; các điều kiện còn lại được kiểm tra trong giao dịch tại mục 4.2. `workshop_id` thêm ở AllocationBatch và `request_id` thêm ở SplitProposalItem là dữ liệu phục vụ FK ghép, không nhận tùy ý từ client.
 
-### 5.1. Quyết định thiết kế chính
+### 4.2. Kiểm tra nghiệp vụ và cập nhật đồng thời
 
-- **QuoteRequest kiêm vai trò đơn hàng:** Sau khi Buyer chấp nhận, không tạo thêm thực thể `Order` riêng. QuoteRequest xuyên suốt từ nháp đến giao hàng (BR nguyên tắc 2).
-- **Không soft-delete chuẩn:** Xóa thật chỉ áp dụng cho nháp (QuoteRequest draft, Product draft). Mọi trạng thái khác chuyển sang trạng thái cuối hoặc bị ẩn.
-- **StatusLog và AllocationLog ghi bắt buộc trong transaction:** Nếu log thất bại thì rollback toàn bộ (SEC-13, BR-26).
-- **Rate-limit counters không lưu trong DB chính:** Dùng Redis/store riêng; cập nhật nguyên tử giữa các instance (SEC-05).
-- **Timestamp tất cả lưu UTC:** Hiển thị convert sang UTC+7 ở tầng API hoặc frontend.
-- **Image polymorphic:** `context_type + context_id` được validate ở application layer; không dùng FK ngoại vì nhiều bảng đích.
+- **Thứ tự khóa thống nhất:** Các thao tác điều phối khóa Workshop liên quan theo ID tăng dần, sau đó QuoteRequest, rồi Quote/Proposal/Allocation liên quan theo ID tăng dần. Khi cần khám phá tập hộ từ phương án, đọc ID trước, khóa rồi đọc lại version/tập hộ; có thay đổi thì thử lại, không dùng kết quả cũ. Thao tác chỉ cần khóa yêu cầu không được giữ khóa đó rồi lấy ngược khóa Workshop. Tạm ngừng hộ, rút/sửa báo giá và chấp nhận cùng tuân thủ thứ tự này. Kiểm tra quyền, trạng thái và thời hạn lại trong giao dịch.
+- **Gửi yêu cầu:** Kiểm tra dữ liệu đủ và hạn theo BR-11/12, danh sách hộ phù hợp; tạo RequestRecipient và chuyển trạng thái nguyên tử. Sửa/xóa/gửi nháp đều kiểm tra version dưới khóa để không xóa yêu cầu đã gửi.
+- **Báo giá:** Kiểm tra hộ nhận, quyền sở hữu, yêu cầu còn mở để thêm/sửa/gửi lại, `max_quantity <= request.quantity`, `now < bid_accept_deadline`, `bid_accept_deadline >= request.bidding_deadline + 24h` và cam kết giao không vượt hạn yêu cầu. Rút chỉ cần chưa chốt/chưa hủy, vẫn được khi đóng nhận hoặc hộ tạm ngừng. Cập nhật Quote, phản hồi, lịch sử và làm hết hiệu lực phương án liên quan cùng giao dịch.
+- **Phương án chia:** Chỉ lập sau đóng nhận, có split_requested_at, chưa chốt/hủy theo UC-20/UC-21; ít nhất hai hộ khác nhau, mỗi lượng chia > 0 và không vượt báo giá, tổng đúng yêu cầu. Có hộ đủ nhận toàn bộ không cấm chia. Khi lập lại, expire bản cũ rồi insert bản mới cùng giao dịch. Sửa/rút báo giá, tạm ngừng hộ, hủy yêu cầu hoặc chốt trực tiếp làm expired phương án proposed liên quan; lưu expire_reason/expired_at để hiển thị lý do cần lập lại.
+- **Chốt đơn:** Kiểm tra yêu cầu chưa hủy/chốt, version yêu cầu/báo giá/phương án, từng hộ còn hoạt động và từng báo giá còn hiệu lực tại thời điểm ghi. Chốt trực tiếp cần một báo giá đủ toàn bộ; chốt phương án cần tổng chia đúng số lượng và quote_version khớp. Tạo tất cả Allocation với bản chụp giá/số lượng/ngày giao, đánh dấu báo giá/phương án được chọn, cập nhật yêu cầu, lịch sử và IdempotencyRecord trong một giao dịch. Không tạo Allocation từng phần qua các giao dịch riêng.
+- **Liên kết lô:** Khóa Allocation trước khi thêm/sửa/xóa, kiểm tra chưa delivered và yêu cầu chưa hủy; tính lại tổng linked_quantity ≤ allocation.quantity trong khóa. FK ghép bảo đảm cùng hộ. Không cộng số lượng qua các yêu cầu để suy luận tồn kho/công suất; thiếu liên kết không chặn bàn giao.
+- **Bàn giao/nhận đủ/hủy:** Kiểm tra trạng thái hiện tại trong khóa; Admin không tạo bước bắt đầu thay hộ. Xác nhận nhận đủ chỉ khi mọi Allocation delivered, yêu cầu chưa hủy; ghi người và căn cứ thực tế. Hủy toàn yêu cầu giữ phần đã bàn giao, không sinh cơ chế thay hộ/giao một phần ngoài phạm vi MVP. Mọi thao tác nghiệp vụ mới trên yêu cầu đã hủy bị từ chối.
+- **Loại sự kiện:** AllocationLog dùng `created`, `production_started`, `handover_recorded`, `handover_by_admin`, `batch_links_changed`; StatusLog dùng `created`, `sent`, `first_quote`, `bidding_closed`, `split_requested`, `accepted`, `production_started`, `received_by_buyer`, `received_by_admin`, `cancelled`. Sự kiện không chuyển trạng thái giữ prev_status = new_status. Liên hệ và phản hồi có bảng lịch sử riêng. Tất cả lịch sử bắt buộc ghi cùng giao dịch, không có API sửa/xóa; Buyer xem rõ hai sự kiện Admin bàn giao thay và xác nhận nhận thay cùng người/thời điểm/lý do/căn cứ.
+- **Xác thực:** Theo mục 2.1/2.21 và SEC-05; khóa các Account theo ID tăng dần khi Admin đặt lại cho người khác, kiểm tra lại phiên/auth_version của Admin trong giao dịch. Không giữ khóa trong quá trình băm mật khẩu.
+- **Ảnh:** Khóa chủ sở hữu/quota phù hợp, kiểm tra quyền, ảnh đã xử lý, số lượng tối đa và quan hệ cố định. Lưu ảnh lịch sử cùng lần sửa nhật ký. Dọn ảnh kiểm tra lại không có tham chiếu dưới cùng cơ chế khóa trước khi đánh dấu dọn; không cho gắn ảnh đang dọn. Trừ used_bytes sau khi xác nhận xóa tệp, có đối soát nếu crash.
 
-### 5.2. Điểm cần làm rõ khi implement
+### 4.3. Chính sách xóa và bảo toàn lịch sử
 
-| # | Điểm mở | Mức ưu tiên |
-|---|---------|------------|
-| 1 | `SplitProposal` hết hiệu lực tự động: trigger DB hay lazy-check khi đọc? | Cao |
-| 2 | Index cho `session.session_hash`: B-tree hay hash index? (ảnh hưởng mỗi request) | Cao |
-| 3 | `IdempotencyRecord` TTL: bao lâu hết hạn? Dọn bằng cron hay trigger? | Trung bình |
-| 4 | `SplitProposal` lập lại: tăng `version` trên bản ghi cũ hay insert bản ghi mới? (ảnh hưởng lịch sử BR-18) | Trung bình |
-| 5 | Giới hạn số phương án lưu/yêu cầu: có TTL xóa phương án `expired` cũ không? | Thấp |
-| 6 | Session store: lưu trong DB chính hay Redis? Nếu DB thì cần partition theo `expires_at` | Cao |
+- FK mặc định RESTRICT/NO ACTION để không xóa lan lịch sử, báo giá, phần việc hoặc lô đã sử dụng. Không xóa tài khoản/hộ có dữ liệu nghiệp vụ qua API MVP; dùng khóa bảo mật/tạm ngừng đúng mục đích.
+- Chỉ xóa nháp hoặc nội dung được use case cho phép (ví dụ mốc nhật ký lô nháp), sau kiểm tra quyền/trạng thái/tham chiếu trong giao dịch. Dọn các log tạo nháp cùng bản nháp chỉ trong luồng xóa nháp hợp lệ; không mở API xóa log độc lập. Không dùng cascade toàn bộ vòng đời đơn.
+- Ảnh đã bỏ tham chiếu được dọn theo thời hạn 24 giờ; ảnh lịch sử không bị dọn. Không đặt TTL xóa phương án expired, lịch sử phản hồi, nhật ký sửa hoặc lịch sử đơn trong MVP. TTL chỉ áp dụng kho tạm/phiên/idempotency theo chính sách tương ứng.
 
 ---
 
-*Tài liệu này quy định cấu trúc dữ liệu, chưa chứng minh đã được cài đặt. Khi chọn ORM/framework, phải ánh xạ từng thực thể, ràng buộc và trigger vào migration tương ứng. Các ngưỡng giới hạn tài nguyên theo [security-and-access-control.md](security-and-access-control.md) — SEC-14.*
+## 5. Quyết định triển khai cho MVP
+
+- **QuoteRequest kiêm đơn hàng:** Không thêm Order; giữ sáu trạng thái chính, hủy là dấu riêng. Mỗi hộ một tài khoản Artisan; không thêm vai trò hoặc cơ chế giao lại phần việc.
+- **Trạng thái theo thời gian:** Đóng nhận khi now ≥ bidding_deadline dù tác vụ nền chưa chạy. Khi ghi bidding_closed_at do hết hạn, dùng chính bidding_deadline. Đọc và chấp nhận phương án luôn kiểm tra hiệu lực thật; tác vụ nền cập nhật expired chỉ hỗ trợ hiển thị. Phương án đã expired không tự phục hồi, bản accepted bất biến.
+- **Kho phiên:** MVP dùng bảng Session với unique B-tree session_hash và index expires_at; chưa cần partition. Kho trước đăng nhập do framework quản lý riêng, TTL 15 phút. Rate-limit dùng Redis/store dùng chung, cập nhật nguyên tử theo SEC-05.
+- **Idempotency:** TTL khởi điểm 24 giờ, dọn bằng tác vụ nền; không thay thế version, khóa hoặc ràng buộc nghiệp vụ.
+- **Ảnh sở hữu cố định:** context_type/context_id đa hình được kiểm tra phía máy chủ trong giao dịch; JournalHistoryImage có FK thật để giữ ảnh lịch sử. UploadReservation là dữ liệu kỹ thuật, không thêm use case nghiệp vụ. Kho ảnh riêng tư, mọi biến thể đi qua kiểm tra quyền theo ngữ cảnh.
+- **QR:** Chỉ lô published được công khai; giữ token ổn định dù hộ suspended. Trả tên xưởng dạng văn bản; chỉ trả liên kết hồ sơ khi hồ sơ được phép công khai. Không lộ dữ liệu Buyer/đơn hay lịch sử sửa qua QR.
+- **Thời gian:** Tất cả mốc lưu UTC; hiển thị UTC+7. now lấy từ máy chủ; không dùng thời gian client để quyết định quyền/hạn.
+- **Index phục vụ luồng chính:** QuoteRequest(buyer_id, created_at); RequestRecipient(workshop_id, request_id); Quote(request_id, status, bid_accept_deadline); Allocation(workshop_id, status); StatusLog(request_id, created_at); AllocationLog(allocation_id, created_at); RecipientResponseHistory(recipient_id, created_at); JournalEditHistory(journal_entry_id, edited_at); UploadReservation(status, expires_at). Đo truy vấn trước khi bổ sung tối ưu khác.
+
+---
+
+*Tài liệu quy định thiết kế, chưa chứng minh đã được cài đặt. Khi chọn ORM/framework, ánh xạ ràng buộc DB và các giao dịch nêu trên vào migration/service; kiểm thử đồng thời và các tình huống chấp nhận trong use-cases.md, SEC-01–SEC-16 và AT-01–AT-25 trong security-and-access-control.md. Không coi mô tả kiểm tra tại tầng ứng dụng là một SQL CHECK đã tồn tại.*
