@@ -41,7 +41,7 @@ flowchart TB
         subgraph Gateway["Cửa ngõ và hạ tầng (common/ + infrastructure/)"]
             Config["Config Validator\n(Fail-Fast Boot)"]
             AuthMid["Global Session Guard\n(Authenticate-Once Context)"]
-            ErrHandler["Global Error Handler\n(Chuẩn hóa RFC 7807)"]
+            ErrHandler["Global Error Handler\n(Chuẩn hóa RFC 9457)"]
             TxRunner["Transaction Runner\n(Unit of Work)"]
         end
 
@@ -374,18 +374,9 @@ CurrentUser là dữ liệu tin cậy tại thời điểm xác thực request, 
 
 ### 5.2. Chuẩn hóa mã lỗi toàn hệ thống (Global Error Handling)
 
-Mọi ngoại lệ trong hệ thống đều được bắt tại `GlobalErrorHandler` ở `common/http/filters` và chuyển đổi sang chuẩn **RFC 7807 (Problem Details)**:
+Mọi ngoại lệ được bắt tại `GlobalErrorHandler` ở `common/http/filters` và trả **RFC 9457 Problem Details**, Content-Type `application/problem+json`. Hợp đồng đầy đủ và mã lỗi dùng đúng [thiết kế API, mục 1.3 và 2](api-design.md); không duy trì một danh mục mã lỗi riêng ở tầng kiến trúc.
 
-| Tầng ném lỗi | Lớp Exception | HTTP Status | Cấu trúc phản hồi JSON |
-| :--- | :--- | :---: | :--- |
-| **Cửa ngõ** | `RequestValidationException` | `400 Bad Request` | `{"code": "INVALID_INPUT", "details": [...]}` |
-| **Xác thực** | `UnauthorizedException` | `401 Unauthorized` | `{"code": "AUTHENTICATION_REQUIRED", "message": "..."}` |
-| **Phân quyền** | `ForbiddenException` | `403 Forbidden` | `{"code": "PERMISSION_DENIED", "message": "..."}` |
-| **Không tìm thấy** | `EntityNotFoundException` | `404 Not Found` | `{"code": "NOT_FOUND", "message": "..."}` |
-| **Tranh chấp** | `ConcurrencyConflictException` | `409 Conflict` | `{"code": "CONCURRENCY_CONFLICT", "message": "Dữ liệu đã thay đổi, vui lòng tải lại"}` |
-| **Nghiệp vụ** | `DomainRuleViolationException` | `422 Unprocessable` | `{"code": "QUOTE_ACCEPTANCE_EXPIRED", "message": "Báo giá đã quá hạn"}` |
-| **Tần suất** | `RateLimitExceededException` | `429 Too Many Requests` | `{"code": "RATE_LIMIT_EXCEEDED", "retry_after": 900}` |
-| **Hệ thống** | Lỗi không mong muốn / DB sập | `500 Internal Error` | `{"code": "INTERNAL_SERVER_ERROR", "tracking_id": "uuid"}` *(giấu stacktrace)* |
+Mỗi lỗi có `type`, `title`, `status`, `detail`, `code`, `tracking_id`; validation thêm `errors` gồm JSON Pointer `field` và `message`. Không bọc trong success/error, không đưa stack trace, SQL, thông tin tài khoản hay dữ liệu riêng tư vào response. Lỗi không tìm thấy dùng `RESOURCE_NOT_FOUND`; báo giá quá hạn dùng `QUOTE_EXPIRED`; sai Content-Type dùng 415 `UNSUPPORTED_MEDIA_TYPE`. Lỗi tần suất có header `Retry-After` tính bằng giây. Lỗi từ middleware, upload và đường đọc ảnh cũng theo cùng hợp đồng; response 204 không có body.
 
 ---
 

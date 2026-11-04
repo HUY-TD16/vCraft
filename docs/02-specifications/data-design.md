@@ -307,7 +307,7 @@ erDiagram
         bigint handed_over_by FK
         boolean admin_handed_over
         text admin_handover_reason
-        text admin_handover_evidence
+        text admin_delivery_evidence
         timestamp admin_handover_actual_at
         timestamp created_at
         timestamp updated_at
@@ -887,12 +887,13 @@ erDiagram
 | `id` | bigint | No | PK |
 | `workshop_id` | bigint | Yes | Unique FK → Workshop; dùng cho ảnh thuộc hộ |
 | `account_id` | bigint | Yes | Unique FK → Account; chỉ cho ngữ cảnh ngoài hộ được phép upload |
-| `limit_bytes` | bigint | No | 2 GiB/hộ hoặc 1 GiB/tài khoản ngoài hộ theo SEC-14 |
+| `initial_workshop_key` | uuid | Yes | Unique FK → InitialWorkshopUploadScope; chỉ dùng trước khi tạo hộ |
+| `limit_bytes` | bigint | No | 2 GiB/phạm vi khởi tạo, 2 GiB/hộ hoặc 1 GiB/tài khoản ngoài hộ theo SEC-14 |
 | `used_bytes` | bigint | No | Default 0; byte thực còn lưu của ảnh gốc nếu giữ, thumbnail, display, ảnh chờ gắn và lịch sử |
 | `reserved_bytes` | bigint | No | Default 0; tổng ngân sách upload chưa quyết toán |
 | `updated_at` | timestamp | No | UTC |
 
-> CHECK đúng một trong workshop_id/account_id khác null; các số byte không âm và `used_bytes + reserved_bytes <= limit_bytes`. Admin upload khởi tạo hộ tính vào quota hộ, không tính vào tài khoản Admin. Có quota không cấp thêm quyền upload. Dùng khóa hàng khi đặt trước/quyết toán; định kỳ đối soát với tệp thực tế. Mỗi tệp vật lý chỉ tính một lần dù có nhiều tham chiếu lịch sử; bản sao độc lập tính riêng.
+> CHECK đúng một trong workshop_id/account_id/initial_workshop_key khác null; các số byte không âm và `used_bytes + reserved_bytes <= limit_bytes`. Admin upload khởi tạo hộ tính vào quota phạm vi tạm, chuyển cùng dòng quota sang hộ khi cấp tài khoản thành công; không tính vào quota cá nhân Admin. quota_id của Image/UploadReservation không đổi. Có quota không cấp thêm quyền upload. Dùng khóa hàng khi đặt trước/quyết toán; định kỳ đối soát với tệp thực tế. Mỗi tệp vật lý chỉ tính một lần dù có nhiều tham chiếu lịch sử; bản sao độc lập tính riêng.
 
 ---
 
@@ -916,6 +917,25 @@ erDiagram
 > Trước nhận tệp, đặt trước quota và dung lượng kho dùng chung nguyên tử. Worker không ghi vượt budget, kể cả tệp tạm/trung gian. Thành công: dọn tệp tạm, tạo Image, chuyển reservation sang committed và chuyển ngân sách sang byte thực cùng giao dịch DB. Không giữ khóa DB trong lúc xử lý ảnh. Thất bại/timeout: chuyển cleanup_pending, chỉ chuyển released và giải phóng ngân sách sau xác nhận dọn sạch. Dùng trạng thái/lease có điều kiện để worker cũ không commit sau khi tác vụ dọn đã nhận quyền xử lý. Dọn hoặc quyết toán lặp không cộng/trừ lần hai.
 
 > Kho tệp không tham gia transaction DB: giữ reservation khi chưa chắc đã dọn, đối soát theo storage_prefix sau crash. Mọi worker dùng chung bộ điều phối dung lượng; khóa kho trước rồi quota theo thứ tự cố định khi nhận/giải phóng ngân sách. Giữ trống tối thiểu `max(2 GiB, 10% dung lượng volume)` sau đặt trước; kiểm tra dung lượng thực và ngân sách chưa phản ánh vào tệp, không chỉ quota từng hộ. Không xóa ảnh đang được tham chiếu để nhận upload mới. Thiếu quota trả 409 `STORAGE_QUOTA_EXCEEDED`, thiếu dung lượng kho trả 503 `STORAGE_CAPACITY_LOW`.
+
+---
+
+### 2.28. InitialWorkshopUploadScope — Phạm vi ảnh khởi tạo hộ
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|---|---|---|---|
+| `initial_workshop_key` | uuid | No | PK; server sinh UUID v4 |
+| `created_by` | bigint | No | FK → Account; Admin tạo phạm vi |
+| `status` | varchar(10) | No | open/attached/expired; mặc định open |
+| `attached_workshop_id` | bigint | Yes | Unique FK → Workshop; chỉ có khi attached |
+| `created_at` | timestamp | No | UTC |
+| `expires_at` | timestamp | No | created_at + 24 giờ |
+
+CHECK status = attached khi và chỉ khi attached_workshop_id khác null. Thời hạn kiểm tra theo giờ DB dù tác vụ đổi open sang expired chưa chạy. Tạo scope và StorageQuota cùng giao dịch. Quota khởi tạo có hạn 2 GiB; tổng used_bytes + reserved_bytes của mọi quota còn initial_workshop_key cùng created_by không vượt 2 GiB, gồm phạm vi hết hạn chưa dọn. Tối đa 3 scope open chưa hết hạn/Admin; kiểm tra dưới khóa Account Admin. Có khóa không thay thế kiểm tra phiên và chủ sở hữu.
+
+Khi upload/giữ chỗ/dọn/chuyển quota, cùng tuân thủ thứ tự khóa kho dung lượng (nếu cần), Account Admin, scope, quota, ảnh/reservation theo ID. Kiểm tra lại scope open, hạn và chủ trước thao tác. Tạo hộ từ scope cần không có reservation reserved/cleanup_pending; đổi chủ của cùng quota sang workshop_id và xóa initial_workshop_key trên quota, gắn ảnh được chọn, cập nhật scope attached cùng transaction tạo Account/Workshop. Không giữ khóa DB trong lúc xử lý ảnh. Ảnh bỏ chọn còn tính quota hộ tới khi dọn; scope không dùng lại. Thất bại rollback tất cả thay đổi DB, không xóa tệp đang có tham chiếu.
+
+Scope hết hạn không nhận upload/gắn ảnh; reservation đang chạy phải kiểm tra lại trước commit, chuyển cleanup_pending nếu không còn hợp lệ. Chỉ giảm used/reserved sau khi dọn tệp thành công theo mục 2.27. Giữ scope attached để kiểm tra khóa đã dùng; không xóa scope khi còn quota tham chiếu.
 
 ---
 
@@ -1112,7 +1132,7 @@ stateDiagram-v2
 | CHECK cùng dòng | Enum trạng thái/vai trò, version > 0; quantity/max_quantity/allocated_quantity/linked_quantity > 0; price/unit_price > 0; tọa độ trong khoảng hợp lệ |
 | CHECK nháp có điều kiện | QuoteRequest.status khác Draft Request thì đủ các trường bắt buộc; khi còn nháp cho null nhưng giá trị đã nhập phải đúng kiểu/miền; các chuỗi bắt buộc không chỉ có khoảng trắng |
 | CHECK cùng dòng | Quote.bid_accept_deadline < committed_delivery_at; QuoteRequest.delivery_deadline > bidding_deadline + 24h khi đã gửi |
-| CHECK cùng dòng | cancelled_at/cancelled_by cùng null hoặc cùng có giá trị; nháp/Delivered không có dấu hủy; admin_delivered cần người, lý do, căn cứ và thời điểm thực tế |
+| CHECK cùng dòng | cancelled_at/cancelled_by cùng null hoặc cùng có giá trị; nháp/Delivered không có dấu hủy; admin_handed_over cần người, lý do, căn cứ và thời điểm thực tế |
 | FK/UNIQUE/CHECK ảnh | JournalHistoryImage và StorageQuota theo mục 2.24–2.27; kích thước byte không âm; storage key của từng biến thể duy nhất |
 
 Các điều kiện đọc bảng khác hoặc tính tổng nhiều dòng không được mô tả như SQL CHECK. Dùng FK ghép khi phù hợp; các điều kiện còn lại được kiểm tra trong giao dịch tại mục 4.2. `workshop_id` thêm ở AllocationBatch và `request_id` thêm ở SplitProposalItem là dữ liệu phục vụ FK ghép, không nhận tùy ý từ client.
@@ -1123,6 +1143,7 @@ Các điều kiện đọc bảng khác hoặc tính tổng nhiều dòng không
 - **Gửi yêu cầu:** Kiểm tra dữ liệu đủ và hạn theo BR-11/12, danh sách hộ phù hợp; tạo RequestRecipient và chuyển trạng thái nguyên tử. Sửa/xóa/gửi nháp đều kiểm tra version dưới khóa để không xóa yêu cầu đã gửi.
 - **Báo giá:** Kiểm tra hộ nhận, quyền sở hữu, yêu cầu còn mở để thêm/sửa/gửi lại, `max_quantity <= request.quantity`, `now < bid_accept_deadline`, `bid_accept_deadline >= request.bidding_deadline + 24h` và cam kết giao không vượt hạn yêu cầu. Rút chỉ cần chưa chốt/chưa hủy, vẫn được khi đóng nhận hoặc hộ tạm ngừng. Cập nhật Quote, phản hồi, lịch sử và làm hết hiệu lực phương án liên quan cùng giao dịch.
 - **Phương án chia:** Chỉ lập sau đóng nhận, có split_requested_at, chưa chốt/hủy theo UC-20/UC-21; ít nhất hai hộ khác nhau, mỗi lượng chia > 0 và không vượt báo giá, tổng đúng yêu cầu. Có hộ đủ nhận toàn bộ không cấm chia. Khi lập lại, expire bản cũ rồi insert bản mới cùng giao dịch. Sửa/rút báo giá, tạm ngừng hộ, hủy yêu cầu hoặc chốt trực tiếp làm expired phương án proposed liên quan; lưu expire_reason/expired_at để hiển thị lý do cần lập lại.
+- **Thay phương án:** Client gửi expected_proposal_id và expected_proposal_version của bản proposed hiện tại, hoặc cả hai null nếu chưa có. Khóa QuoteRequest và so sánh cả cặp trước expire bản cũ/tạo bản mới; khác ID dù cùng version vẫn là xung đột. Unique có điều kiện bảo đảm tối đa một proposed.
 - **Chốt đơn:** Kiểm tra yêu cầu chưa hủy/chốt, version yêu cầu/báo giá/phương án, từng hộ còn hoạt động và từng báo giá còn hiệu lực tại thời điểm ghi. Chốt trực tiếp cần một báo giá đủ toàn bộ; chốt phương án cần tổng chia đúng số lượng và quote_version khớp. Tạo tất cả Allocation với bản chụp giá/số lượng/ngày giao, đánh dấu báo giá/phương án được chọn, cập nhật yêu cầu, lịch sử và IdempotencyRecord trong một giao dịch. Không tạo Allocation từng phần qua các giao dịch riêng.
 - **Liên kết lô:** Khóa Allocation trước khi thêm/sửa/xóa, kiểm tra chưa handed_over và yêu cầu chưa hủy; tính lại tổng linked_quantity ≤ allocation.quantity trong khóa. FK ghép bảo đảm cùng hộ. Không cộng số lượng qua các yêu cầu để suy luận tồn kho/công suất; thiếu liên kết không chặn bàn giao.
 - **Bàn giao/nhận đủ/hủy:** Kiểm tra trạng thái hiện tại trong khóa; Admin không tạo bước bắt đầu thay hộ. Xác nhận nhận đủ chỉ khi mọi Allocation handed_over, yêu cầu chưa hủy; ghi người và căn cứ thực tế. Hủy toàn yêu cầu giữ phần đã bàn giao, không sinh cơ chế thay hộ/giao một phần ngoài phạm vi MVP. Mọi thao tác nghiệp vụ mới trên yêu cầu đã hủy bị từ chối.
