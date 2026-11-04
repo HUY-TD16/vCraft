@@ -28,6 +28,7 @@ erDiagram
     WORKSHOP {
         bigint id PK
         bigint account_id FK
+        bigint avatar_image_id FK
         varchar name
         text story
         varchar address
@@ -70,7 +71,51 @@ erDiagram
         timestamp created_at
     }
 
+    WORKSHOP_STATUS_LOG {
+        bigint id PK
+        bigint workshop_id FK
+        varchar prev_status
+        varchar new_status
+        bigint performed_by FK
+        text reason
+        timestamp created_at
+    }
+    SECURITY_AUDIT_LOG {
+        bigint id PK
+        bigint actor_id FK
+        bigint target_account_id FK
+        varchar event_type
+        text reason
+        text verification_evidence
+        varchar ip_address
+        integer auth_version_before
+        integer auth_version_after
+        timestamp created_at
+    }
+    STORAGE_QUOTA {
+        bigint id PK
+        bigint workshop_id FK
+        bigint account_id FK
+        bigint limit_bytes
+        bigint used_bytes
+        bigint reserved_bytes
+        timestamp updated_at
+    }
+    UPLOAD_RESERVATION {
+        bigint id PK
+        bigint quota_id FK
+        bigint uploaded_by FK
+        varchar context_type
+        bigint context_id
+        bigint budget_bytes
+        bigint actual_bytes
+        varchar status
+        timestamp expires_at
+    }
+
     ACCOUNT ||--o| WORKSHOP : "gắn với"
+    WORKSHOP ||--o{ WORKSHOP_STATUS_LOG : "lịch sử trạng thái"
+    WORKSHOP o|--o| IMAGE : "ảnh đại diện"
     WORKSHOP ||--o{ CERTIFICATE : "có"
     ACCOUNT ||--o{ SESSION : "có phiên"
     CERTIFICATE o|--|| IMAGE : "minh chứng"
@@ -139,6 +184,7 @@ erDiagram
     NEWS_POST {
         bigint id PK
         bigint created_by FK
+        bigint updated_by FK
         varchar title
         text content
         varchar post_type
@@ -257,12 +303,12 @@ erDiagram
         integer version
         timestamp started_at
         bigint started_by FK
-        timestamp delivered_at
-        bigint delivered_by FK
-        boolean admin_delivered
-        text admin_delivery_reason
-        text admin_delivery_evidence
-        timestamp admin_delivery_actual_at
+        timestamp handed_over_at
+        bigint handed_over_by FK
+        boolean admin_handed_over
+        text admin_handover_reason
+        text admin_handover_evidence
+        timestamp admin_handover_actual_at
         timestamp created_at
         timestamp updated_at
     }
@@ -367,11 +413,28 @@ erDiagram
 | `latitude` | decimal(9,6) | Yes | −90 đến 90; null nếu chưa nhập |
 | `longitude` | decimal(9,6) | Yes | −180 đến 180 |
 | `accepting_visitors` | boolean | No | Default false; Artisan bật/tắt |
+| `avatar_image_id` | bigint | Yes | FK → Image; ảnh đại diện xưởng trên danh mục/bản đồ |
 | `status` | varchar(15) | No | Enum: `active`, `suspended`. Default `active` khi tạo |
 | `created_at` | timestamp | No | UTC |
 | `updated_at` | timestamp | No | UTC |
 
 > **Ràng buộc:** `UNIQUE (account_id)`. Hồ sơ công khai khi `status = active` AND có đủ `name`, `address`, `story`, ≥1 ảnh xưởng. Hồ sơ đủ điều kiện công khai không được sửa xóa trường bắt buộc. Tọa độ phải trong khoảng hợp lệ nếu nhập.
+
+---
+
+### 2.2a. WorkshopStatusLog — Lịch sử trạng thái xưởng
+
+| Trường | Kiểu | Null | Ràng buộc / Mô tả |
+|--------|------|------|-------------------|
+| `id` | bigint | No | PK |
+| `workshop_id` | bigint | No | FK → Workshop |
+| `prev_status` | varchar(15) | Yes | Null khi mới tạo hộ ban đầu |
+| `new_status` | varchar(15) | No | `active`, `suspended` |
+| `performed_by` | bigint | No | FK → Account (Admin) |
+| `reason` | text | Yes | Lý do tạm ngừng hoặc mở lại theo BR-05, UC-04 |
+| `created_at` | timestamp | No | UTC |
+
+> **Audit log theo SEC-15:** Mọi thao tác Admin tạm ngừng hoặc cho hộ hoạt động lại bắt buộc ghi nhận người thực hiện, thời điểm và lý do. Không cho sửa hoặc xóa lịch sử này.
 
 ---
 
@@ -479,6 +542,7 @@ erDiagram
 |--------|------|------|-------------------|
 | `id` | bigint | No | PK |
 | `created_by` | bigint | No | FK → Account (Admin) |
+| `updated_by` | bigint | Yes | FK → Account (Admin sửa/gỡ tin gần nhất) |
 | `title` | varchar(300) | No | Tiêu đề |
 | `content` | text | No | Nội dung |
 | `post_type` | varchar(30) | No | Enum: `material`, `power_schedule`, `support_policy`, `announcement` |
@@ -630,17 +694,17 @@ erDiagram
 | `quantity` | integer | No | Chốt cố định khi tạo |
 | `unit_price` | numeric(15,0) | No | Chốt cố định khi tạo |
 | `committed_delivery_at` | timestamp | No | Chốt cố định khi tạo |
-| `status` | varchar(20) | No | Enum: `not_started`, `in_production`, `delivered` |
+| `status` | varchar(20) | No | Enum: `not_started`, `in_production`, `handed_over` |
 | `version` | integer | No | Default 1; tăng khi đổi trạng thái hoặc liên kết lô |
 | `started_at` | timestamp | Yes | UTC |
 | `started_by` | bigint | Yes | FK → Account (Artisan) |
-| `delivered_at` | timestamp | Yes | UTC |
-| `delivered_by` | bigint | Yes | FK → Account |
+| `handed_over_at` | timestamp | Yes | UTC; thời điểm hệ thống ghi nhận bàn giao |
+| `handed_over_by` | bigint | Yes | FK → Account (Artisan hoặc Admin) |
 | `delivery_note` | text | Yes | Ghi chú bàn giao |
-| `admin_delivered` | boolean | No | Default false; true khi Admin ghi nhận thay |
+| `admin_handed_over` | boolean | No | Default false; true khi Admin ghi nhận thay |
 | `admin_delivery_evidence` | text | Yes | Căn cứ đã xác minh; bắt buộc khi Admin ghi nhận thay |
-| `admin_delivery_reason` | text | Yes | Bắt buộc khi `admin_delivered = true` |
-| `admin_delivery_actual_at` | timestamp | Yes | Thời điểm bàn giao thực tế do Admin xác nhận (không ở tương lai) |
+| `admin_handover_reason` | text | Yes | Bắt buộc khi `admin_handed_over = true` |
+| `admin_handover_actual_at` | timestamp | Yes | Thời điểm bàn giao thực tế do Admin xác nhận (không ở tương lai) |
 | `created_at` | timestamp | No | UTC |
 | `updated_at` | timestamp | No | UTC |
 
@@ -660,7 +724,7 @@ erDiagram
 | `linked_at` | timestamp | No | UTC |
 | `linked_by` | bigint | No | FK → Account (Artisan) |
 
-> **Ràng buộc:** `SUM(linked_quantity) ≤ allocation.quantity`. Batch phải cùng Workshop. Không đổi sau `allocation.status = delivered`. Unique `(allocation_id, batch_id)`. **Thiếu liên kết không chặn** ghi nhận bàn giao — chỉ hiển thị cảnh báo.
+> **Ràng buộc:** `SUM(linked_quantity) ≤ allocation.quantity`. Batch phải cùng Workshop. Không đổi sau `allocation.status = handed_over`. Unique `(allocation_id, batch_id)`. **Thiếu liên kết không chặn** ghi nhận bàn giao — chỉ hiển thị cảnh báo.
 
 ---
 
@@ -805,7 +869,9 @@ erDiagram
 | `actor_id` | bigint | Yes | FK → Account; null cho tác vụ hệ thống/thiết lập ban đầu |
 | `target_account_id` | bigint | No | FK → Account chịu tác động |
 | `event_type` | varchar(40) | No | Cấp tài khoản, đổi/đặt lại mật khẩu, khóa/mở khóa bảo mật, tạo/thu hồi phiên |
-| `reason` | text | Yes | Lý do/căn cứ xử lý; bắt buộc cho đặt lại và khóa thủ công theo SEC-05 |
+| `reason` | text | Yes | Lý do xử lý theo SEC-05 |
+| `verification_evidence` | text | Yes | Bắt buộc cho đặt lại mật khẩu: phương thức, căn cứ xác minh ngoài hệ thống |
+| `ip_address` | varchar(45) | Yes | IP tin cậy thực hiện thao tác theo SEC-15 |
 | `auth_version_before` | integer | Yes | Phiên bản trước sự kiện; null khi cấp mới |
 | `auth_version_after` | integer | No | Phiên bản sau sự kiện |
 | `created_at` | timestamp | No | UTC do server ghi |
@@ -864,28 +930,31 @@ stateDiagram-v2
     state "Artisans Bidding" as Artisans_Bidding
     state "Buyer Accepted" as Buyer_Accepted
     state "In Production" as In_Production
-    [*] --> Draft : Buyer tạo nháp
+    state "Cancelled (Dấu hủy)" as Cancelled
 
+    [*] --> Draft : Buyer tạo nháp
     Draft --> Sent_to_Artisans : Buyer gửi\n[hợp lệ + có hộ nhận]
     Draft --> [*] : Buyer xóa nháp
 
     Sent_to_Artisans --> Artisans_Bidding : Hệ thống\n[có báo giá hợp lệ đầu tiên]
+    Sent_to_Artisans --> Cancelled : Buyer hủy trước chào giá
 
-    Artisans_Bidding --> Buyer_Accepted : Buyer chấp nhận trực tiếp\nhoặc chấp nhận phương án chia
+    Artisans_Bidding --> Buyer_Accepted : Buyer chấp nhận trực tiếp\nhoặc phương án chia
+    Artisans_Bidding --> Cancelled : Buyer hủy khi đang chào giá
 
     Buyer_Accepted --> In_Production : Hệ thống\n[hộ đầu tiên bắt đầu phần việc]
+    Buyer_Accepted --> Cancelled : Admin hủy sau chốt [có lý do]
 
-    In_Production --> Delivered : Buyer xác nhận nhận đủ\n[mọi Allocation = delivered]
+    In_Production --> Delivered : Buyer xác nhận nhận đủ\n[mọi Allocation = handed_over]
+    In_Production --> Delivered : Admin xác nhận thay Buyer\n[mọi Allocation handed_over + căn cứ]
+    In_Production --> Cancelled : Admin hủy đang sản xuất [có lý do + xử lý hàng]
 
-    In_Production --> Delivered : Admin xác nhận thay Buyer\n[mọi Allocation delivered + lý do + căn cứ]
-
-    note right of Artisans_Bidding
-        Hủy là dấu riêng, không phải trạng thái thứ bảy
-        Buyer hủy trước chốt; Admin hủy sau chốt
-        Ghi cancelled_at, cancelled_by, cancel_reason
-        Giữ trạng thái chính; không khôi phục
-        Nháp chỉ xóa; Delivered không hủy
-        Sau hủy không tiếp tục chuyển trạng thái
+    note right of Cancelled
+        Hủy là dấu riêng (cancelled_at, cancelled_by, cancel_reason)
+        Buyer hủy ở Sent_to_Artisans & Artisans_Bidding (UC-27)
+        Admin hủy ở Buyer_Accepted & In_Production (BR-21, BR-22)
+        Delivered tuyệt đối không được hủy
+        Yêu cầu đã hủy không được khôi phục hoặc tiếp tục chuyển trạng thái
     end note
 ```
 
@@ -899,8 +968,8 @@ stateDiagram-v2
 
     not_started --> in_production : Artisan bắt đầu\n[request chua_huy]
 
-    in_production --> delivered : Artisan ghi nhận bàn giao\n[yêu cầu chưa hủy + bàn giao đủ số lượng]
-    in_production --> delivered : Admin ghi nhận thay\n[yêu cầu In Production chưa hủy\ncó căn cứ + lý do + thời điểm thực tế]
+    in_production --> handed_over : Artisan ghi nhận bàn giao\n[yêu cầu chưa hủy + bàn giao đủ số lượng]
+    in_production --> handed_over : Admin ghi nhận thay\n[yêu cầu In Production chưa hủy\ncó căn cứ + lý do + thời điểm thực tế]
 
     note right of not_started
         Admin KHÔNG thể ghi nhận thay
@@ -908,9 +977,10 @@ stateDiagram-v2
         Phải để Artisan bắt đầu trước
     end note
 
-    note right of delivered
-        Không đổi AllocationBatch sau delivered
-        Không quay lại in_production
+    note right of handed_over
+        handed_over = đã ghi nhận bàn giao (BR-24)
+        Không đổi AllocationBatch sau khi handed_over
+        Độc lập với QuoteRequest.Delivered (Buyer nhận đủ)
     end note
 ```
 
@@ -989,7 +1059,7 @@ stateDiagram-v2
 
     active --> withdrawn : Artisan rút\n[có lý do bắt buộc\nyêu cầu chưa chốt VÀ chưa hủy]
 
-    active --> accepted : Hệ thống chốt\n[khi Buyer chấp nhận\nvà Allocation được tạo]
+    active --> accepted : Hệ thống chốt khi Buyer chấp nhận\n[now < bid_accept_deadline & Allocation được tạo]
 
     note right of accepted
         Không sửa/rút sau khi accepted
@@ -1054,8 +1124,8 @@ Các điều kiện đọc bảng khác hoặc tính tổng nhiều dòng không
 - **Báo giá:** Kiểm tra hộ nhận, quyền sở hữu, yêu cầu còn mở để thêm/sửa/gửi lại, `max_quantity <= request.quantity`, `now < bid_accept_deadline`, `bid_accept_deadline >= request.bidding_deadline + 24h` và cam kết giao không vượt hạn yêu cầu. Rút chỉ cần chưa chốt/chưa hủy, vẫn được khi đóng nhận hoặc hộ tạm ngừng. Cập nhật Quote, phản hồi, lịch sử và làm hết hiệu lực phương án liên quan cùng giao dịch.
 - **Phương án chia:** Chỉ lập sau đóng nhận, có split_requested_at, chưa chốt/hủy theo UC-20/UC-21; ít nhất hai hộ khác nhau, mỗi lượng chia > 0 và không vượt báo giá, tổng đúng yêu cầu. Có hộ đủ nhận toàn bộ không cấm chia. Khi lập lại, expire bản cũ rồi insert bản mới cùng giao dịch. Sửa/rút báo giá, tạm ngừng hộ, hủy yêu cầu hoặc chốt trực tiếp làm expired phương án proposed liên quan; lưu expire_reason/expired_at để hiển thị lý do cần lập lại.
 - **Chốt đơn:** Kiểm tra yêu cầu chưa hủy/chốt, version yêu cầu/báo giá/phương án, từng hộ còn hoạt động và từng báo giá còn hiệu lực tại thời điểm ghi. Chốt trực tiếp cần một báo giá đủ toàn bộ; chốt phương án cần tổng chia đúng số lượng và quote_version khớp. Tạo tất cả Allocation với bản chụp giá/số lượng/ngày giao, đánh dấu báo giá/phương án được chọn, cập nhật yêu cầu, lịch sử và IdempotencyRecord trong một giao dịch. Không tạo Allocation từng phần qua các giao dịch riêng.
-- **Liên kết lô:** Khóa Allocation trước khi thêm/sửa/xóa, kiểm tra chưa delivered và yêu cầu chưa hủy; tính lại tổng linked_quantity ≤ allocation.quantity trong khóa. FK ghép bảo đảm cùng hộ. Không cộng số lượng qua các yêu cầu để suy luận tồn kho/công suất; thiếu liên kết không chặn bàn giao.
-- **Bàn giao/nhận đủ/hủy:** Kiểm tra trạng thái hiện tại trong khóa; Admin không tạo bước bắt đầu thay hộ. Xác nhận nhận đủ chỉ khi mọi Allocation delivered, yêu cầu chưa hủy; ghi người và căn cứ thực tế. Hủy toàn yêu cầu giữ phần đã bàn giao, không sinh cơ chế thay hộ/giao một phần ngoài phạm vi MVP. Mọi thao tác nghiệp vụ mới trên yêu cầu đã hủy bị từ chối.
+- **Liên kết lô:** Khóa Allocation trước khi thêm/sửa/xóa, kiểm tra chưa handed_over và yêu cầu chưa hủy; tính lại tổng linked_quantity ≤ allocation.quantity trong khóa. FK ghép bảo đảm cùng hộ. Không cộng số lượng qua các yêu cầu để suy luận tồn kho/công suất; thiếu liên kết không chặn bàn giao.
+- **Bàn giao/nhận đủ/hủy:** Kiểm tra trạng thái hiện tại trong khóa; Admin không tạo bước bắt đầu thay hộ. Xác nhận nhận đủ chỉ khi mọi Allocation handed_over, yêu cầu chưa hủy; ghi người và căn cứ thực tế. Hủy toàn yêu cầu giữ phần đã bàn giao, không sinh cơ chế thay hộ/giao một phần ngoài phạm vi MVP. Mọi thao tác nghiệp vụ mới trên yêu cầu đã hủy bị từ chối.
 - **Loại sự kiện:** AllocationLog dùng `created`, `production_started`, `handover_recorded`, `handover_by_admin`, `batch_links_changed`; StatusLog dùng `created`, `sent`, `first_quote`, `bidding_closed`, `split_requested`, `accepted`, `production_started`, `received_by_buyer`, `received_by_admin`, `cancelled`. Sự kiện không chuyển trạng thái giữ prev_status = new_status. Liên hệ và phản hồi có bảng lịch sử riêng. Tất cả lịch sử bắt buộc ghi cùng giao dịch, không có API sửa/xóa; Buyer xem rõ hai sự kiện Admin bàn giao thay và xác nhận nhận thay cùng người/thời điểm/lý do/căn cứ.
 - **Xác thực:** Theo mục 2.1/2.21 và SEC-05; khóa các Account theo ID tăng dần khi Admin đặt lại cho người khác, kiểm tra lại phiên/auth_version của Admin trong giao dịch. Không giữ khóa trong quá trình băm mật khẩu.
 - **Ảnh:** Khóa chủ sở hữu/quota phù hợp, kiểm tra quyền, ảnh đã xử lý, số lượng tối đa và quan hệ cố định. Lưu ảnh lịch sử cùng lần sửa nhật ký. Dọn ảnh kiểm tra lại không có tham chiếu dưới cùng cơ chế khóa trước khi đánh dấu dọn; không cho gắn ảnh đang dọn. Trừ used_bytes sau khi xác nhận xóa tệp, có đối soát nếu crash.
