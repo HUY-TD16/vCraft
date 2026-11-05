@@ -1,0 +1,19 @@
+{
+  "name": "vcraft-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nền tảng triển lãm số, truy xuất nguồn gốc và điều phối đơn mua buôn làng gốm Bát Tràng",
+  "scripts": {
+    "dev:backend": "pnpm --filter vcraft-backend dev",
+    "dev:frontend": "pnpm --filter vcraft-frontend dev",
+    "build:backend": "pnpm --filter vcraft-backend build",
+    "build:frontend": "pnpm --filter vcraft-frontend build",
+    "build": "pnpm --recursive run build",
+    "test": "pnpm --recursive run test"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22.11.0",
+    "pnpm": ">=9.12.0"
+  }
+}
