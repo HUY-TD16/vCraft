@@ -11,6 +11,7 @@
 !deploy/frontend.conf
 **/node_modules
 **/dist
+backend/src/generated/prisma
 **/.env*
 **/storage
 **/*.tsbuildinfo

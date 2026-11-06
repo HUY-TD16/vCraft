@@ -11,7 +11,7 @@ COPY backend/ backend/
 WORKDIR /app/backend
 RUN pnpm run build && mkdir -p /var/lib/vcraft/uploads && chown node:node /var/lib/vcraft/uploads
 USER node
-CMD ["sh", "-ec", "printf 'SELECT 1;' | ./node_modules/.bin/prisma db execute --stdin --schema prisma/schema.prisma && exec node dist/main.js"]
+CMD ["sh", "-ec", "./node_modules/.bin/prisma migrate deploy && exec node dist/main.js"]
 
 FROM workspace AS frontend-build
 RUN pnpm --filter vcraft-frontend install --frozen-lockfile

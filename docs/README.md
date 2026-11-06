@@ -17,4 +17,14 @@
 
 Dừng stack và giữ dữ liệu bằng `docker compose --env-file .env -f deploy/compose.yaml down`.
 
+Container backend chạy `prisma migrate deploy` trước khi mở NestJS. Compose dùng `.env` ở gốc để tạo `DATABASE_URL` trỏ đến `postgres:5432`. Khi NestJS khởi động, `DatabaseModule` mở kết nối qua Prisma và chạy `SELECT 1`.
+
+**Chạy backend trên máy host:** khởi động riêng PostgreSQL bằng `docker compose up -d postgres` từ gốc sau khi chuẩn bị `.env`. Sao chép `backend/.env.example` thành `backend/.env` và chỉnh `DATABASE_URL` khớp với user, mật khẩu, tên database và cổng đã công bố (mặc định `localhost:5433`). Từ gốc repo chạy:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter vcraft-backend exec prisma migrate deploy
+pnpm dev:backend
+```
+
 **Nếu đang dùng PostgreSQL 17:** sao lưu database cũ bằng `pg_dump` và thử khôi phục vào PostgreSQL 18 trước khi chuyển dữ liệu thật. Cấu hình mới tạo volume `vcraft_pgdata18` riêng. Volume cũ `vcraft_pgdata` vẫn chứa dữ liệu bản 17.

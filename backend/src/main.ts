@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './bootstrap/app.module';
 import cookieParser = require('cookie-parser');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   // SEC-14: Prefix API toàn hệ thống
   app.setGlobalPrefix('api');

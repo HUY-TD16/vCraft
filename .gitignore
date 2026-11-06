@@ -4,6 +4,7 @@ node_modules/
 .pnp.js
 
 # Build artifacts
+backend/src/generated/prisma/
 dist/
 build/
 .next/

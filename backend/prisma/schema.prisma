@@ -1,8 +1,557 @@
 generator client {
-  provider = "prisma-client-js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                               BigInt                       @id @default(autoincrement())
+  username                         String                       @unique @db.VarChar(32)
+  password_hash                    String                       @db.VarChar(255)
+  display_name                     String?                      @db.VarChar(100)
+  phone                            String?                      @db.VarChar(20)
+  role                             String                       @db.VarChar(10)
+  auth_version                     Int                          @default(1)
+  is_login_locked                  Boolean                      @default(false)
+  temp_password_expires_at         DateTime?                    @db.Timestamptz(3)
+  created_at                       DateTime                     @default(now()) @db.Timestamptz(3)
+  updated_at                       DateTime                     @updatedAt @db.Timestamptz(3)
+  workshop                         Workshop?
+  workshopStatusLogs               WorkshopStatusLog[]
+  journalEntries                   JournalEntry[]
+  journalEditHistories             JournalEditHistory[]
+  newsPostsAsCreatedBy             NewsPost[]                   @relation("NewsPost_createdBy")
+  newsPostsAsUpdatedBy             NewsPost[]                   @relation("NewsPost_updatedBy")
+  quoteRequestsAsBuyer             QuoteRequest[]               @relation("QuoteRequest_buyer")
+  quoteRequestsAsCancelledBy       QuoteRequest[]               @relation("QuoteRequest_cancelledBy")
+  contactEditHistories             ContactEditHistory[]
+  requestRecipients                RequestRecipient[]
+  quotes                           Quote[]
+  splitProposalsAsCreatedBy        SplitProposal[]              @relation("SplitProposal_createdBy")
+  splitProposalsAsRejectedBy       SplitProposal[]              @relation("SplitProposal_rejectedBy")
+  allocationsAsStartedBy           Allocation[]                 @relation("Allocation_startedBy")
+  allocationsAsHandedOverBy        Allocation[]                 @relation("Allocation_handedOverBy")
+  allocationBatches                AllocationBatch[]
+  allocationLogs                   AllocationLog[]
+  statusLogs                       StatusLog[]
+  images                           Image[]
+  sessions                         Session[]
+  idempotencyRecords               IdempotencyRecord[]
+  recipientResponseHistories       RecipientResponseHistory[]
+  securityAuditLogsAsActor         SecurityAuditLog[]           @relation("SecurityAuditLog_actor")
+  securityAuditLogsAsTargetAccount SecurityAuditLog[]           @relation("SecurityAuditLog_targetAccount")
+  storageQuota                     StorageQuota?
+  uploadReservations               UploadReservation[]
+  initialWorkshopUploadScopes      InitialWorkshopUploadScope[]
+}
+
+model Workshop {
+  id                         BigInt                      @id @default(autoincrement())
+  account_id                 BigInt                      @unique
+  name                       String                      @db.VarChar(200)
+  story                      String?
+  address                    String?                     @db.VarChar(500)
+  latitude                   Decimal?                    @db.Decimal(9, 6)
+  longitude                  Decimal?                    @db.Decimal(9, 6)
+  accepting_visitors         Boolean                     @default(false)
+  avatar_image_id            BigInt?
+  status                     String                      @default("active") @db.VarChar(15)
+  created_at                 DateTime                    @default(now()) @db.Timestamptz(3)
+  updated_at                 DateTime                    @updatedAt @db.Timestamptz(3)
+  account                    Account                     @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  avatarImage                Image?                      @relation(fields: [avatar_image_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  workshopStatusLogs         WorkshopStatusLog[]
+  certificates               Certificate[]
+  products                   Product[]
+  batches                    Batch[]
+  requestRecipients          RequestRecipient[]
+  quotes                     Quote[]
+  splitProposalItems         SplitProposalItem[]
+  allocations                Allocation[]
+  storageQuota               StorageQuota?
+  initialWorkshopUploadScope InitialWorkshopUploadScope?
+}
+
+model WorkshopStatusLog {
+  id           BigInt   @id @default(autoincrement())
+  workshop_id  BigInt
+  prev_status  String?  @db.VarChar(15)
+  new_status   String   @db.VarChar(15)
+  performed_by BigInt
+  reason       String?
+  created_at   DateTime @default(now()) @db.Timestamptz(3)
+  workshop     Workshop @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  performedBy  Account  @relation(fields: [performed_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model Certificate {
+  id          BigInt   @id @default(autoincrement())
+  workshop_id BigInt
+  name        String   @db.VarChar(200)
+  image_id    BigInt   @unique
+  created_at  DateTime @default(now()) @db.Timestamptz(3)
+  workshop    Workshop @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  image       Image    @relation(fields: [image_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model Category {
+  id            BigInt         @id @default(autoincrement())
+  name          String         @unique @db.VarChar(100)
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now()) @db.Timestamptz(3)
+  updated_at    DateTime       @updatedAt @db.Timestamptz(3)
+  products      Product[]
+  quoteRequests QuoteRequest[]
+}
+
+model Product {
+  id           BigInt    @id @default(autoincrement())
+  workshop_id  BigInt
+  batch_id     BigInt
+  category_id  BigInt
+  name         String    @db.VarChar(300)
+  price        Decimal   @db.Decimal(15, 0)
+  description  String?
+  status       String    @db.VarChar(10)
+  published_at DateTime? @db.Timestamptz(3)
+  created_at   DateTime  @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(3)
+  workshop     Workshop  @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  category     Category  @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  batch        Batch     @relation(fields: [batch_id, workshop_id], references: [id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model Batch {
+  id                BigInt            @id @default(autoincrement())
+  workshop_id       BigInt
+  name              String            @db.VarChar(200)
+  qr_token          String            @unique @db.VarChar(64)
+  status            String            @db.VarChar(10)
+  published_at      DateTime?         @db.Timestamptz(3)
+  created_at        DateTime          @default(now()) @db.Timestamptz(3)
+  updated_at        DateTime          @updatedAt @db.Timestamptz(3)
+  workshop          Workshop          @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  journalEntries    JournalEntry[]
+  products          Product[]
+  allocationBatches AllocationBatch[]
+
+  @@unique([id, workshop_id])
+}
+
+model JournalEntry {
+  id                   BigInt               @id @default(autoincrement())
+  batch_id             BigInt
+  performed_by         BigInt
+  stage                String               @db.VarChar(200)
+  performed_at         DateTime             @db.Timestamptz(3)
+  notes                String?
+  created_at           DateTime             @default(now()) @db.Timestamptz(3)
+  updated_at           DateTime             @updatedAt @db.Timestamptz(3)
+  batch                Batch                @relation(fields: [batch_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  performedBy          Account              @relation(fields: [performed_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  journalEditHistories JournalEditHistory[]
+}
+
+model JournalEditHistory {
+  id                   BigInt                @id @default(autoincrement())
+  journal_entry_id     BigInt
+  edited_by            BigInt
+  prev_stage           String                @db.VarChar(200)
+  prev_performed_at    DateTime              @db.Timestamptz(3)
+  prev_notes           String?
+  edited_at            DateTime              @db.Timestamptz(3)
+  journalEntry         JournalEntry          @relation(fields: [journal_entry_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  editedBy             Account               @relation(fields: [edited_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  journalHistoryImages JournalHistoryImage[]
+
+  @@index([journal_entry_id, edited_at])
+}
+
+model NewsPost {
+  id           BigInt    @id @default(autoincrement())
+  created_by   BigInt
+  updated_by   BigInt?
+  title        String    @db.VarChar(300)
+  content      String
+  post_type    String    @db.VarChar(30)
+  status       String    @db.VarChar(10)
+  published_at DateTime? @db.Timestamptz(3)
+  created_at   DateTime  @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(3)
+  createdBy    Account   @relation("NewsPost_createdBy", fields: [created_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  updatedBy    Account?  @relation("NewsPost_updatedBy", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model QuoteRequest {
+  id                   BigInt               @id @default(autoincrement())
+  buyer_id             BigInt
+  category_id          BigInt?
+  spec                 String?
+  quantity             Int?
+  unit                 String?              @db.VarChar(10)
+  unit_set_description String?
+  status               String               @db.VarChar(25)
+  delivery_mode        String?              @db.VarChar(20)
+  delivery_region      String?              @db.VarChar(200)
+  delivery_address     String?
+  recipient_name       String?              @db.VarChar(200)
+  recipient_phone      String?              @db.VarChar(20)
+  bidding_deadline     DateTime?            @db.Timestamptz(3)
+  delivery_deadline    DateTime?            @db.Timestamptz(3)
+  bidding_closed_at    DateTime?            @db.Timestamptz(3)
+  split_requested_at   DateTime?            @db.Timestamptz(3)
+  version              Int                  @default(1)
+  cancelled_at         DateTime?            @db.Timestamptz(3)
+  cancelled_by         BigInt?
+  cancel_reason        String?
+  created_at           DateTime             @default(now()) @db.Timestamptz(3)
+  updated_at           DateTime             @updatedAt @db.Timestamptz(3)
+  buyer                Account              @relation("QuoteRequest_buyer", fields: [buyer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  category             Category?            @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cancelledBy          Account?             @relation("QuoteRequest_cancelledBy", fields: [cancelled_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  contactEditHistories ContactEditHistory[]
+  requestRecipients    RequestRecipient[]
+  quotes               Quote[]
+  splitProposals       SplitProposal[]
+  allocations          Allocation[]
+  statusLogs           StatusLog[]
+
+  @@index([buyer_id, created_at])
+}
+
+model ContactEditHistory {
+  id                   BigInt       @id @default(autoincrement())
+  request_id           BigInt
+  edited_by            BigInt
+  prev_recipient_name  String       @db.VarChar(200)
+  prev_recipient_phone String       @db.VarChar(20)
+  new_recipient_name   String       @db.VarChar(200)
+  new_recipient_phone  String       @db.VarChar(20)
+  edited_at            DateTime     @db.Timestamptz(3)
+  version              Int
+  request              QuoteRequest @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  editedBy             Account      @relation(fields: [edited_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model RequestRecipient {
+  id                         BigInt                     @id @default(autoincrement())
+  request_id                 BigInt
+  workshop_id                BigInt
+  response_status            String                     @db.VarChar(15)
+  decline_reason             String?
+  responded_by               BigInt?
+  responded_at               DateTime?                  @db.Timestamptz(3)
+  sent_at                    DateTime                   @db.Timestamptz(3)
+  version                    Int                        @default(1)
+  request                    QuoteRequest               @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  workshop                   Workshop                   @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  respondedBy                Account?                   @relation(fields: [responded_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  recipientResponseHistories RecipientResponseHistory[]
+  quote                      Quote?
+
+  @@unique([request_id, workshop_id])
+  @@index([workshop_id, request_id])
+}
+
+model Quote {
+  id                         BigInt                     @id @default(autoincrement())
+  request_id                 BigInt
+  workshop_id                BigInt
+  unit_price                 Decimal                    @db.Decimal(15, 0)
+  max_quantity               Int
+  bid_accept_deadline        DateTime                   @db.Timestamptz(3)
+  committed_delivery_at      DateTime                   @db.Timestamptz(3)
+  status                     String                     @db.VarChar(10)
+  version                    Int                        @default(1)
+  withdraw_reason            String?
+  withdrawn_by               BigInt?
+  withdrawn_at               DateTime?                  @db.Timestamptz(3)
+  created_at                 DateTime                   @default(now()) @db.Timestamptz(3)
+  updated_at                 DateTime                   @updatedAt @db.Timestamptz(3)
+  request                    QuoteRequest               @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  workshop                   Workshop                   @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  withdrawnBy                Account?                   @relation(fields: [withdrawn_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  recipientResponseHistories RecipientResponseHistory[]
+  recipient                  RequestRecipient           @relation(fields: [request_id, workshop_id], references: [request_id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+  splitProposalItems         SplitProposalItem[]
+  allocation                 Allocation?
+
+  @@unique([request_id, workshop_id])
+  @@unique([id, request_id, workshop_id])
+  @@index([request_id, status, bid_accept_deadline])
+}
+
+model SplitProposal {
+  id                 BigInt              @id @default(autoincrement())
+  request_id         BigInt
+  created_by         BigInt
+  status             String              @db.VarChar(10)
+  version            Int                 @default(1)
+  expired_at         DateTime?           @db.Timestamptz(3)
+  expire_reason      String?             @db.VarChar(40)
+  reject_reason      String?
+  rejected_by        BigInt?
+  rejected_at        DateTime?           @db.Timestamptz(3)
+  created_at         DateTime            @default(now()) @db.Timestamptz(3)
+  updated_at         DateTime            @updatedAt @db.Timestamptz(3)
+  request            QuoteRequest        @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  createdBy          Account             @relation("SplitProposal_createdBy", fields: [created_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  rejectedBy         Account?            @relation("SplitProposal_rejectedBy", fields: [rejected_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  splitProposalItems SplitProposalItem[]
+
+  @@unique([id, request_id])
+}
+
+model SplitProposalItem {
+  id                 BigInt        @id @default(autoincrement())
+  request_id         BigInt
+  quote_version      Int
+  proposal_id        BigInt
+  workshop_id        BigInt
+  quote_id           BigInt
+  allocated_quantity Int
+  workshop           Workshop      @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  proposal           SplitProposal @relation(fields: [proposal_id, request_id], references: [id, request_id], onDelete: Restrict, onUpdate: NoAction)
+  quote              Quote         @relation(fields: [quote_id, request_id, workshop_id], references: [id, request_id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([proposal_id, workshop_id])
+}
+
+model Allocation {
+  id                       BigInt            @id @default(autoincrement())
+  request_id               BigInt
+  workshop_id              BigInt
+  quote_id                 BigInt            @unique
+  quantity                 Int
+  unit_price               Decimal           @db.Decimal(15, 0)
+  committed_delivery_at    DateTime          @db.Timestamptz(3)
+  status                   String            @db.VarChar(20)
+  version                  Int               @default(1)
+  started_at               DateTime?         @db.Timestamptz(3)
+  started_by               BigInt?
+  handed_over_at           DateTime?         @db.Timestamptz(3)
+  handed_over_by           BigInt?
+  delivery_note            String?
+  admin_handed_over        Boolean           @default(false)
+  admin_delivery_evidence  String?
+  admin_handover_reason    String?
+  admin_handover_actual_at DateTime?         @db.Timestamptz(3)
+  created_at               DateTime          @default(now()) @db.Timestamptz(3)
+  updated_at               DateTime          @updatedAt @db.Timestamptz(3)
+  request                  QuoteRequest      @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  workshop                 Workshop          @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  startedBy                Account?          @relation("Allocation_startedBy", fields: [started_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  handedOverBy             Account?          @relation("Allocation_handedOverBy", fields: [handed_over_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  allocationLogs           AllocationLog[]
+  quote                    Quote             @relation(fields: [quote_id, request_id, workshop_id], references: [id, request_id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+  allocationBatches        AllocationBatch[]
+
+  @@unique([request_id, workshop_id])
+  @@unique([id, workshop_id])
+  @@unique([quote_id, request_id, workshop_id])
+  @@index([workshop_id, status])
+}
+
+model AllocationBatch {
+  id              BigInt     @id @default(autoincrement())
+  workshop_id     BigInt
+  allocation_id   BigInt
+  batch_id        BigInt
+  linked_quantity Int
+  linked_at       DateTime   @db.Timestamptz(3)
+  linked_by       BigInt
+  linkedBy        Account    @relation(fields: [linked_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  allocation      Allocation @relation(fields: [allocation_id, workshop_id], references: [id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+  batch           Batch      @relation(fields: [batch_id, workshop_id], references: [id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([allocation_id, batch_id])
+}
+
+model AllocationLog {
+  id              BigInt     @id @default(autoincrement())
+  allocation_id   BigInt
+  event_type      String     @db.VarChar(40)
+  evidence        String?
+  prev_status     String?    @db.VarChar(20)
+  new_status      String     @db.VarChar(20)
+  performed_by    BigInt
+  note            String?
+  is_admin_action Boolean    @default(false)
+  created_at      DateTime   @default(now()) @db.Timestamptz(3)
+  allocation      Allocation @relation(fields: [allocation_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  performedBy     Account    @relation(fields: [performed_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([allocation_id, created_at])
+}
+
+model StatusLog {
+  id              BigInt       @id @default(autoincrement())
+  request_id      BigInt
+  event_type      String       @db.VarChar(40)
+  evidence        String?
+  prev_status     String?      @db.VarChar(25)
+  new_status      String       @db.VarChar(25)
+  performed_by    BigInt?
+  note            String?
+  is_admin_action Boolean      @default(false)
+  created_at      DateTime     @default(now()) @db.Timestamptz(3)
+  request         QuoteRequest @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  performedBy     Account?     @relation(fields: [performed_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([request_id, created_at])
+}
+
+model Image {
+  id                   BigInt                @id @default(autoincrement())
+  uploaded_by          BigInt
+  context_type         String                @db.VarChar(30)
+  context_id           BigInt?
+  storage_key          String?               @unique @db.VarChar(255)
+  thumbnail_key        String                @unique @db.VarChar(255)
+  display_key          String                @unique @db.VarChar(255)
+  original_size_bytes  Int
+  thumbnail_size_bytes BigInt
+  display_size_bytes   BigInt
+  quota_id             BigInt
+  reservation_id       BigInt                @unique
+  width                Int
+  height               Int
+  unreferenced_at      DateTime?             @db.Timestamptz(3)
+  storage_state        String                @db.VarChar(15)
+  is_attached          Boolean               @default(false)
+  created_at           DateTime              @default(now()) @db.Timestamptz(3)
+  workshops            Workshop[]
+  certificate          Certificate?
+  uploadedBy           Account               @relation(fields: [uploaded_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  quota                StorageQuota          @relation(fields: [quota_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reservation          UploadReservation     @relation(fields: [reservation_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  journalHistoryImages JournalHistoryImage[]
+}
+
+model Session {
+  id             String   @id @db.VarChar(64)
+  account_id     BigInt
+  session_hash   String   @unique @db.VarChar(255)
+  auth_version   Int
+  level          String   @db.VarChar(15)
+  created_at     DateTime @default(now()) @db.Timestamptz(3)
+  last_active_at DateTime @db.Timestamptz(3)
+  expires_at     DateTime @db.Timestamptz(3)
+  is_revoked     Boolean  @default(false)
+  account        Account  @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([expires_at])
+}
+
+model IdempotencyRecord {
+  id                  BigInt   @id @default(autoincrement())
+  idempotency_key     String   @db.VarChar(128)
+  request_fingerprint String   @db.VarChar(64)
+  account_id          BigInt
+  action              String   @db.VarChar(50)
+  object_type         String   @db.VarChar(30)
+  object_id           BigInt
+  result_snapshot     Json     @db.JsonB
+  created_at          DateTime @default(now()) @db.Timestamptz(3)
+  expires_at          DateTime @db.Timestamptz(3)
+  account             Account  @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([account_id, action, object_type, object_id, idempotency_key])
+}
+
+model RecipientResponseHistory {
+  id             BigInt           @id @default(autoincrement())
+  recipient_id   BigInt
+  quote_id       BigInt?
+  event_type     String           @db.VarChar(30)
+  prev_status    String           @db.VarChar(15)
+  new_status     String           @db.VarChar(15)
+  reason         String?
+  quote_snapshot Json?            @db.JsonB
+  performed_by   BigInt
+  created_at     DateTime         @default(now()) @db.Timestamptz(3)
+  recipient      RequestRecipient @relation(fields: [recipient_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  quote          Quote?           @relation(fields: [quote_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  performedBy    Account          @relation(fields: [performed_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([recipient_id, created_at])
+}
+
+model JournalHistoryImage {
+  history_id BigInt
+  image_id   BigInt
+  position   Int
+  history    JournalEditHistory @relation(fields: [history_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  image      Image              @relation(fields: [image_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([history_id, image_id])
+  @@unique([history_id, position])
+}
+
+model SecurityAuditLog {
+  id                    BigInt   @id @default(autoincrement())
+  actor_id              BigInt?
+  target_account_id     BigInt
+  event_type            String   @db.VarChar(40)
+  reason                String?
+  verification_evidence String?
+  ip_address            String?  @db.VarChar(45)
+  auth_version_before   Int?
+  auth_version_after    Int
+  created_at            DateTime @default(now()) @db.Timestamptz(3)
+  actor                 Account? @relation("SecurityAuditLog_actor", fields: [actor_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  targetAccount         Account  @relation("SecurityAuditLog_targetAccount", fields: [target_account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model StorageQuota {
+  id                   BigInt                      @id @default(autoincrement())
+  workshop_id          BigInt?                     @unique
+  account_id           BigInt?                     @unique
+  initial_workshop_key String?                     @unique @db.Uuid
+  limit_bytes          BigInt
+  used_bytes           BigInt                      @default(0)
+  reserved_bytes       BigInt                      @default(0)
+  updated_at           DateTime                    @updatedAt @db.Timestamptz(3)
+  images               Image[]
+  workshop             Workshop?                   @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  account              Account?                    @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  initialWorkshop      InitialWorkshopUploadScope? @relation(fields: [initial_workshop_key], references: [initial_workshop_key], onDelete: Restrict, onUpdate: NoAction)
+  uploadReservations   UploadReservation[]
+}
+
+model UploadReservation {
+  id             BigInt       @id @default(autoincrement())
+  quota_id       BigInt
+  uploaded_by    BigInt
+  context_type   String       @db.VarChar(30)
+  context_id     BigInt?
+  budget_bytes   BigInt
+  actual_bytes   BigInt?
+  status         String       @db.VarChar(20)
+  storage_prefix String       @unique @db.VarChar(255)
+  expires_at     DateTime     @db.Timestamptz(3)
+  created_at     DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at     DateTime     @updatedAt @db.Timestamptz(3)
+  image          Image?
+  quota          StorageQuota @relation(fields: [quota_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  uploadedBy     Account      @relation(fields: [uploaded_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([status, expires_at])
+}
+
+model InitialWorkshopUploadScope {
+  initial_workshop_key String        @id @default(uuid()) @db.Uuid
+  created_by           BigInt
+  status               String        @default("open") @db.VarChar(10)
+  attached_workshop_id BigInt?       @unique
+  created_at           DateTime      @default(now()) @db.Timestamptz(3)
+  expires_at           DateTime      @db.Timestamptz(3)
+  storageQuota         StorageQuota?
+  createdBy            Account       @relation(fields: [created_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  attachedWorkshop     Workshop?     @relation(fields: [attached_workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 }
