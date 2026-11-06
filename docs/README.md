@@ -19,6 +19,10 @@ Dừng stack và giữ dữ liệu bằng `docker compose --env-file .env -f dep
 
 Container backend chạy `prisma migrate deploy` trước khi mở NestJS. Compose dùng `.env` ở gốc để tạo `DATABASE_URL` trỏ đến `postgres:5432`. Khi NestJS khởi động, `DatabaseModule` mở kết nối qua Prisma và chạy `SELECT 1`.
 
+Trước khi mở cổng, backend kiểm tra URL PostgreSQL, khóa phiên (ít nhất 32 ký tự), cổng (1–65535), môi trường, origin HTTP(S) và quyền đọc/ghi thư mục ảnh. Nếu cấu hình sai, log nêu tên biến cần sửa. Trong Compose, thư mục ảnh là volume `/var/lib/vcraft/uploads`.
+
+API dùng prefix `/api/v1`. Để kiểm tra qua Nginx, gọi `curl -i http://localhost/api/v1/`: khi chưa có route gốc, phản hồi dự kiến là HTTP 404, `application/problem+json`, mã `RESOURCE_NOT_FOUND` và `tracking_id`. Khi thêm DTO, dùng `@Body(new ZodValidationPipe(schema))` với `z.strictObject(...)` cho từng object và khai báo quy tắc trim theo trường. Các lỗi validation trả đường dẫn JSON Pointer trong `errors`.
+
 **Chạy backend trên máy host:** khởi động riêng PostgreSQL bằng `docker compose up -d postgres` từ gốc sau khi chuẩn bị `.env`. Sao chép `backend/.env.example` thành `backend/.env` và chỉnh `DATABASE_URL` khớp với user, mật khẩu, tên database và cổng đã công bố (mặc định `localhost:5433`). Từ gốc repo chạy:
 
 ```sh
