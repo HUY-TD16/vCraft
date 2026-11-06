@@ -1,0 +1,16 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!backend/
+!backend/**
+!frontend/
+!frontend/**
+!deploy/
+!deploy/frontend.conf
+**/node_modules
+**/dist
+**/.env*
+**/storage
+**/*.tsbuildinfo
