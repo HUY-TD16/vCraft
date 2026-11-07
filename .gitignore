@@ -45,6 +45,7 @@ uploads/
 storage/
 !backend/src/infrastructure/storage/
 media/
+!backend/src/modules/media/
 data/
 
 # Temporary / Cache

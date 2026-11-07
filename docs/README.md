@@ -1,5 +1,7 @@
 # Chạy vCraft bằng Docker
 
+[Hợp đồng và dữ liệu mẫu để làm song song](contracts/README.md)
+
 1. Khởi động Docker Desktop ở chế độ Linux containers hoặc Docker Engine trên Linux. Phiên bản mục tiêu là Engine 29.9.3 và Compose 5.7.0. Chạy các lệnh bên dưới từ thư mục gốc của repo.
 2. Sao chép `.env.example` thành `.env`. Điền hai chuỗi ngẫu nhiên riêng biệt vào `POSTGRES_PASSWORD` và `SESSION_SECRET`, mỗi chuỗi ít nhất 32 ký tự chữ và số. Compose dùng mật khẩu này trong URL kết nối nội bộ.
 3. Build và khởi động bốn dịch vụ:
