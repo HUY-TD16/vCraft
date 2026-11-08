@@ -65,9 +65,9 @@ Tình huống ghép bắt buộc gồm cấp hộ thất bại sau chuyển quot
 
 ## Quy ước exception
 
-Domain/application ném BusinessRuleException từ common/domain/errors với code trong BusinessRuleCode, theo ma trận lỗi của operation. Ví dụ lockAndAssertActive ném new BusinessRuleException('WORKSHOP_SUSPENDED'). Promise bị reject làm lỗi thoát khỏi transaction. Consumer chỉ bắt lỗi khi thực sự xử lý được; lỗi cần rollback phải tiếp tục được ném.
+Domain/application ném BusinessRuleException từ common/domain/errors với code trong BusinessRuleCode, theo ma trận lỗi của operation. Constructor nhận `(code, message = code, details = {})`; details là bản sao bất biến gồm giá trị scalar hoặc mảng scalar, chỉ chứa ngữ cảnh nội bộ cần thiết, không chứa secret. Lỗi riêng nằm trong module: `modules/workshops/domain/errors/workshop-suspended.ts` định nghĩa WorkshopSuspended kế thừa lỗi chung với mã WORKSHOP_SUSPENDED. Promise bị reject làm lỗi thoát khỏi transaction. Consumer chỉ bắt lỗi khi thực sự xử lý được; lỗi cần rollback phải tiếp tục được ném.
 
-ProblemDetailsFilter ánh xạ code sang HTTP qua statusByCode và trả thông báo công khai cố định. ApiProblem dùng ở tầng HTTP. Lỗi DB/hạ tầng giữ nguyên để runner nhận diện lỗi có thể retry và filter trả INTERNAL_SERVER_ERROR. Adapter chỉ chuyển lỗi DB thành BusinessRuleException khi xác định đúng vi phạm nghiệp vụ, chẳng hạn ràng buộc unique username; không chuyển mọi lỗi DB thành một lỗi nghiệp vụ chung.
+ProblemDetailsFilter ánh xạ code sang HTTP qua statusByCode và trả thông báo công khai cố định; không đưa message hoặc details nội bộ của exception vào phản hồi. ApiProblem dùng ở tầng HTTP. Lỗi DB/hạ tầng giữ nguyên để runner nhận diện lỗi có thể retry và filter trả INTERNAL_SERVER_ERROR. Adapter chỉ chuyển lỗi DB thành BusinessRuleException khi xác định đúng vi phạm nghiệp vụ, chẳng hạn ràng buộc unique username; không chuyển mọi lỗi DB thành một lỗi nghiệp vụ chung.
 
 Với operation quy định rõ dịch vụ không khả dụng, dùng ServiceUnavailableException thuần TypeScript tại common/application/errors. Ba mã được hỗ trợ là SECURITY_SERVICE_UNAVAILABLE, STORAGE_CAPACITY_LOW và IMAGE_PROCESSING_UNAVAILABLE, đều ánh xạ HTTP 503. Ví dụ resolveSession gặp kho phiên không khả dụng phải ném SECURITY_SERVICE_UNAVAILABLE; không trả null như trường hợp không có phiên.
 
@@ -80,6 +80,8 @@ Runner dùng interactive transaction, tối đa ba lần thử. Chỉ retry P203
 Giới hạn hiện tại là chờ lấy transaction tối đa 2 giây và chạy mỗi lần tối đa 5 giây; retry chờ 25 rồi 50 ms. Đây là giới hạn mỗi lần thử. HTTP timeout không tự hủy callback hoặc transaction đang chạy, nên workflow cần idempotency theo đặc tả. Các lời gọi mạng, băm mật khẩu, xử lý ảnh và tác dụng phụ ngoài DB phải nằm ngoài callback có thể retry.
 
 ## Đăng ký module và DI
+
+Cấu hình dùng chung nằm tại `common/config/app-config.ts`. Module cần cấu hình import `AppConfigModule`, provider nhận `@Inject(APP_CONFIG) private readonly config: AppConfig`. Chỉ tầng cấu hình đọc biến môi trường; adapter sử dụng các giá trị đã kiểm tra, có kiểu dữ liệu và bất biến. Domain giữ thuần TypeScript, không phụ thuộc token NestJS hoặc `process.env`. `readConfig(env)` phục vụ kiểm tra cấu hình độc lập; `loadConfig()` đọc `backend/.env` rồi kiểm tra. `ConfigurationError.fields` cung cấp danh sách tên biến thiếu/sai.
 
 IdentityModule, WorkshopsModule, CatalogModule, TraceabilityModule, MediaModule và TradingModule có register(implementation, dependencies). implementation phải triển khai đúng public interface. dependencies nhận imports, providers và controllers nội bộ. Module tự import DatabaseModule, đăng ký implementation một lần và dùng useExisting để export contract token cùng instance.
 

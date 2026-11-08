@@ -22,7 +22,7 @@ export function workshopContractSuite(name: string, setup: () => Promise<Worksho
         await expect(fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.missingId], tx)))
           .rejects.toEqual(new BusinessRuleException('RESOURCE_NOT_FOUND'));
         await expect(fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.suspendedId], tx)))
-          .rejects.toEqual(new BusinessRuleException('WORKSHOP_SUSPENDED'));
+          .rejects.toMatchObject({ code: 'WORKSHOP_SUSPENDED' });
       } finally {
         await fixture.dispose();
       }

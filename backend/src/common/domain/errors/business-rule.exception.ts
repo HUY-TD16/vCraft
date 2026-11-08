@@ -9,9 +9,21 @@ export type BusinessRuleCode =
   | 'BIDDING_CLOSED' | 'NO_ELIGIBLE_WORKSHOP' | 'INSUFFICIENT_CAPACITY'
   | 'RESOURCE_IN_USE' | 'IMAGE_CONTEXT_MISMATCH' | 'UPLOAD_SCOPE_UNAVAILABLE';
 
+export type BusinessRuleDetail = string | number | boolean | null;
+export type BusinessRuleDetails = Readonly<Record<string, BusinessRuleDetail | readonly BusinessRuleDetail[]>>;
+
 export class BusinessRuleException extends Error {
-  constructor(readonly code: BusinessRuleCode) {
-    super(code);
-    this.name = 'BusinessRuleException';
+  readonly details: BusinessRuleDetails;
+
+  constructor(
+    readonly code: BusinessRuleCode,
+    message: string = code,
+    details: BusinessRuleDetails = {},
+  ) {
+    super(message);
+    this.name = new.target.name;
+    this.details = Object.freeze(Object.fromEntries(
+      Object.entries(details).map(([key, value]) => [key, Array.isArray(value) ? Object.freeze([...value]) : value]),
+    ));
   }
 }

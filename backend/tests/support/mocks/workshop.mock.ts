@@ -2,6 +2,7 @@ import type { IWorkshopContract } from '../../../src/modules/workshops/public/co
 import { unconfigured } from './unconfigured';
 import type { Id } from '../../../src/common/application/types/contract-types';
 import { BusinessRuleException } from '../../../src/common/domain/errors/business-rule.exception';
+import { WorkshopSuspended } from '../../../src/modules/workshops/domain/errors/workshop-suspended';
 
 export class MockWorkshopContract implements IWorkshopContract {
   private readonly statuses = new Map<Id, 'active' | 'suspended'>();
@@ -21,7 +22,7 @@ export class MockWorkshopContract implements IWorkshopContract {
         if (!this.statuses.has(id)) throw new BusinessRuleException('RESOURCE_NOT_FOUND');
       }
       if (workshopIds.some(id => this.statuses.get(id) === 'suspended')) {
-        throw new BusinessRuleException('WORKSHOP_SUSPENDED');
+        throw new WorkshopSuspended();
       }
     });
     return this;

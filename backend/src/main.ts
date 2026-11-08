@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { UnsupportedMediaTypeException } from '@nestjs/common';
@@ -39,7 +38,7 @@ async function bootstrap() {
 }
 
 void bootstrap().catch(error => {
-  console.error(error instanceof Error && /^(UPLOAD_DIR|Missing or invalid environment variables:)/.test(error.message)
+  console.error(error instanceof Error && /^(UPLOAD_DIR|Missing or invalid environment variables:|Cannot read backend .env)/.test(error.message)
     ? error.message : 'Backend startup failed. Check database connectivity and configuration.');
   process.exit(1);
 });
