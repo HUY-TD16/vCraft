@@ -9,7 +9,9 @@ FROM workspace AS backend
 RUN pnpm --filter vcraft-backend install --frozen-lockfile
 COPY backend/ backend/
 WORKDIR /app/backend
-RUN pnpm run build && mkdir -p /var/lib/vcraft/uploads && chown node:node /var/lib/vcraft/uploads
+RUN pnpm run build \
+    && mkdir -p /var/lib/vcraft/uploads /app/backend/node_modules/.vite \
+    && chown node:node /var/lib/vcraft/uploads /app/backend/node_modules/.vite
 USER node
 CMD ["sh", "-ec", "./node_modules/.bin/prisma migrate deploy && exec node dist/main.js"]
 

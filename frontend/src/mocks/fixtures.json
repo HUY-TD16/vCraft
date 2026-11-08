@@ -1,0 +1,6131 @@
+[
+  {
+    "name": "csrf",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/auth/csrf"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "csrf_token": "mock-csrf-token",
+          "session_level": "preauth"
+        }
+      }
+    }
+  },
+  {
+    "name": "me-buyer",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/auth/me"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "101",
+          "username": "buyer_demo",
+          "display_name": "Khách mẫu",
+          "role": "buyer",
+          "workshop_id": null,
+          "session_level": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "me-artisan",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/auth/me"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "201",
+          "username": "artisan_demo",
+          "display_name": null,
+          "role": "artisan",
+          "workshop_id": "301",
+          "session_level": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "me-admin",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/auth/me"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "1",
+          "username": "admin_demo",
+          "display_name": null,
+          "role": "admin",
+          "workshop_id": null,
+          "session_level": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "workshops",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/workshops?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng",
+            "address": "Bát Tràng, Hà Nội",
+            "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+            "latitude": 20.9781,
+            "longitude": 105.914,
+            "accepting_visitors": true
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "workshop",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/workshops/301"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "301",
+          "name": "Xưởng gốm mẫu Bát Tràng",
+          "story": "Xưởng làm gốm thủ công.",
+          "address": "Bát Tràng, Hà Nội",
+          "latitude": 20.9781,
+          "longitude": 105.914,
+          "accepting_visitors": true,
+          "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+          "images": [
+            {
+              "id": "501",
+              "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+              "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+            }
+          ],
+          "certificates": []
+        }
+      }
+    }
+  },
+  {
+    "name": "own-workshop",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/workshop"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "301",
+          "name": "Xưởng gốm mẫu Bát Tràng",
+          "story": "Xưởng làm gốm thủ công.",
+          "address": "Bát Tràng, Hà Nội",
+          "latitude": 20.9781,
+          "longitude": 105.914,
+          "accepting_visitors": true,
+          "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+          "images": [
+            {
+              "id": "501",
+              "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+              "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+            }
+          ],
+          "certificates": [],
+          "status": "active",
+          "is_profile_public": true,
+          "missing_public_fields": [],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-workshops",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/workshops?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng",
+            "story": "Xưởng làm gốm thủ công.",
+            "address": "Bát Tràng, Hà Nội",
+            "latitude": 20.9781,
+            "longitude": 105.914,
+            "accepting_visitors": true,
+            "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+            "images": [
+              {
+                "id": "501",
+                "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+                "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+              }
+            ],
+            "certificates": [],
+            "status": "active",
+            "is_profile_public": true,
+            "missing_public_fields": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z",
+            "account": {
+              "id": "201",
+              "username": "artisan_demo",
+              "display_name": null,
+              "role": "artisan",
+              "workshop_id": "301"
+            }
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-workshop",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/workshops/301"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "301",
+          "name": "Xưởng gốm mẫu Bát Tràng",
+          "story": "Xưởng làm gốm thủ công.",
+          "address": "Bát Tràng, Hà Nội",
+          "latitude": 20.9781,
+          "longitude": 105.914,
+          "accepting_visitors": true,
+          "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+          "images": [
+            {
+              "id": "501",
+              "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+              "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+            }
+          ],
+          "certificates": [],
+          "status": "active",
+          "is_profile_public": true,
+          "missing_public_fields": [],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "account": {
+            "id": "201",
+            "username": "artisan_demo",
+            "display_name": null,
+            "role": "artisan",
+            "workshop_id": "301"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "workshop-history",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/workshops/301/status-history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "30101",
+            "prev_status": "active",
+            "new_status": "suspended",
+            "actor": {
+              "id": "1",
+              "display_name": null
+            },
+            "reason": "Tạm ngừng theo hồ sơ mẫu.",
+            "created_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "accounts",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/accounts?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "101",
+            "username": "buyer_demo",
+            "display_name": "Khách mẫu",
+            "role": "buyer",
+            "workshop_id": null
+          },
+          {
+            "id": "201",
+            "username": "artisan_demo",
+            "display_name": null,
+            "role": "artisan",
+            "workshop_id": "301"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 2,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "categories",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/categories?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "11",
+            "name": "Ấm, chén và cốc",
+            "is_active": true
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-categories",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/categories?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "11",
+            "name": "Ấm, chén và cốc",
+            "is_active": true
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "products",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/products?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "701",
+            "name": "Cốc men trắng",
+            "price": 45000,
+            "category": {
+              "id": "11",
+              "name": "Ấm, chén và cốc"
+            },
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "product",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/products/701"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "701",
+          "name": "Cốc men trắng",
+          "price": 45000,
+          "description": null,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "images": [
+            {
+              "id": "504",
+              "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+              "display_url": "/api/v1/media/current/product/701/images/504/display"
+            }
+          ],
+          "batch": {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "own-products",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/products?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "701",
+            "name": "Cốc men trắng",
+            "price": 45000,
+            "description": null,
+            "category": {
+              "id": "11",
+              "name": "Ấm, chén và cốc"
+            },
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "images": [
+              {
+                "id": "504",
+                "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+                "display_url": "/api/v1/media/current/product/701/images/504/display"
+              }
+            ],
+            "batch": {
+              "id": "901",
+              "name": "Lô cốc mẫu",
+              "trace_url": "/api/v1/trace/demo-bat-trang-901"
+            },
+            "status": "published",
+            "published_at": "2026-11-10T08:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "own-product",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/products/701"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "701",
+          "name": "Cốc men trắng",
+          "price": 45000,
+          "description": null,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "images": [
+            {
+              "id": "504",
+              "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+              "display_url": "/api/v1/media/current/product/701/images/504/display"
+            }
+          ],
+          "batch": {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901"
+          },
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "news-list",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/news?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "601",
+            "title": "Lịch sinh hoạt làng nghề",
+            "post_type": "announcement",
+            "status": "published",
+            "published_at": "2026-11-10T08:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "news-detail",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/news/601"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "601",
+          "title": "Lịch sinh hoạt làng nghề",
+          "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+          "post_type": "announcement",
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-news-list",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/news?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "601",
+            "title": "Lịch sinh hoạt làng nghề",
+            "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+            "post_type": "announcement",
+            "status": "published",
+            "published_at": "2026-11-10T08:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z",
+            "created_by": "1",
+            "updated_by": null
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-news",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/news/601"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "601",
+          "title": "Lịch sinh hoạt làng nghề",
+          "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+          "post_type": "announcement",
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "created_by": "1",
+          "updated_by": null
+        }
+      }
+    }
+  },
+  {
+    "name": "artisan-batches",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/batches?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "status": "published",
+            "qr_token": "demo-bat-trang-901",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901",
+            "published_at": "2026-11-10T08:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "artisan-batch",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/batches/901"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "901",
+          "name": "Lô cốc mẫu",
+          "status": "published",
+          "qr_token": "demo-bat-trang-901",
+          "trace_url": "/api/v1/trace/demo-bat-trang-901",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "artisan-journal",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/batches/901/journal?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "1001",
+            "batch_id": "901",
+            "stage": "Tạo hình",
+            "performed_at": "2026-11-10T08:00:00.000Z",
+            "notes": null,
+            "images": [
+              {
+                "id": "801",
+                "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+                "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+              }
+            ],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-batches",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/batches?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "status": "published",
+            "qr_token": "demo-bat-trang-901",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901",
+            "published_at": "2026-11-10T08:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            }
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-batch",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/batches/901"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "901",
+          "name": "Lô cốc mẫu",
+          "status": "published",
+          "qr_token": "demo-bat-trang-901",
+          "trace_url": "/api/v1/trace/demo-bat-trang-901",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-journal",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/batches/901/journal?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "1001",
+            "batch_id": "901",
+            "stage": "Tạo hình",
+            "performed_at": "2026-11-10T08:00:00.000Z",
+            "notes": null,
+            "images": [
+              {
+                "id": "801",
+                "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+                "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+              }
+            ],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "journal-histories",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/batches/901/journal/1001/history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "1101",
+            "journal_entry_id": "1001",
+            "prev_stage": "Tạo hình sơ bộ",
+            "prev_performed_at": "2026-11-10T08:00:00.000Z",
+            "prev_notes": null,
+            "images": [
+              {
+                "id": "801",
+                "thumbnail_url": "/api/v1/media/history/1101/images/801/thumbnail",
+                "display_url": "/api/v1/media/history/1101/images/801/display"
+              }
+            ],
+            "edited_by": {
+              "id": "201",
+              "display_name": null
+            },
+            "edited_at": "2026-11-10T09:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "journal-history",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/batches/901/journal/1001/history/1101"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "1101",
+          "journal_entry_id": "1001",
+          "prev_stage": "Tạo hình sơ bộ",
+          "prev_performed_at": "2026-11-10T08:00:00.000Z",
+          "prev_notes": null,
+          "images": [
+            {
+              "id": "801",
+              "thumbnail_url": "/api/v1/media/history/1101/images/801/thumbnail",
+              "display_url": "/api/v1/media/history/1101/images/801/display"
+            }
+          ],
+          "edited_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "edited_at": "2026-11-10T09:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "trace",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/trace/demo-bat-trang-901"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "batch_name": "Lô cốc mẫu",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "workshop": {
+            "name": "Xưởng gốm mẫu Bát Tràng",
+            "is_profile_available": true,
+            "profile_url": "/workshops/301"
+          },
+          "journal_entries": [
+            {
+              "id": "1001",
+              "batch_id": "901",
+              "stage": "Tạo hình",
+              "performed_at": "2026-11-10T08:00:00.000Z",
+              "notes": null,
+              "images": [
+                {
+                  "id": "801",
+                  "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+                  "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+                }
+              ],
+              "created_at": "2026-11-10T08:00:00.000Z",
+              "updated_at": "2026-11-10T08:00:00.000Z"
+            }
+          ],
+          "journal_pagination": {
+            "page": 1,
+            "limit": 20,
+            "total_records": 1,
+            "total_pages": 1
+          },
+          "disclaimer": "Nhật ký sản xuất do hộ gia đình tự chịu trách nhiệm cung cấp nội dung."
+        }
+      }
+    }
+  },
+  {
+    "name": "trace-suspended",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/trace/demo-bat-trang-901"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "batch_name": "Lô cốc mẫu",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "workshop": {
+            "name": "Xưởng gốm mẫu Bát Tràng",
+            "is_profile_available": false,
+            "profile_url": null
+          },
+          "journal_entries": [
+            {
+              "id": "1001",
+              "batch_id": "901",
+              "stage": "Tạo hình",
+              "performed_at": "2026-11-10T08:00:00.000Z",
+              "notes": null,
+              "images": [
+                {
+                  "id": "801",
+                  "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+                  "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+                }
+              ],
+              "created_at": "2026-11-10T08:00:00.000Z",
+              "updated_at": "2026-11-10T08:00:00.000Z"
+            }
+          ],
+          "journal_pagination": {
+            "page": 1,
+            "limit": 20,
+            "total_records": 1,
+            "total_pages": 1
+          },
+          "disclaimer": "Nhật ký sản xuất do hộ gia đình tự chịu trách nhiệm cung cấp nội dung."
+        }
+      }
+    }
+  },
+  {
+    "name": "buyer-requests",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/buyer/quote-requests?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "10001",
+            "status": "artisans_bidding",
+            "version": 3,
+            "category": {
+              "id": "11",
+              "name": "Ấm, chén và cốc"
+            },
+            "quantity": 5000,
+            "unit": "piece",
+            "bidding_deadline": "2026-11-12T17:00:00.000Z",
+            "delivery_deadline": "2026-12-01T17:00:00.000Z",
+            "is_bidding_open": true,
+            "cancelled_at": null,
+            "split_requested_at": null,
+            "coordination_state": null,
+            "no_valid_quotes": false,
+            "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-requests",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/quote-requests?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "10001",
+            "status": "artisans_bidding",
+            "version": 3,
+            "category": {
+              "id": "11",
+              "name": "Ấm, chén và cốc"
+            },
+            "quantity": 5000,
+            "unit": "piece",
+            "bidding_deadline": "2026-11-12T17:00:00.000Z",
+            "delivery_deadline": "2026-12-01T17:00:00.000Z",
+            "is_bidding_open": true,
+            "cancelled_at": null,
+            "split_requested_at": null,
+            "coordination_state": null,
+            "no_valid_quotes": false,
+            "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "created_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "invited-requests",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/quote-requests?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "10001",
+            "status": "artisans_bidding",
+            "version": 3,
+            "category": {
+              "id": "11",
+              "name": "Ấm, chén và cốc"
+            },
+            "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+            "quantity": 5000,
+            "unit": "piece",
+            "unit_set_description": null,
+            "delivery_mode": "at_buyer_address",
+            "delivery_region": "Cầu Giấy, Hà Nội",
+            "bidding_deadline": "2026-11-12T17:00:00.000Z",
+            "delivery_deadline": "2026-12-01T17:00:00.000Z",
+            "bidding_closed_at": null,
+            "is_bidding_open": true,
+            "cancelled_at": null,
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T09:00:00.000Z",
+            "own_recipient": {
+              "id": "11001",
+              "request_id": "10001",
+              "workshop": {
+                "id": "301",
+                "name": "Xưởng gốm mẫu Bát Tràng"
+              },
+              "response_status": "quoted",
+              "version": 2,
+              "sent_at": "2026-11-10T08:00:00.000Z",
+              "responded_at": "2026-11-10T09:00:00.000Z",
+              "decline_reason": null,
+              "eligibility_labels": []
+            },
+            "own_quote": {
+              "id": "401",
+              "request_id": "10001",
+              "workshop": {
+                "id": "301",
+                "name": "Xưởng gốm mẫu Bát Tràng"
+              },
+              "unit_price": 45000,
+              "max_quantity": 3000,
+              "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "active",
+              "version": 1,
+              "withdraw_reason": null,
+              "withdrawn_at": null,
+              "is_eligible": true,
+              "ineligible_reasons": [],
+              "created_at": "2026-11-10T08:00:00.000Z",
+              "updated_at": "2026-11-10T08:00:00.000Z"
+            }
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "buyer-request",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 3,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": true,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+          "delivery_confirmation": null
+        }
+      }
+    }
+  },
+  {
+    "name": "admin-request",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 3,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": true,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+          "delivery_confirmation": null
+        }
+      }
+    }
+  },
+  {
+    "name": "invited-request",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 3,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": true,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "own_recipient": {
+            "id": "11001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "response_status": "quoted",
+            "version": 2,
+            "sent_at": "2026-11-10T08:00:00.000Z",
+            "responded_at": "2026-11-10T09:00:00.000Z",
+            "decline_reason": null,
+            "eligibility_labels": []
+          },
+          "own_quote": {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "allocated-request",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "buyer_accepted",
+          "version": 5,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": "2026-11-10T09:00:00.000Z",
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "own_recipient": {
+            "id": "11001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "response_status": "quoted",
+            "version": 2,
+            "sent_at": "2026-11-10T08:00:00.000Z",
+            "responded_at": "2026-11-10T09:00:00.000Z",
+            "decline_reason": null,
+            "eligibility_labels": []
+          },
+          "own_quote": {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "accepted",
+            "version": 2,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": false,
+            "ineligible_reasons": [
+              "REQUEST_ACCEPTED"
+            ],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          },
+          "own_allocation_id": "12001",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội"
+        }
+      }
+    }
+  },
+  {
+    "name": "recipients",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/recipients?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "11001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "response_status": "quoted",
+            "version": 2,
+            "sent_at": "2026-11-10T08:00:00.000Z",
+            "responded_at": "2026-11-10T09:00:00.000Z",
+            "decline_reason": null,
+            "eligibility_labels": []
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "quotes",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/quotes?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          },
+          {
+            "id": "402",
+            "request_id": "10001",
+            "workshop": {
+              "id": "302",
+              "name": "Xưởng gốm mẫu thứ hai"
+            },
+            "unit_price": 46000,
+            "max_quantity": 2000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 2,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "own-quotes",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/quotes?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "recipient-history",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/recipients/11001/history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "13001",
+            "event_type": "quote_submitted",
+            "prev_status": "pending",
+            "new_status": "quoted",
+            "reason": null,
+            "quote_snapshot": {
+              "unit_price": 45000,
+              "max_quantity": 3000,
+              "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "active",
+              "version": 1
+            },
+            "performed_by": {
+              "id": "201",
+              "display_name": null
+            },
+            "created_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "contact-history",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/contact-history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "14001",
+            "prev_recipient_name": "Người nhận cũ",
+            "prev_recipient_phone": "0900000001",
+            "new_recipient_name": "Người nhận mẫu",
+            "new_recipient_phone": "0900000000",
+            "edited_by": {
+              "id": "101",
+              "display_name": "Khách mẫu"
+            },
+            "edited_at": "2026-11-10T08:00:00.000Z",
+            "version": 3
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "request-history",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "15001",
+            "event_type": "sent",
+            "prev_status": "draft_request",
+            "new_status": "sent_to_artisans",
+            "performed_by": {
+              "id": "101",
+              "display_name": "Khách mẫu"
+            },
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "is_admin_action": false,
+            "note": null,
+            "evidence": null
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "request-allocations",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/allocations?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "12001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "quote_id": "401",
+            "quantity": 3000,
+            "unit_price": 45000,
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "not_started",
+            "version": 1,
+            "started_at": null,
+            "started_by": null,
+            "handed_over_at": null,
+            "handed_over_by": null,
+            "delivery_note": null,
+            "admin_handed_over": false,
+            "admin_handover_reason": null,
+            "admin_delivery_evidence": null,
+            "admin_handover_actual_at": null,
+            "traceability_warning": "NO_BATCH_LINK"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "own-allocations",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/allocations?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "12001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "quote_id": "401",
+            "quantity": 3000,
+            "unit_price": 45000,
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "not_started",
+            "version": 1,
+            "started_at": null,
+            "started_by": null,
+            "handed_over_at": null,
+            "handed_over_by": null,
+            "delivery_note": null,
+            "admin_handed_over": false,
+            "admin_handover_reason": null,
+            "admin_delivery_evidence": null,
+            "admin_handover_actual_at": null,
+            "traceability_warning": "NO_BATCH_LINK"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "allocation",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/allocations/12001"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "12001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "quote_id": "401",
+          "quantity": 3000,
+          "unit_price": 45000,
+          "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+          "status": "not_started",
+          "version": 1,
+          "started_at": null,
+          "started_by": null,
+          "handed_over_at": null,
+          "handed_over_by": null,
+          "delivery_note": null,
+          "admin_handed_over": false,
+          "admin_handover_reason": null,
+          "admin_delivery_evidence": null,
+          "admin_handover_actual_at": null,
+          "traceability_warning": "NO_BATCH_LINK"
+        }
+      }
+    }
+  },
+  {
+    "name": "allocation-history",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/allocations/12001/history?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "16001",
+            "event_type": "created",
+            "prev_status": null,
+            "new_status": "not_started",
+            "performed_by": {
+              "id": "101",
+              "display_name": "Khách mẫu"
+            },
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "is_admin_action": false,
+            "note": null,
+            "evidence": null
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "allocation-batches",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/allocations/12001/batches?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "batch_id": "901",
+            "batch_name": "Lô cốc mẫu",
+            "linked_quantity": 3000,
+            "is_trace_public": true,
+            "trace_url": "/api/v1/trace/demo-bat-trang-901",
+            "linked_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "split-queue",
+    "role": "admin",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/admin/split-queue?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "request_id": "10001",
+            "request_version": 4,
+            "split_requested_at": "2026-11-10T09:00:00.000Z",
+            "waiting_seconds": 120,
+            "coordination_state": "awaiting_buyer",
+            "revision_reason": null,
+            "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "eligible_quote_count": 2,
+            "eligible_capacity": "5000",
+            "required_quantity": 5000
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "proposals",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/split-proposals?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "501",
+            "request_id": "10001",
+            "status": "proposed",
+            "version": 1,
+            "created_at": "2026-11-10T09:00:00.000Z",
+            "decision_deadline": "2026-11-14T17:00:00.000Z",
+            "expired_at": null,
+            "expire_reason": null,
+            "rejected_by": null,
+            "rejected_at": null,
+            "reject_reason": null,
+            "items": [
+              {
+                "workshop_id": "301",
+                "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+                "quote_id": "401",
+                "quote_version": 1,
+                "quantity": 3000,
+                "unit_price": 45000,
+                "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+                "line_total": "135000000"
+              },
+              {
+                "workshop_id": "302",
+                "workshop_name": "Xưởng gốm mẫu thứ hai",
+                "quote_id": "402",
+                "quote_version": 1,
+                "quantity": 2000,
+                "unit_price": 46000,
+                "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+                "line_total": "92000000"
+              }
+            ],
+            "total_amount": "227000000"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "proposal",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/split-proposals/501"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "501",
+          "request_id": "10001",
+          "status": "proposed",
+          "version": 1,
+          "created_at": "2026-11-10T09:00:00.000Z",
+          "decision_deadline": "2026-11-14T17:00:00.000Z",
+          "expired_at": null,
+          "expire_reason": null,
+          "rejected_by": null,
+          "rejected_at": null,
+          "reject_reason": null,
+          "items": [
+            {
+              "workshop_id": "301",
+              "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+              "quote_id": "401",
+              "quote_version": 1,
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "135000000"
+            },
+            {
+              "workshop_id": "302",
+              "workshop_name": "Xưởng gốm mẫu thứ hai",
+              "quote_id": "402",
+              "quote_version": 1,
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "92000000"
+            }
+          ],
+          "total_amount": "227000000"
+        }
+      }
+    }
+  },
+  {
+    "name": "proposal-expired",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/split-proposals/501"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "501",
+          "request_id": "10001",
+          "status": "expired",
+          "version": 2,
+          "created_at": "2026-11-10T09:00:00.000Z",
+          "decision_deadline": "2026-11-14T17:00:00.000Z",
+          "expired_at": "2026-11-10T09:00:00.000Z",
+          "expire_reason": "quote_changed",
+          "rejected_by": null,
+          "rejected_at": null,
+          "reject_reason": null,
+          "items": [
+            {
+              "workshop_id": "301",
+              "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+              "quote_id": "401",
+              "quote_version": 1,
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "135000000"
+            },
+            {
+              "workshop_id": "302",
+              "workshop_name": "Xưởng gốm mẫu thứ hai",
+              "quote_id": "402",
+              "quote_version": 1,
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "92000000"
+            }
+          ],
+          "total_amount": "227000000"
+        }
+      }
+    }
+  },
+  {
+    "name": "empty-requests",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/buyer/quote-requests?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 0,
+          "total_pages": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "login",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "buyer_demo",
+        "password": "ExampleOnlyPassword!123"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "user": {
+            "id": "101",
+            "username": "buyer_demo",
+            "display_name": "Khách mẫu",
+            "role": "buyer",
+            "workshop_id": null,
+            "session_level": "normal"
+          },
+          "csrf_token": "mock-csrf-token"
+        }
+      }
+    }
+  },
+  {
+    "name": "login-temp",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "artisan_demo",
+        "password": "ExampleOnlyPassword!123"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "user": {
+            "id": "201",
+            "username": "artisan_demo",
+            "display_name": null,
+            "role": "artisan",
+            "workshop_id": "301",
+            "session_level": "temp_password"
+          },
+          "csrf_token": "mock-csrf-token"
+        }
+      }
+    }
+  },
+  {
+    "name": "register-buyer",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/register-buyer",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "buyer_demo",
+        "password": "ExampleOnlyPassword!123",
+        "password_confirmation": "ExampleOnlyPassword!123",
+        "display_name": "Khách mẫu",
+        "phone": "0900000000"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "101",
+          "username": "buyer_demo",
+          "display_name": "Khách mẫu",
+          "role": "buyer",
+          "created_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "change-password",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/change-password",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "current_password": "ExampleOnlyPassword!123",
+        "new_password": "AnotherExampleOnly!123",
+        "new_password_confirmation": "AnotherExampleOnly!123"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "reauthentication_required": true
+        }
+      }
+    }
+  },
+  {
+    "name": "change-temp-password",
+    "role": "temp_password",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/change-temp-password",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "current_temp_password": "ExampleOnlyPassword!123",
+        "new_password": "AnotherExampleOnly!123",
+        "new_password_confirmation": "AnotherExampleOnly!123"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "reauthentication_required": true
+        }
+      }
+    }
+  },
+  {
+    "name": "logout",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/logout",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {}
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "logged_out": true
+        }
+      }
+    }
+  },
+  {
+    "name": "create-artisan",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/accounts/artisan",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "artisan_demo",
+        "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+        "address": "Bát Tràng, Hà Nội"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "account_id": "201",
+          "username": "artisan_demo",
+          "workshop_id": "301",
+          "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+          "temporary_password": "ExampleOnlyPassword!123",
+          "expires_at": "2026-11-11T08:00:00.000Z",
+          "note": "Mật khẩu giả dùng để dựng giao diện hiển thị một lần."
+        }
+      }
+    }
+  },
+  {
+    "name": "reset-password",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/accounts/201/reset-password",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "admin_current_password": "ExampleOnlyPassword!123",
+        "reason": "Tình huống mẫu mất quyền truy cập.",
+        "verification_evidence": "Biên bản mẫu đã xác minh trực tiếp."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "account_id": "201",
+          "temporary_password": "ExampleOnlyPassword!123",
+          "expires_at": "2026-11-11T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "create-upload-scope",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/workshop-upload-scopes",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {}
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "initial_workshop_key": "d9155555-6369-480f-9953-85b68d8fbef8",
+          "expires_at": "2026-11-11T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "save-workshop",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/workshop",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Xưởng gốm mẫu Bát Tràng",
+        "story": "Xưởng làm gốm thủ công.",
+        "address": "Bát Tràng, Hà Nội",
+        "latitude": 20.9781,
+        "longitude": 105.914,
+        "avatar_image_id": "501",
+        "image_ids": [
+          "501"
+        ],
+        "certificates": []
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "301",
+          "name": "Xưởng gốm mẫu Bát Tràng",
+          "story": "Xưởng làm gốm thủ công.",
+          "address": "Bát Tràng, Hà Nội",
+          "latitude": 20.9781,
+          "longitude": 105.914,
+          "accepting_visitors": true,
+          "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+          "images": [
+            {
+              "id": "501",
+              "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+              "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+            }
+          ],
+          "certificates": [],
+          "status": "active",
+          "is_profile_public": true,
+          "missing_public_fields": [],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "visitors",
+    "role": "artisan",
+    "request": {
+      "method": "PATCH",
+      "url": "/api/v1/artisan/workshop/visitors",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "accepting_visitors": false
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "accepting_visitors": false
+        }
+      }
+    }
+  },
+  {
+    "name": "suspend-workshop",
+    "role": "admin",
+    "request": {
+      "method": "PATCH",
+      "url": "/api/v1/admin/workshops/301/status",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "status": "suspended",
+        "reason": "Lý do tạm ngừng mẫu."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "301",
+          "name": "Xưởng gốm mẫu Bát Tràng",
+          "story": "Xưởng làm gốm thủ công.",
+          "address": "Bát Tràng, Hà Nội",
+          "latitude": 20.9781,
+          "longitude": 105.914,
+          "accepting_visitors": true,
+          "avatar_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+          "images": [
+            {
+              "id": "501",
+              "thumbnail_url": "/api/v1/media/current/workshop_profile/301/images/501/thumbnail",
+              "display_url": "/api/v1/media/current/workshop_profile/301/images/501/display"
+            }
+          ],
+          "certificates": [],
+          "status": "suspended",
+          "is_profile_public": false,
+          "missing_public_fields": [],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "account": {
+            "id": "201",
+            "username": "artisan_demo",
+            "display_name": null,
+            "role": "artisan",
+            "workshop_id": "301"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "create-category",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/categories",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Ấm, chén và cốc"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "11",
+          "name": "Ấm, chén và cốc",
+          "is_active": true
+        }
+      }
+    }
+  },
+  {
+    "name": "save-category",
+    "role": "admin",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/admin/categories/11",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Ấm, chén và cốc",
+        "is_active": false
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "11",
+          "name": "Ấm, chén và cốc",
+          "is_active": false
+        }
+      }
+    }
+  },
+  {
+    "name": "delete-category",
+    "role": "admin",
+    "request": {
+      "method": "DELETE",
+      "url": "/api/v1/admin/categories/12",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      }
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "body": null
+    }
+  },
+  {
+    "name": "create-product",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/products",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "batch_id": "901",
+        "category_id": "11",
+        "name": "Cốc men trắng",
+        "price": 45000,
+        "description": null,
+        "image_ids": [
+          "504"
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "701",
+          "name": "Cốc men trắng",
+          "price": 45000,
+          "description": null,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "images": [
+            {
+              "id": "504",
+              "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+              "display_url": "/api/v1/media/current/product/701/images/504/display"
+            }
+          ],
+          "batch": {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901"
+          },
+          "status": "draft",
+          "published_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "save-product",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/products/701",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "batch_id": "901",
+        "category_id": "11",
+        "name": "Cốc men trắng",
+        "price": 45000,
+        "description": null,
+        "image_ids": [
+          "504"
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "701",
+          "name": "Cốc men trắng",
+          "price": 45000,
+          "description": null,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "images": [
+            {
+              "id": "504",
+              "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+              "display_url": "/api/v1/media/current/product/701/images/504/display"
+            }
+          ],
+          "batch": {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901"
+          },
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "publish-product",
+    "role": "artisan",
+    "request": {
+      "method": "PATCH",
+      "url": "/api/v1/artisan/products/701/status",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "status": "published"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "701",
+          "name": "Cốc men trắng",
+          "price": 45000,
+          "description": null,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "images": [
+            {
+              "id": "504",
+              "thumbnail_url": "/api/v1/media/current/product/701/images/504/thumbnail",
+              "display_url": "/api/v1/media/current/product/701/images/504/display"
+            }
+          ],
+          "batch": {
+            "id": "901",
+            "name": "Lô cốc mẫu",
+            "trace_url": "/api/v1/trace/demo-bat-trang-901"
+          },
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "delete-product",
+    "role": "artisan",
+    "request": {
+      "method": "DELETE",
+      "url": "/api/v1/artisan/products/702",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      }
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "body": null
+    }
+  },
+  {
+    "name": "create-batch",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/batches",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Lô cốc mẫu"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "901",
+          "name": "Lô cốc mẫu",
+          "status": "draft",
+          "qr_token": "demo-bat-trang-901",
+          "trace_url": null,
+          "published_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "save-batch",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/batches/901",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Lô cốc mẫu"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "901",
+          "name": "Lô cốc mẫu",
+          "status": "draft",
+          "qr_token": "demo-bat-trang-901",
+          "trace_url": null,
+          "published_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "publish-batch",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/batches/901/publish",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {}
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "901",
+          "name": "Lô cốc mẫu",
+          "status": "published",
+          "qr_token": "demo-bat-trang-901",
+          "trace_url": "/api/v1/trace/demo-bat-trang-901",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "create-journal",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/batches/901/journal",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "stage": "Tạo hình",
+        "performed_at": "2026-11-10T08:00:00.000Z",
+        "notes": null,
+        "image_ids": [
+          "801"
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "1001",
+          "batch_id": "901",
+          "stage": "Tạo hình",
+          "performed_at": "2026-11-10T08:00:00.000Z",
+          "notes": null,
+          "images": [
+            {
+              "id": "801",
+              "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+              "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+            }
+          ],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "save-journal",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/batches/901/journal/1001",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "stage": "Tạo hình",
+        "performed_at": "2026-11-10T08:00:00.000Z",
+        "notes": null,
+        "image_ids": [
+          "801"
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "1001",
+          "batch_id": "901",
+          "stage": "Tạo hình",
+          "performed_at": "2026-11-10T08:00:00.000Z",
+          "notes": null,
+          "images": [
+            {
+              "id": "801",
+              "thumbnail_url": "/api/v1/media/current/journal_entry/1001/images/801/thumbnail",
+              "display_url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+            }
+          ],
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "delete-journal",
+    "role": "artisan",
+    "request": {
+      "method": "DELETE",
+      "url": "/api/v1/artisan/batches/902/journal/1002",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      }
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "body": null
+    }
+  },
+  {
+    "name": "create-news",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/news",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "title": "Lịch sinh hoạt làng nghề",
+        "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+        "post_type": "announcement"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "601",
+          "title": "Lịch sinh hoạt làng nghề",
+          "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+          "post_type": "announcement",
+          "status": "draft",
+          "published_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "created_by": "1",
+          "updated_by": null
+        }
+      }
+    }
+  },
+  {
+    "name": "save-news",
+    "role": "admin",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/admin/news/601",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "title": "Lịch sinh hoạt làng nghề",
+        "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+        "post_type": "announcement"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "601",
+          "title": "Lịch sinh hoạt làng nghề",
+          "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+          "post_type": "announcement",
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "created_by": "1",
+          "updated_by": "1"
+        }
+      }
+    }
+  },
+  {
+    "name": "publish-news",
+    "role": "admin",
+    "request": {
+      "method": "PATCH",
+      "url": "/api/v1/admin/news/601/status",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "status": "published"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "601",
+          "title": "Lịch sinh hoạt làng nghề",
+          "content": "Buổi gặp mặt chia sẻ kỹ thuật tạo hình.",
+          "post_type": "announcement",
+          "status": "published",
+          "published_at": "2026-11-10T08:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T08:00:00.000Z",
+          "created_by": "1",
+          "updated_by": null
+        }
+      }
+    }
+  },
+  {
+    "name": "delete-news",
+    "role": "admin",
+    "request": {
+      "method": "DELETE",
+      "url": "/api/v1/admin/news/602",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      }
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "body": null
+    }
+  },
+  {
+    "name": "create-request",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {}
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "draft_request",
+          "version": 1,
+          "category": null,
+          "spec": null,
+          "quantity": null,
+          "unit": null,
+          "unit_set_description": null,
+          "delivery_mode": null,
+          "delivery_region": null,
+          "bidding_deadline": null,
+          "delivery_deadline": null,
+          "bidding_closed_at": null,
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": null,
+          "recipient_phone": null,
+          "delivery_address": null,
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        }
+      }
+    }
+  },
+  {
+    "name": "save-request",
+    "role": "buyer",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/buyer/quote-requests/10001",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 1,
+        "category_id": "11",
+        "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+        "quantity": 5000,
+        "unit": "piece",
+        "unit_set_description": null,
+        "delivery_mode": "at_buyer_address",
+        "delivery_region": "Cầu Giấy, Hà Nội",
+        "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+        "recipient_name": "Người nhận mẫu",
+        "recipient_phone": "0900000000",
+        "bidding_deadline": "2026-11-12T17:00:00.000Z",
+        "delivery_deadline": "2026-12-01T17:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "draft_request",
+          "version": 2,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "draft_request",
+              "version": 2,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "delete-request",
+    "role": "buyer",
+    "request": {
+      "method": "DELETE",
+      "url": "/api/v1/buyer/quote-requests/10001",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 1
+      }
+    },
+    "response": {
+      "status": 204,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "body": null
+    }
+  },
+  {
+    "name": "copy-request",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/copy",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {}
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10002",
+          "status": "draft_request",
+          "version": 1,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": null,
+          "delivery_deadline": null,
+          "bidding_closed_at": null,
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        }
+      }
+    }
+  },
+  {
+    "name": "send-request",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/send",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 2
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "sent_to_artisans",
+          "version": 3,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": true,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "sent_to_artisans",
+              "version": 3,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "change-contact",
+    "role": "buyer",
+    "request": {
+      "method": "PATCH",
+      "url": "/api/v1/buyer/quote-requests/10001/contact",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 3,
+        "recipient_name": "Người nhận mẫu",
+        "recipient_phone": "0900000000"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 4,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": true,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 4,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "decline-request",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/quote-requests/10001/decline",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_recipient_version": 1,
+        "decline_reason": "Xưởng đang đầy tải."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "11001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "response_status": "declined",
+          "version": 2,
+          "sent_at": "2026-11-10T08:00:00.000Z",
+          "responded_at": "2026-11-10T09:00:00.000Z",
+          "decline_reason": "Xưởng đang đầy tải.",
+          "eligibility_labels": []
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 3,
+              "cancelled_at": null
+            },
+            "recipient": {
+              "id": "11001",
+              "status": "declined",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "submit-quote",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/quote-requests/10001/quote",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_recipient_version": 1,
+        "expected_quote_version": null,
+        "unit_price": 45000,
+        "max_quantity": 3000,
+        "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+        "committed_delivery_at": "2026-11-28T17:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "quote": {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          },
+          "recipient": {
+            "id": "11001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "response_status": "quoted",
+            "version": 2,
+            "sent_at": "2026-11-10T08:00:00.000Z",
+            "responded_at": "2026-11-10T09:00:00.000Z",
+            "decline_reason": null,
+            "eligibility_labels": []
+          }
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 3,
+              "cancelled_at": null
+            },
+            "quote": {
+              "id": "401",
+              "status": "active",
+              "version": 1
+            },
+            "recipient": {
+              "id": "11001",
+              "status": "quoted",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "withdraw-quote",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/quote-requests/10001/quote/withdraw",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_recipient_version": 2,
+        "expected_quote_version": 1,
+        "withdraw_reason": "Lò nung cần sửa."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "quote": {
+            "id": "401",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 3000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "withdrawn",
+            "version": 2,
+            "withdraw_reason": "Lò nung cần sửa.",
+            "withdrawn_at": "2026-11-10T09:00:00.000Z",
+            "is_eligible": false,
+            "ineligible_reasons": [
+              "QUOTE_WITHDRAWN"
+            ],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          },
+          "recipient": {
+            "id": "11001",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "response_status": "withdrawn",
+            "version": 3,
+            "sent_at": "2026-11-10T08:00:00.000Z",
+            "responded_at": "2026-11-10T09:00:00.000Z",
+            "decline_reason": null,
+            "eligibility_labels": []
+          }
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 3,
+              "cancelled_at": null
+            },
+            "quote": {
+              "id": "401",
+              "status": "withdrawn",
+              "version": 2
+            },
+            "recipient": {
+              "id": "11001",
+              "status": "withdrawn",
+              "version": 3
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "close-bidding",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/close-bidding",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 3
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 4,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": "2026-11-10T09:00:00.000Z",
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 4,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "request-split",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/request-split",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 4
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 5,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": "2026-11-10T09:00:00.000Z",
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": "2026-11-10T09:00:00.000Z",
+          "coordination_state": "awaiting_admin",
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": "2026-11-14T17:00:00.000Z",
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 5,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "create-proposal",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/quote-requests/10001/split-proposals",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_id": null,
+        "expected_proposal_version": null,
+        "items": [
+          {
+            "workshop_id": "301",
+            "quote_id": "401",
+            "expected_quote_version": 1,
+            "allocated_quantity": 3000
+          },
+          {
+            "workshop_id": "302",
+            "quote_id": "402",
+            "expected_quote_version": 1,
+            "allocated_quantity": 2000
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "501",
+          "request_id": "10001",
+          "status": "proposed",
+          "version": 1,
+          "created_at": "2026-11-10T09:00:00.000Z",
+          "decision_deadline": "2026-11-14T17:00:00.000Z",
+          "expired_at": null,
+          "expire_reason": null,
+          "rejected_by": null,
+          "rejected_at": null,
+          "reject_reason": null,
+          "items": [
+            {
+              "workshop_id": "301",
+              "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+              "quote_id": "401",
+              "quote_version": 1,
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "135000000"
+            },
+            {
+              "workshop_id": "302",
+              "workshop_name": "Xưởng gốm mẫu thứ hai",
+              "quote_id": "402",
+              "quote_version": 1,
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "92000000"
+            }
+          ],
+          "total_amount": "227000000"
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 5,
+              "cancelled_at": null
+            },
+            "proposal": {
+              "id": "501",
+              "status": "proposed",
+              "version": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "reject-proposal",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/split-proposals/501/reject",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_version": 1,
+        "reason": "Cần xem lại phương án."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "501",
+          "request_id": "10001",
+          "status": "expired",
+          "version": 2,
+          "created_at": "2026-11-10T09:00:00.000Z",
+          "decision_deadline": "2026-11-14T17:00:00.000Z",
+          "expired_at": "2026-11-10T09:00:00.000Z",
+          "expire_reason": "buyer_rejected",
+          "rejected_by": {
+            "id": "101",
+            "display_name": "Khách mẫu"
+          },
+          "rejected_at": "2026-11-10T09:00:00.000Z",
+          "reject_reason": "Cần xem lại phương án.",
+          "items": [
+            {
+              "workshop_id": "301",
+              "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+              "quote_id": "401",
+              "quote_version": 1,
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "135000000"
+            },
+            {
+              "workshop_id": "302",
+              "workshop_name": "Xưởng gốm mẫu thứ hai",
+              "quote_id": "402",
+              "quote_version": 1,
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "line_total": "92000000"
+            }
+          ],
+          "total_amount": "227000000"
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 5,
+              "cancelled_at": null
+            },
+            "proposal": {
+              "id": "501",
+              "status": "expired",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "accept-proposal",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/split-proposals/501/accept",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_version": 1
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "request_id": "10001",
+          "request_status": "buyer_accepted",
+          "request_version": 6,
+          "accepted_proposal_id": "501",
+          "allocations": [
+            {
+              "id": "12001",
+              "request_id": "10001",
+              "workshop": {
+                "id": "301",
+                "name": "Xưởng gốm mẫu Bát Tràng"
+              },
+              "quote_id": "401",
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "not_started",
+              "version": 1,
+              "started_at": null,
+              "started_by": null,
+              "handed_over_at": null,
+              "handed_over_by": null,
+              "delivery_note": null,
+              "admin_handed_over": false,
+              "admin_handover_reason": null,
+              "admin_delivery_evidence": null,
+              "admin_handover_actual_at": null,
+              "traceability_warning": "NO_BATCH_LINK"
+            },
+            {
+              "id": "12002",
+              "request_id": "10001",
+              "workshop": {
+                "id": "302",
+                "name": "Xưởng gốm mẫu thứ hai"
+              },
+              "quote_id": "402",
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "not_started",
+              "version": 1,
+              "started_at": null,
+              "started_by": null,
+              "handed_over_at": null,
+              "handed_over_by": null,
+              "delivery_note": null,
+              "admin_handed_over": false,
+              "admin_handover_reason": null,
+              "admin_delivery_evidence": null,
+              "admin_handover_actual_at": null,
+              "traceability_warning": "NO_BATCH_LINK"
+            }
+          ]
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "buyer_accepted",
+              "version": 6,
+              "cancelled_at": null
+            },
+            "proposal": {
+              "id": "501",
+              "status": "accepted",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "accept-quote",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/accept-quote",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "quote_id": "403",
+        "expected_request_version": 3,
+        "expected_quote_version": 1
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "request_id": "10001",
+          "request_status": "buyer_accepted",
+          "request_version": 4,
+          "accepted_proposal_id": null,
+          "allocations": [
+            {
+              "id": "12001",
+              "request_id": "10001",
+              "workshop": {
+                "id": "301",
+                "name": "Xưởng gốm mẫu Bát Tràng"
+              },
+              "quote_id": "403",
+              "quantity": 5000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "not_started",
+              "version": 1,
+              "started_at": null,
+              "started_by": null,
+              "handed_over_at": null,
+              "handed_over_by": null,
+              "delivery_note": null,
+              "admin_handed_over": false,
+              "admin_handover_reason": null,
+              "admin_delivery_evidence": null,
+              "admin_handover_actual_at": null,
+              "traceability_warning": "NO_BATCH_LINK"
+            }
+          ]
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "buyer_accepted",
+              "version": 4,
+              "cancelled_at": null
+            },
+            "quote": {
+              "id": "403",
+              "status": "accepted",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "start-allocation",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/allocations/12001/start",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_allocation_version": 1
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "12001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "quote_id": "401",
+          "quantity": 3000,
+          "unit_price": 45000,
+          "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+          "status": "in_production",
+          "version": 2,
+          "started_at": "2026-11-10T09:00:00.000Z",
+          "started_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "handed_over_at": null,
+          "handed_over_by": null,
+          "delivery_note": null,
+          "admin_handed_over": false,
+          "admin_handover_reason": null,
+          "admin_delivery_evidence": null,
+          "admin_handover_actual_at": null,
+          "traceability_warning": "NO_BATCH_LINK"
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 7,
+              "cancelled_at": null
+            },
+            "allocation": {
+              "id": "12001",
+              "status": "in_production",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "link-batches",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/allocations/12001/batches",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_allocation_version": 2,
+        "links": [
+          {
+            "batch_id": "901",
+            "linked_quantity": 3000
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "12001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "quote_id": "401",
+          "quantity": 3000,
+          "unit_price": 45000,
+          "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+          "status": "in_production",
+          "version": 3,
+          "started_at": "2026-11-10T09:00:00.000Z",
+          "started_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "handed_over_at": null,
+          "handed_over_by": null,
+          "delivery_note": null,
+          "admin_handed_over": false,
+          "admin_handover_reason": null,
+          "admin_delivery_evidence": null,
+          "admin_handover_actual_at": null,
+          "traceability_warning": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 7,
+              "cancelled_at": null
+            },
+            "allocation": {
+              "id": "12001",
+              "status": "in_production",
+              "version": 3
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "handover",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/allocations/12001/handover",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_allocation_version": 3,
+        "delivery_note": "Đã bàn giao đủ phần việc."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "12001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "quote_id": "401",
+          "quantity": 3000,
+          "unit_price": 45000,
+          "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+          "status": "handed_over",
+          "version": 4,
+          "started_at": "2026-11-10T09:00:00.000Z",
+          "started_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "handed_over_at": "2026-11-10T09:00:00.000Z",
+          "handed_over_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "delivery_note": "Đã bàn giao đủ phần việc.",
+          "admin_handed_over": false,
+          "admin_handover_reason": null,
+          "admin_delivery_evidence": null,
+          "admin_handover_actual_at": null,
+          "traceability_warning": "NO_BATCH_LINK"
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 7,
+              "cancelled_at": null
+            },
+            "allocation": {
+              "id": "12001",
+              "status": "handed_over",
+              "version": 4
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "handover-admin",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/allocations/12001/handover-by-admin",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_allocation_version": 3,
+        "reason": "Xưởng mất điện.",
+        "evidence": "Biên bản mẫu đã ký.",
+        "actual_handover_at": "2026-11-10T09:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "12001",
+          "request_id": "10001",
+          "workshop": {
+            "id": "301",
+            "name": "Xưởng gốm mẫu Bát Tràng"
+          },
+          "quote_id": "401",
+          "quantity": 3000,
+          "unit_price": 45000,
+          "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+          "status": "handed_over",
+          "version": 4,
+          "started_at": "2026-11-10T08:00:00.000Z",
+          "started_by": {
+            "id": "201",
+            "display_name": null
+          },
+          "handed_over_at": "2026-11-10T09:00:00.000Z",
+          "handed_over_by": {
+            "id": "1",
+            "display_name": null
+          },
+          "delivery_note": "Đã bàn giao đủ phần việc.",
+          "admin_handed_over": true,
+          "admin_handover_reason": "Xưởng mất điện.",
+          "admin_delivery_evidence": "Biên bản mẫu đã ký.",
+          "admin_handover_actual_at": "2026-11-10T09:00:00.000Z",
+          "traceability_warning": "NO_BATCH_LINK"
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 7,
+              "cancelled_at": null
+            },
+            "allocation": {
+              "id": "12001",
+              "status": "handed_over",
+              "version": 4
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "confirm-delivery-buyer",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/confirm-delivery",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 7
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "delivered",
+          "version": 8,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": "2026-11-10T08:00:00.000Z",
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": {
+            "performed_by": {
+              "id": "101",
+              "display_name": "Khách mẫu"
+            },
+            "performed_at": "2026-11-10T09:00:00.000Z",
+            "is_admin_action": false,
+            "reason": null,
+            "evidence": null
+          }
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "delivered",
+              "version": 8,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "confirm-delivery-admin",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/quote-requests/10001/confirm-delivery-by-admin",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 7,
+        "reason": "Buyer đã nhận đủ.",
+        "evidence": "Biên bản mẫu đã ký."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "delivered",
+          "version": 8,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": "2026-11-10T08:00:00.000Z",
+          "is_bidding_open": false,
+          "cancelled_at": null,
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": null,
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": {
+            "performed_by": {
+              "id": "1",
+              "display_name": null
+            },
+            "performed_at": "2026-11-10T09:00:00.000Z",
+            "is_admin_action": true,
+            "reason": "Buyer đã nhận đủ.",
+            "evidence": "Biên bản mẫu đã ký."
+          }
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "delivered",
+              "version": 8,
+              "cancelled_at": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "cancel-buyer",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/cancel",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 3,
+        "cancel_reason": "Lý do hủy mẫu."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "artisans_bidding",
+          "version": 4,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": false,
+          "cancelled_at": "2026-11-10T09:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": "Lý do hủy mẫu.",
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "artisans_bidding",
+              "version": 4,
+              "cancelled_at": "2026-11-10T09:00:00.000Z"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "cancel-admin",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/quote-requests/10001/cancel-by-admin",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 7,
+        "cancel_reason": "Lý do hủy mẫu.",
+        "goods_handling_note": "Giữ lịch sử phần đã bàn giao, xử lý ngoài hệ thống."
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "id": "10001",
+          "status": "in_production",
+          "version": 8,
+          "category": {
+            "id": "11",
+            "name": "Ấm, chén và cốc"
+          },
+          "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+          "quantity": 5000,
+          "unit": "piece",
+          "unit_set_description": null,
+          "delivery_mode": "at_buyer_address",
+          "delivery_region": "Cầu Giấy, Hà Nội",
+          "bidding_deadline": "2026-11-12T17:00:00.000Z",
+          "delivery_deadline": "2026-12-01T17:00:00.000Z",
+          "bidding_closed_at": null,
+          "is_bidding_open": false,
+          "cancelled_at": "2026-11-10T09:00:00.000Z",
+          "created_at": "2026-11-10T08:00:00.000Z",
+          "updated_at": "2026-11-10T09:00:00.000Z",
+          "recipient_name": "Người nhận mẫu",
+          "recipient_phone": "0900000000",
+          "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+          "cancel_reason": "Lý do hủy mẫu.",
+          "split_requested_at": null,
+          "coordination_state": null,
+          "no_valid_quotes": false,
+          "nearest_accept_deadline": null,
+          "delivery_confirmation": null
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": false,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 8,
+              "cancelled_at": "2026-11-10T09:00:00.000Z"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "upload-image",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/media/upload",
+      "headers": {
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "form": {
+        "file": "sample-image.png",
+        "context_type": "journal_entry",
+        "target_workshop_id": "301"
+      }
+    },
+    "response": {
+      "status": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "image_id": "801",
+          "context_type": "journal_entry",
+          "context_id": null,
+          "thumbnail_url": "/api/v1/media/pending/801/thumbnail",
+          "display_url": "/api/v1/media/pending/801/display",
+          "unattached_expires_at": "2026-11-11T08:00:00.000Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "image-pending",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/media/pending/801/thumbnail"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "body": null,
+      "bodyBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII="
+    }
+  },
+  {
+    "name": "image-current",
+    "role": "public",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/media/current/journal_entry/1001/images/801/display"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "body": null,
+      "bodyBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII="
+    }
+  },
+  {
+    "name": "image-history",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/media/history/1101/images/801/thumbnail"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "body": null,
+      "bodyBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII="
+    }
+  },
+  {
+    "name": "invalid-input",
+    "role": "buyer",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/buyer/quote-requests/10001",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 1,
+        "category_id": "11",
+        "spec": "5000 cốc gốm men trắng dung tích 300 ml.",
+        "quantity": 5000,
+        "unit": "piece",
+        "unit_set_description": null,
+        "delivery_mode": "at_buyer_address",
+        "delivery_region": "Cầu Giấy, Hà Nội",
+        "delivery_address": "Địa chỉ giao hàng giả lập tại Hà Nội",
+        "recipient_name": "Người nhận mẫu",
+        "recipient_phone": "0900000000",
+        "bidding_deadline": "2026-11-12T17:00:00.000Z",
+        "delivery_deadline": "2026-12-01T17:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 400,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:INVALID_INPUT",
+        "title": "Dữ liệu không hợp lệ",
+        "status": 400,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "INVALID_INPUT",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c",
+        "errors": [
+          {
+            "field": "/quantity",
+            "message": "Số lượng phải là số nguyên dương."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "session-expired",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 401,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:SESSION_EXPIRED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 401,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "SESSION_EXPIRED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "permission-denied",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/accounts/artisan",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "artisan_demo",
+        "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+        "address": "Bát Tràng, Hà Nội"
+      }
+    },
+    "response": {
+      "status": 403,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:PERMISSION_DENIED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 403,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "PERMISSION_DENIED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "temp-password-restricted",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/artisan/workshop"
+    },
+    "response": {
+      "status": 403,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:TEMP_PASSWORD_RESTRICTED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 403,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "TEMP_PASSWORD_RESTRICTED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "csrf-invalid",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/send",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 2
+      }
+    },
+    "response": {
+      "status": 403,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:CSRF_INVALID",
+        "title": "Không thể thực hiện thao tác",
+        "status": 403,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "CSRF_INVALID",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "resource-not-found",
+    "role": "artisan",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/media/history/1101/images/801/thumbnail"
+    },
+    "response": {
+      "status": 404,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:RESOURCE_NOT_FOUND",
+        "title": "Không thể thực hiện thao tác",
+        "status": 404,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "RESOURCE_NOT_FOUND",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "version-conflict",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/split-proposals/501/accept",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_version": 1
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:CONCURRENCY_CONFLICT",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "CONCURRENCY_CONFLICT",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "idempotency-conflict",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/split-proposals/501/accept",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_version": 1
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:IDEMPOTENCY_CONFLICT",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "IDEMPOTENCY_CONFLICT",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "username-taken",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/register-buyer",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "buyer_demo",
+        "password": "ExampleOnlyPassword!123",
+        "password_confirmation": "ExampleOnlyPassword!123",
+        "display_name": "Khách mẫu",
+        "phone": "0900000000"
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:USERNAME_TAKEN",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "USERNAME_TAKEN",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "name-taken",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/categories",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "name": "Ấm, chén và cốc"
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:NAME_TAKEN",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "NAME_TAKEN",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "upload-scope-busy",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/accounts/artisan",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "artisan_demo",
+        "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+        "address": "Bát Tràng, Hà Nội",
+        "initial_workshop_key": "d9155555-6369-480f-9953-85b68d8fbef8",
+        "image_ids": [
+          "501"
+        ]
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:UPLOAD_SCOPE_BUSY",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "UPLOAD_SCOPE_BUSY",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "upload-scope-unavailable",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/accounts/artisan",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "artisan_demo",
+        "workshop_name": "Xưởng gốm mẫu Bát Tràng",
+        "address": "Bát Tràng, Hà Nội",
+        "initial_workshop_key": "d9155555-6369-480f-9953-85b68d8fbef8",
+        "image_ids": [
+          "501"
+        ]
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:UPLOAD_SCOPE_UNAVAILABLE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "UPLOAD_SCOPE_UNAVAILABLE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "quota-exceeded",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/media/upload",
+      "headers": {
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "form": {
+        "file": "sample-image.png",
+        "context_type": "journal_entry",
+        "target_workshop_id": "301"
+      }
+    },
+    "response": {
+      "status": 409,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:STORAGE_QUOTA_EXCEEDED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 409,
+        "detail": "Dữ liệu đã thay đổi. Tải lại trước khi tiếp tục.",
+        "code": "STORAGE_QUOTA_EXCEEDED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "payload-too-large",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/media/upload",
+      "headers": {
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "form": {
+        "file": "sample-image.png",
+        "context_type": "journal_entry",
+        "target_workshop_id": "301"
+      }
+    },
+    "response": {
+      "status": 413,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:PAYLOAD_TOO_LARGE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 413,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "PAYLOAD_TOO_LARGE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "unsupported-media-type",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/media/upload",
+      "headers": {
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "form": {
+        "file": "sample-image.png",
+        "context_type": "journal_entry",
+        "target_workshop_id": "301"
+      }
+    },
+    "response": {
+      "status": 415,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:UNSUPPORTED_MEDIA_TYPE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 415,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "UNSUPPORTED_MEDIA_TYPE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "quote-expired",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/accept-quote",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "quote_id": "403",
+        "expected_request_version": 3,
+        "expected_quote_version": 1
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:QUOTE_EXPIRED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "QUOTE_EXPIRED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "workshop-suspended",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/artisan/quote-requests/10001/quote",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_recipient_version": 1,
+        "expected_quote_version": null,
+        "unit_price": 45000,
+        "max_quantity": 3000,
+        "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+        "committed_delivery_at": "2026-11-28T17:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:WORKSHOP_SUSPENDED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "WORKSHOP_SUSPENDED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "invalid-state",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/allocations/12001/handover-by-admin",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_allocation_version": 3,
+        "reason": "Xưởng mất điện.",
+        "evidence": "Biên bản mẫu đã ký.",
+        "actual_handover_at": "2026-11-10T08:00:00.000Z"
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:INVALID_STATE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "INVALID_STATE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "no-eligible-workshop",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/send",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 2
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:NO_ELIGIBLE_WORKSHOP",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "NO_ELIGIBLE_WORKSHOP",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "insufficient-capacity",
+    "role": "admin",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/admin/quote-requests/10001/split-proposals",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_id": null,
+        "expected_proposal_version": null,
+        "items": [
+          {
+            "workshop_id": "301",
+            "quote_id": "401",
+            "expected_quote_version": 1,
+            "allocated_quantity": 3000
+          },
+          {
+            "workshop_id": "302",
+            "quote_id": "402",
+            "expected_quote_version": 1,
+            "allocated_quantity": 2000
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:INSUFFICIENT_CAPACITY",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "INSUFFICIENT_CAPACITY",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "image-context-mismatch",
+    "role": "artisan",
+    "request": {
+      "method": "PUT",
+      "url": "/api/v1/artisan/products/701",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "batch_id": "901",
+        "category_id": "11",
+        "name": "Cốc men trắng",
+        "price": 45000,
+        "description": null,
+        "image_ids": [
+          "504"
+        ]
+      }
+    },
+    "response": {
+      "status": 422,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:IMAGE_CONTEXT_MISMATCH",
+        "title": "Không thể thực hiện thao tác",
+        "status": 422,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "IMAGE_CONTEXT_MISMATCH",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "rate-limit",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "buyer_demo",
+        "password": "ExampleOnlyPassword!123"
+      }
+    },
+    "response": {
+      "status": 429,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store",
+        "Retry-After": "30"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:RATE_LIMIT_EXCEEDED",
+        "title": "Không thể thực hiện thao tác",
+        "status": 429,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "RATE_LIMIT_EXCEEDED",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "internal-error",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001"
+    },
+    "response": {
+      "status": 500,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:INTERNAL_SERVER_ERROR",
+        "title": "Không thể thực hiện thao tác",
+        "status": 500,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "INTERNAL_SERVER_ERROR",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "security-unavailable",
+    "role": "public",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "body": {
+        "username": "buyer_demo",
+        "password": "ExampleOnlyPassword!123"
+      }
+    },
+    "response": {
+      "status": 503,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:SECURITY_SERVICE_UNAVAILABLE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 503,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "SECURITY_SERVICE_UNAVAILABLE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "image-processing-unavailable",
+    "role": "artisan",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/media/upload",
+      "headers": {
+        "X-CSRF-Token": "mock-csrf-token"
+      },
+      "form": {
+        "file": "sample-image.png",
+        "context_type": "journal_entry",
+        "target_workshop_id": "301"
+      }
+    },
+    "response": {
+      "status": 503,
+      "headers": {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "type": "urn:vcraft:problem:IMAGE_PROCESSING_UNAVAILABLE",
+        "title": "Không thể thực hiện thao tác",
+        "status": 503,
+        "detail": "Tình huống lỗi mẫu để kiểm tra giao diện.",
+        "code": "IMAGE_PROCESSING_UNAVAILABLE",
+        "tracking_id": "fd170555-8e69-4eab-a7f8-9c5604d7ca0c"
+      }
+    }
+  },
+  {
+    "name": "accept-proposal-replay",
+    "role": "buyer",
+    "request": {
+      "method": "POST",
+      "url": "/api/v1/buyer/quote-requests/10001/split-proposals/501/accept",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "mock-csrf-token",
+        "X-Idempotency-Key": "b85ebf30-2f70-47bb-8d08-46ccf22d3414"
+      },
+      "body": {
+        "expected_request_version": 5,
+        "expected_proposal_version": 1
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "request_id": "10001",
+          "request_status": "buyer_accepted",
+          "request_version": 6,
+          "accepted_proposal_id": "501",
+          "allocations": [
+            {
+              "id": "12001",
+              "request_id": "10001",
+              "workshop": {
+                "id": "301",
+                "name": "Xưởng gốm mẫu Bát Tràng"
+              },
+              "quote_id": "401",
+              "quantity": 3000,
+              "unit_price": 45000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "not_started",
+              "version": 1,
+              "started_at": null,
+              "started_by": null,
+              "handed_over_at": null,
+              "handed_over_by": null,
+              "delivery_note": null,
+              "admin_handed_over": false,
+              "admin_handover_reason": null,
+              "admin_delivery_evidence": null,
+              "admin_handover_actual_at": null,
+              "traceability_warning": "NO_BATCH_LINK"
+            },
+            {
+              "id": "12002",
+              "request_id": "10001",
+              "workshop": {
+                "id": "302",
+                "name": "Xưởng gốm mẫu thứ hai"
+              },
+              "quote_id": "402",
+              "quantity": 2000,
+              "unit_price": 46000,
+              "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+              "status": "not_started",
+              "version": 1,
+              "started_at": null,
+              "started_by": null,
+              "handed_over_at": null,
+              "handed_over_by": null,
+              "delivery_note": null,
+              "admin_handed_over": false,
+              "admin_handover_reason": null,
+              "admin_delivery_evidence": null,
+              "admin_handover_actual_at": null,
+              "traceability_warning": "NO_BATCH_LINK"
+            }
+          ]
+        },
+        "operation": {
+          "id": "19001",
+          "replayed": true,
+          "committed_at": "2026-11-10T09:00:00.000Z",
+          "current_state": {
+            "request": {
+              "id": "10001",
+              "status": "in_production",
+              "version": 7,
+              "cancelled_at": null
+            },
+            "proposal": {
+              "id": "501",
+              "status": "accepted",
+              "version": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "quotes-direct-acceptance",
+    "role": "buyer",
+    "request": {
+      "method": "GET",
+      "url": "/api/v1/quote-requests/10001/quotes?page=1&limit=20"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "id": "403",
+            "request_id": "10001",
+            "workshop": {
+              "id": "301",
+              "name": "Xưởng gốm mẫu Bát Tràng"
+            },
+            "unit_price": 45000,
+            "max_quantity": 5000,
+            "bid_accept_deadline": "2026-11-14T17:00:00.000Z",
+            "committed_delivery_at": "2026-11-28T17:00:00.000Z",
+            "status": "active",
+            "version": 1,
+            "withdraw_reason": null,
+            "withdrawn_at": null,
+            "is_eligible": true,
+            "ineligible_reasons": [],
+            "created_at": "2026-11-10T08:00:00.000Z",
+            "updated_at": "2026-11-10T08:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "total_records": 1,
+          "total_pages": 1
+        }
+      }
+    }
+  }
+]

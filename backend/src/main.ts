@@ -1,21 +1,43 @@
-import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { APP_CONFIG, type AppConfig } from "./common/config/app-config";
+import { checkUploadDirectory } from "./infrastructure/storage/check-upload-directory";
 import { AppModule } from "./bootstrap/app.module";
-import cookieParser = require("cookie-parser");
+import { appLogger } from "./common/observability/app-logger";
+import { configureHttp } from "./bootstrap/configure-http";
+import { configureSwagger } from "./common/http/swagger/configure-swagger";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+    abortOnError: false,
+    logger: appLogger,
+  });
+  const config = app.get<AppConfig>(APP_CONFIG);
   app.enableShutdownHooks();
 
-  // SEC-14: Prefix API toàn hệ thống
-  app.setGlobalPrefix("api");
-
-  // SEC-05: Cookie parser phục vụ Session Cookie
-  app.use(cookieParser());
-
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`vCraft Backend is running on: http://localhost:${port}/api`);
+  configureHttp(app);
+  configureSwagger(app, config);
+  await app.init();
+  await checkUploadDirectory(config.UPLOAD_DIR);
+  await app.listen(config.PORT);
 }
 
-bootstrap();
+void bootstrap().catch((error) => {
+  console.error(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: "error",
+      module: "Bootstrap",
+      event: "startup_failed",
+      message:
+        error instanceof Error &&
+        /^(UPLOAD_DIR|Missing or invalid environment variables:|Cannot read backend .env)/.test(
+          error.message,
+        )
+          ? error.message
+          : "Backend startup failed. Check database connectivity and configuration.",
+    }),
+  );
+  process.exit(1);
+});

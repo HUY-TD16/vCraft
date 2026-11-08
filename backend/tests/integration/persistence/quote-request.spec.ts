@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaService } from '../../../src/infrastructure/database/prisma/prisma.service';
 
 const testUrl = process.env.VCRAFT_TEST_DATABASE_URL;
@@ -8,14 +8,12 @@ describe.skipIf(!testUrl)('QuoteRequest on a migrated PostgreSQL test schema', (
   let db: PrismaService;
 
   beforeAll(async () => {
-    vi.stubEnv('DATABASE_URL', testUrl!);
     const { PrismaService } = await import('../../../src/infrastructure/database/prisma/prisma.service');
-    db = new PrismaService();
+    db = new PrismaService({ DATABASE_URL: testUrl! });
   });
 
   afterAll(async () => {
     await db?.$disconnect();
-    vi.unstubAllEnvs();
   });
 
   it('uses the configured schema for model queries', async () => {
@@ -23,14 +21,15 @@ describe.skipIf(!testUrl)('QuoteRequest on a migrated PostgreSQL test schema', (
     expect(schema).toBeTruthy();
     expect(schema).not.toBe('public');
     const rollback = new Error('rollback fixture');
+    const name = randomUUID();
     await expect(db.$transaction(async tx => {
-      const name = randomUUID();
       await tx.category.create({ data: { name } });
       await tx.$queryRaw`SELECT set_config('search_path', quote_ident(${schema}::text), true)`;
       const rows = await tx.$queryRaw`SELECT name FROM "Category" WHERE name = ${name}`;
       expect(rows).toEqual([{ name }]);
       throw rollback;
     })).rejects.toBe(rollback);
+    expect(await db.category.findUnique({ where: { name } })).toBeNull();
   });
 
   it.each(['spec', 'recipient_name', 'recipient_phone', 'unit_set_description', 'delivery_region', 'delivery_address'])(
