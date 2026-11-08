@@ -78,7 +78,7 @@ describe('business errors', () => {
   });
 
   it('maps module-specific errors without serializing internal data', () => {
-    const response = { status: vi.fn().mockReturnThis(), type: vi.fn().mockReturnThis(), json: vi.fn() };
+    const response = { status: vi.fn().mockReturnThis(), type: vi.fn().mockReturnThis(), json: vi.fn(), setHeader: vi.fn(), removeHeader: vi.fn() };
     const host = { switchToHttp: () => ({ getResponse: () => response }) } as ArgumentsHost;
     const filter = new ProblemDetailsFilter();
     const error = new WorkshopSuspended();

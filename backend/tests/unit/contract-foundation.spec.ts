@@ -12,7 +12,7 @@ import { MockTransactionRunner } from '../support/mocks/transaction-runner.mock'
 describe('contract foundations', () => {
   it('maps a provider business error to Problem Details without exposing internal messages', () => {
     const response = {
-      status: vi.fn().mockReturnThis(), type: vi.fn().mockReturnThis(), json: vi.fn(),
+      status: vi.fn().mockReturnThis(), type: vi.fn().mockReturnThis(), json: vi.fn(), setHeader: vi.fn(), removeHeader: vi.fn(),
     };
     const error = new BusinessRuleException('WORKSHOP_SUSPENDED');
     error.message = 'private implementation details';

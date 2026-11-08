@@ -47,7 +47,7 @@ describe('Problem Details', () => {
   function respond(error: Error) {
     const response = {
       status: vi.fn().mockReturnThis(), type: vi.fn().mockReturnThis(),
-      setHeader: vi.fn(), json: vi.fn(),
+      setHeader: vi.fn(), removeHeader: vi.fn(), json: vi.fn(),
     };
     const host = { switchToHttp: () => ({ getResponse: () => response }) } as ArgumentsHost;
     new ProblemDetailsFilter().catch(error, host);
