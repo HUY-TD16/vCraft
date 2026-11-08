@@ -19,10 +19,13 @@ export function workshopContractSuite(name: string, setup: () => Promise<Worksho
       const fixture = await setup();
       try {
         await fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.activeId], tx));
-        await expect(fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.missingId], tx)))
-          .rejects.toEqual(new BusinessRuleException('RESOURCE_NOT_FOUND'));
-        await expect(fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.suspendedId], tx)))
-          .rejects.toMatchObject({ code: 'WORKSHOP_SUSPENDED' });
+        const missing = fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.missingId], tx));
+        await expect(missing).rejects.toBeInstanceOf(BusinessRuleException);
+        await expect(missing).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+
+        const suspended = fixture.runner.run(tx => fixture.contract.lockAndAssertActive([fixture.suspendedId], tx));
+        await expect(suspended).rejects.toBeInstanceOf(BusinessRuleException);
+        await expect(suspended).rejects.toMatchObject({ code: 'WORKSHOP_SUSPENDED' });
       } finally {
         await fixture.dispose();
       }
