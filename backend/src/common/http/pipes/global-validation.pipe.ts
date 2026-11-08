@@ -14,7 +14,10 @@ export class GlobalValidationPipe implements PipeTransform {
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
     if (metadata.type === 'custom') return value;
     const schema = (metadata.metatype as { schema?: StrictSchema } | undefined)?.schema;
-    if (!schema) throw new InternalServerErrorException();
+    if (!schema) {
+      if (metadata.type === 'param') return value;
+      throw new InternalServerErrorException();
+    }
     return new ZodValidationPipe(schema).transform(value === undefined ? {} : value);
   }
 }

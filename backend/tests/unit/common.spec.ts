@@ -1,8 +1,9 @@
-import { type ArgumentsHost } from '@nestjs/common';
+import { InternalServerErrorException, type ArgumentMetadata, type ArgumentsHost } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { readConfig } from '../../src/common/config/app-config';
 import { InputValidationError, ZodValidationPipe } from '../../src/common/http/pipes/zod-validation.pipe';
+import { createZodDto, GlobalValidationPipe } from '../../src/common/http/pipes/global-validation.pipe';
 import { ApiProblem } from '../../src/common/http/filters/api-problem';
 import { ProblemDetailsFilter } from '../../src/common/http/filters/problem-details.filter';
 
@@ -40,6 +41,34 @@ describe('DTO validation', () => {
     const errors = (error as InputValidationError).errors;
     expect(errors.map(issue => issue.field)).toEqual(['/title', '/items/0/quantity', '/a~1b~0c']);
     expect(JSON.stringify(errors)).not.toContain('private-value');
+  });
+});
+
+describe('GlobalValidationPipe', () => {
+  const globalPipe = new GlobalValidationPipe();
+  class SampleDto extends createZodDto(z.strictObject({ id: z.string().min(1) })) {}
+
+  it('allows param without schema to pass through without error', () => {
+    const metadata: ArgumentMetadata = { type: 'param', metatype: String, data: 'id' };
+    expect(globalPipe.transform('123', metadata)).toBe('123');
+  });
+
+  it('validates param with schema if schema is provided', () => {
+    const metadata: ArgumentMetadata = { type: 'param', metatype: SampleDto };
+    expect(globalPipe.transform({ id: '123' }, metadata)).toEqual({ id: '123' });
+    expect(() => globalPipe.transform({ id: '' }, metadata)).toThrow(InputValidationError);
+  });
+
+  it('allows custom param decorator metadata to pass through', () => {
+    const metadata: ArgumentMetadata = { type: 'custom' };
+    expect(globalPipe.transform({ actorId: '1' }, metadata)).toEqual({ actorId: '1' });
+  });
+
+  it('fails closed when body or query lacks a DTO schema', () => {
+    const bodyMetadata: ArgumentMetadata = { type: 'body', metatype: Object };
+    expect(() => globalPipe.transform({ test: true }, bodyMetadata)).toThrow(InternalServerErrorException);
+    const queryMetadata: ArgumentMetadata = { type: 'query', metatype: Object };
+    expect(() => globalPipe.transform({ test: true }, queryMetadata)).toThrow(InternalServerErrorException);
   });
 });
 
