@@ -5,6 +5,7 @@ import { checkUploadDirectory } from './infrastructure/storage/check-upload-dire
 import { AppModule } from './bootstrap/app.module';
 import { appLogger } from './common/observability/app-logger';
 import { configureHttp } from './bootstrap/configure-http';
+import { configureSwagger } from './common/http/swagger/configure-swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false, abortOnError: false, logger: appLogger });
@@ -12,6 +13,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   configureHttp(app);
+  configureSwagger(app, config);
 
   await app.init();
   await checkUploadDirectory(config.UPLOAD_DIR);

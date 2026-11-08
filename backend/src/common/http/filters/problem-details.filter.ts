@@ -8,7 +8,7 @@ import { ServiceUnavailableException } from '../../application/errors/service-un
 import { appLogger, type AppLogger } from '../../observability/app-logger';
 import { requestContext } from '../../observability/request-context';
 
-const problems = {
+export const problems = {
   400: ['INVALID_INPUT', 'Dữ liệu không hợp lệ', 'Kiểm tra lại dữ liệu đã gửi.'],
   401: ['AUTHENTICATION_REQUIRED', 'Cần đăng nhập', 'Vui lòng đăng nhập để tiếp tục.'],
   403: ['PERMISSION_DENIED', 'Không có quyền', 'Bạn không có quyền thực hiện thao tác này.'],

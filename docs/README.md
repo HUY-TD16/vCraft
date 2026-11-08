@@ -2,6 +2,8 @@
 
 [Hợp đồng và dữ liệu mẫu để làm song song](contracts/README.md)
 
+[Swagger và quy ước mô tả API cho module](swagger.md)
+
 Backend và Prisma CLI đọc `backend/.env` theo đường dẫn cố định, kể cả khi chạy từ gốc repo. Biến môi trường do shell hoặc Docker cung cấp được ưu tiên hơn file, kể cả giá trị rỗng (sẽ bị validation từ chối nếu không hợp lệ). Backend không tự đọc `.env` ở gốc; file đó dành cho Compose. Không cần `backend/.env` nếu môi trường đã cung cấp đủ biến.
 
 `DATABASE_URL` và `SESSION_SECRET` bắt buộc. Các mặc định: `PORT=3000`, `NODE_ENV=development`, `APP_ORIGIN=http://localhost`, `UPLOAD_DIR=./storage/uploads`. Đường dẫn upload tương đối tính từ thư mục backend. Secret mẫu chỉ dùng phát triển, phải thay trước triển khai. Cấu hình sai khiến ứng dụng dừng trước khi lắng nghe, thông báo liệt kê tên biến, không in giá trị secret.
