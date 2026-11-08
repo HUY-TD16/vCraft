@@ -5,23 +5,19 @@ import type { OpenAPIObject } from '@nestjs/swagger';
 import type { AppConfig } from '../../config/app-config';
 import { ACCESS_POLICY, SESSION_LEVELS, type AccessPolicy, type SessionLevel } from '../../security/decorators/access-policy';
 import { paginationSchema, problemSchema, requestIdHeader } from './api-schemas';
+import { applyDeferredSchemaDecorators } from './deferred-schema.decorators';
 
 export function createApiDocument(app: INestApplication, config: Pick<AppConfig, 'NODE_ENV'>): OpenAPIObject {
   const cookieName = config.NODE_ENV === 'development' ? 'vcraft-session' : '__Host-vcraft-session';
-  const document = SwaggerModule.createDocument(app, new DocumentBuilder()
-    .setTitle('vCraft API').setVersion('1')
-    .setDescription('Hợp đồng của controller đã đăng ký. Phiên qua cookie HttpOnly; không dùng Bearer token. Swagger không thay kiểm tra quyền phía máy chủ.')
-    .addCookieAuth(cookieName, { type: 'apiKey', in: 'cookie', description: 'Cookie do server cấp khi đăng nhập; không nhập token thủ công.' }, 'session')
-    .build(), { operationIdFactory: (controller, method) => `${controller}_${method}` });
-  document.components ??= {};
-  document.components.schemas = { ...document.components.schemas, ProblemDetails: problemSchema, Pagination: paginationSchema };
   const policies = new Map<string, { access?: AccessPolicy; levels: readonly SessionLevel[] }>();
   const reflector = new Reflector();
   const scanner = new MetadataScanner();
   for (const module of app.get(ModulesContainer).values()) {
     for (const { metatype } of module.controllers.values()) {
       if (!metatype) continue;
+      applyDeferredSchemaDecorators(metatype);
       for (const method of scanner.getAllMethodNames(metatype.prototype)) {
+        applyDeferredSchemaDecorators(metatype.prototype[method]);
         const targets = [metatype.prototype[method], metatype];
         policies.set(`${metatype.name}_${method}`, {
           access: reflector.getAllAndOverride<AccessPolicy>(ACCESS_POLICY, targets),
@@ -30,6 +26,13 @@ export function createApiDocument(app: INestApplication, config: Pick<AppConfig,
       }
     }
   }
+  const document = SwaggerModule.createDocument(app, new DocumentBuilder()
+    .setTitle('vCraft API').setVersion('1')
+    .setDescription('Hợp đồng của controller đã đăng ký. Phiên qua cookie HttpOnly; không dùng Bearer token. Swagger không thay kiểm tra quyền phía máy chủ.')
+    .addCookieAuth(cookieName, { type: 'apiKey', in: 'cookie', description: 'Cookie do server cấp khi đăng nhập; không nhập token thủ công.' }, 'session')
+    .build(), { operationIdFactory: (controller, method) => `${controller}_${method}` });
+  document.components ??= {};
+  document.components.schemas = { ...document.components.schemas, ProblemDetails: problemSchema, Pagination: paginationSchema };
   for (const path of Object.values(document.paths)) {
     for (const method of ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] as const) {
       const operation = path[method];

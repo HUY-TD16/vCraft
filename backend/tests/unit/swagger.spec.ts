@@ -24,6 +24,9 @@ class FixtureController {
   @Get('empty') @ApiEmptyResponse() empty() {}
   @Get('image') @ApiImageResponse() image() {}
   @Get('pagination') @ApiPaginationQuery() pagination() {}
+  @Get('transformed')
+  @ApiDataResponse(z.string().transform(value => value.trim()), { openApiSchema: { type: 'string' } })
+  transformed() {}
 }
 Reflect.defineMetadata('design:paramtypes', [Input], FixtureController.prototype, 'create');
 Reflect.defineMetadata('design:paramtypes', [List], FixtureController.prototype, 'list');
@@ -85,5 +88,21 @@ describe('shared OpenAPI contract', () => {
         jsonDocumentUrl: 'api/docs/openapi.json', swaggerOptions: { supportedSubmitMethods: [], persistAuthorization: false },
       }));
     } finally { setup.mockRestore(); }
+  });
+
+  it('defers conversion until document generation and supports explicit transform schemas', () => {
+    expect(() => {
+      class UnregisteredController {
+        @ApiDataResponse(z.string().transform(value => value.trim()))
+        transformed() {}
+      }
+      return UnregisteredController;
+    }).not.toThrow();
+    const doc = createApiDocument(app, { NODE_ENV: 'development' });
+    expect(doc.paths['/api/v1/fixture/transformed'].get?.responses['200']).toMatchObject({
+      content: { 'application/json': { schema: { properties: { data: { type: 'string' } } } } },
+    });
+    const repeated = createApiDocument(app, { NODE_ENV: 'development' });
+    expect(repeated.paths['/api/v1/fixture'].get?.parameters).toEqual(doc.paths['/api/v1/fixture'].get?.parameters);
   });
 });

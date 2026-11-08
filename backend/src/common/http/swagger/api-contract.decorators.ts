@@ -5,37 +5,46 @@ import { z } from 'zod';
 import { statusByCode } from '../filters/api-problem';
 import { requestIdHeader } from './api-schemas';
 import { problems } from '../filters/problem-details.filter';
+import { deferSchemaDecorator } from './deferred-schema.decorators';
 
 export function schemaFor(schema: z.ZodType, io: 'input' | 'output' = 'output'): SchemaObject {
   return z.toJSONSchema(schema, { target: 'openapi-3.0', io }) as SchemaObject;
 }
 
-export const ApiZodBody = (dto: { schema: z.ZodType }) => ApiBody({ required: true, schema: schemaFor(dto.schema, 'input') });
+export const ApiZodBody = (dto: { schema: z.ZodType }, openApiSchema?: SchemaObject) =>
+  deferSchemaDecorator(() => ApiBody({ required: true, schema: openApiSchema ?? schemaFor(dto.schema, 'input') }));
 
-export function ApiZodParameters(dto: { schema: z.ZodType }, location: 'query' | 'path' = 'query') {
-  const schema = schemaFor(dto.schema, 'input');
-  return applyDecorators(...Object.entries(schema.properties ?? {}).map(([name, property]) => {
-    if (!('$ref' in property) && property.type === 'string' && typeof property.default === 'number') {
-      property.default = String(property.default);
-    }
-    const options = { name, required: location === 'path' || !!schema.required?.includes(name), schema: property };
-    return location === 'path' ? ApiParam(options) : ApiQuery(options);
-  }));
+export function ApiZodParameters(dto: { schema: z.ZodType }, location: 'query' | 'path' = 'query', openApiSchema?: SchemaObject) {
+  return deferSchemaDecorator(() => {
+    const schema = openApiSchema ?? schemaFor(dto.schema, 'input');
+    return applyDecorators(...Object.entries(schema.properties ?? {}).map(([name, property]) => {
+      if (!('$ref' in property) && property.type === 'string' && typeof property.default === 'number') {
+        property.default = String(property.default);
+      }
+      const options = { name, required: location === 'path' || !!schema.required?.includes(name), schema: property };
+      return location === 'path' ? ApiParam(options) : ApiQuery(options);
+    }));
+  });
 }
 
-export function ApiDataResponse(schema: z.ZodType, options: { status?: 200 | 201; paginated?: boolean; example?: unknown; operation?: z.ZodType } = {}) {
-  return ApiResponse({
+export function ApiDataResponse(schema: z.ZodType, options: {
+  status?: 200 | 201; paginated?: boolean; example?: unknown; operation?: z.ZodType;
+  openApiSchema?: SchemaObject; operationSchema?: SchemaObject;
+} = {}) {
+  return deferSchemaDecorator(() => ApiResponse({
     status: options.status ?? 200, description: 'Thành công', headers: { 'X-Request-ID': requestIdHeader },
     content: { 'application/json': { schema: {
       type: 'object', required: ['success', 'data', ...(options.paginated ? ['pagination'] : []), ...(options.operation ? ['operation'] : [])],
       properties: {
         success: { type: 'boolean', enum: [true] },
-        data: options.paginated ? { type: 'array', items: schemaFor(schema) } : schemaFor(schema),
+        data: options.paginated
+          ? { type: 'array', items: options.openApiSchema ?? schemaFor(schema) }
+          : options.openApiSchema ?? schemaFor(schema),
         ...(options.paginated && { pagination: { $ref: '#/components/schemas/Pagination' } }),
-        ...(options.operation && { operation: schemaFor(options.operation) }),
+        ...(options.operation && { operation: options.operationSchema ?? schemaFor(options.operation) }),
       },
     }, ...(options.example !== undefined && { example: options.example }) } },
-  });
+  }));
 }
 
 export function ApiProblemResponses(...codes: (keyof typeof statusByCode)[]) {

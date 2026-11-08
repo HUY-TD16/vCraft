@@ -1,8 +1,26 @@
 # Swagger dùng chung
 
-Khi backend chạy với `NODE_ENV=development`, mở `/api/docs` qua cùng origin của API; JSON OpenAPI ở `/api/docs/openapi.json`. Với Docker mặc định: `http://localhost/api/docs`. Production/test không mở các đường tài liệu này. UI chỉ đọc, tắt Try it out và không lưu thông tin xác thực.
+Khi backend chạy với `NODE_ENV=development`, mở `/api/docs` qua cùng origin của API; JSON OpenAPI ở `/api/docs/openapi.json`. Compose mặc định dùng production và tắt Swagger. Để bật cho phát triển trên máy nhóm, chạy từ gốc repo:
+
+```sh
+docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.dev.yaml up -d --build --wait
+```
+
+Sau đó mở `http://localhost/api/docs`. Dùng cùng hai tùy chọn `-f` cho các lệnh Compose tiếp theo của môi trường development. Override này dùng cùng stack và volume hiện tại, đổi backend sang development, bao gồm cookie `vcraft-session` theo quy ước môi trường. Để trở lại production, chạy lại lệnh với riêng `-f deploy/compose.yaml`. Production/test không mở các đường tài liệu này. UI chỉ đọc, tắt Try it out và không lưu thông tin xác thực.
 
 Mã dùng chung nằm trong `backend/src/common/http/swagger/`. Bootstrap gọi `configureSwagger` sau `configureHttp`. Tài liệu chỉ liệt kê controller thực sự được đăng ký; hiện AppModule chưa có controller nghiệp vụ nên danh sách endpoint còn trống, không có nghĩa toàn bộ API đặc tả đã được triển khai.
+
+Decorator chỉ lưu công việc chuyển schema. `createApiDocument` thực hiện chuyển đổi cho controller đã đăng ký trước khi sinh OpenAPI; bootstrap gọi bước này ở development. Schema không biểu diễn được vẫn báo lỗi khi sinh tài liệu để người viết module bổ sung schema tường minh.
+
+Với response có transform, truyền `openApiSchema` mô tả JSON sau transform:
+
+```typescript
+@ApiDataResponse(z.string().transform(value => value.trim()), {
+  openApiSchema: { type: 'string' },
+})
+```
+
+`ApiZodBody(Dto, openApiSchema)` và `ApiZodParameters(Dto, location, openApiSchema)` nhận schema đầu vào tường minh. Với `ApiDataResponse`, `operationSchema` mô tả đầu ra của `options.operation`. Schema tường minh chỉ phục vụ tài liệu; DTO runtime tiếp tục dùng Zod.
 
 ## Quy ước cho module
 
