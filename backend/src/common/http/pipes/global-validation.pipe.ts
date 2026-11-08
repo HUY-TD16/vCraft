@@ -6,7 +6,7 @@ type StrictSchema = z.ZodObject<z.core.$ZodShape, z.core.$strict>;
 
 export function createZodDto<T extends StrictSchema>(schema: T) {
   class Dto { static readonly schema = schema; }
-  return Dto as typeof Dto & { new(): z.output<T> };
+  return Dto as unknown as { new(): z.output<T>; readonly schema: T };
 }
 
 export class GlobalValidationPipe implements PipeTransform {
