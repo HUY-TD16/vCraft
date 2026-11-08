@@ -1,6 +1,7 @@
 import { HttpException } from '@nestjs/common';
+import type { BusinessRuleCode } from '../../domain/errors/business-rule.exception';
 
-const statusByCode = {
+export const statusByCode = {
   INVALID_INPUT: 400, INVALID_IMAGE_FORMAT: 400,
   AUTHENTICATION_REQUIRED: 401, SESSION_EXPIRED: 401, INVALID_CREDENTIALS: 401,
   PERMISSION_DENIED: 403, TEMP_PASSWORD_RESTRICTED: 403, CSRF_INVALID: 403,
@@ -13,7 +14,7 @@ const statusByCode = {
   RESOURCE_IN_USE: 422, IMAGE_CONTEXT_MISMATCH: 422, UPLOAD_SCOPE_UNAVAILABLE: 422,
   RATE_LIMIT_EXCEEDED: 429, INTERNAL_SERVER_ERROR: 500,
   SECURITY_SERVICE_UNAVAILABLE: 503, STORAGE_CAPACITY_LOW: 503, IMAGE_PROCESSING_UNAVAILABLE: 503,
-} as const;
+} as const satisfies Record<BusinessRuleCode, number> & Record<string, number>;
 
 type Code = keyof typeof statusByCode;
 

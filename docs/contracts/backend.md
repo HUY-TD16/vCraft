@@ -2,7 +2,7 @@
 
 Tên operation dưới đây là chữ ký public contract đã chốt cho bước triển khai. Provider đặt interface và DTO thuần TypeScript trong `modules/<provider>/public/`, export DI token rõ ràng. Adapter triển khai thuộc provider. Consumer chỉ import public contract.
 
-Source đã có sáu interface IIdentityContract, IWorkshopContract, ICatalogContract, ITraceabilityContract, IMediaContract và ITradingContract. Community có hợp đồng HTTP trong catalogue, hiện chưa có consumer backend cần public service. TransactionRunner ở bước này là port để người C viết workflow và mock; adapter transaction được nối khi triển khai workflow đầu tiên.
+Source có sáu interface IIdentityContract, IWorkshopContract, ICatalogContract, ITraceabilityContract, IMediaContract và ITradingContract. Community có hợp đồng HTTP trong catalogue, hiện chưa có consumer backend cần public service. DatabaseModule cung cấp TRANSACTION_RUNNER qua PrismaTransactionRunner để triển khai workflow và integration test.
 
 `Id` là chuỗi số dương trong miền bigint. `Instant` là ISO UTC, `Version` là số nguyên dương. `Actor` lấy từ phiên đã xác thực, gồm accountId, role, workshopId nullable, authVersion, sessionId. Trường actor, owner và thời gian hệ thống do server cung cấp.
 
@@ -55,6 +55,49 @@ Phần việc ghi chỉ gọi hợp đồng trong cùng tx, lỗi phải thoát 
 
 ## Quy ước mock backend
 
-Mỗi provider bàn giao mock public contract trong tests của consumer. Mock trả đúng các cấu trúc ở bảng, có trường hợp null, thiếu quyền và lỗi đã liệt kê. Mock có thể ghi nhận thứ tự gọi/tx identity để kiểm tra workflow truyền cùng context. Tính đúng của khóa và rollback được kiểm chứng riêng bằng PostgreSQL.
+Mỗi provider duy trì mock public contract dùng chung tại backend/tests/support/mocks/. Consumer tạo instance mới cho mỗi test. Các method là Vitest mock có kiểu theo interface, hỗ trợ mockResolvedValue, mockRejectedValue và mockImplementation. Method chưa được cấu hình ném lỗi rõ ràng. mock.calls và mock.invocationCallOrder phục vụ kiểm tra input, thứ tự gọi và tx identity. Tính đúng của khóa và rollback được kiểm chứng riêng bằng PostgreSQL.
+
+MockWorkshopContract có givenActiveWorkshops(...ids) và givenSuspended(...ids) cho lockAndAssertActive. Sau khi cấu hình, ID chưa được khai báo trả RESOURCE_NOT_FOUND. Các method khác vẫn cần cấu hình riêng. MockCatalogContract có givenEligibleWorkshops(categoryId, ...ids), loại trùng và sắp ID theo giá trị bigint; category chưa cấu hình báo lỗi thiết lập test. Dùng mockRejectedValue với BusinessRuleException để mô tả phân loại không hợp lệ. MockTransactionRunner tạo context mới cho mỗi run; các kiểm thử PostgreSQL dùng PrismaTransactionRunner để xác nhận commit/rollback.
+
+workshopContractSuite tại tests/contracts/workshop.contract-suite.ts dùng chung cho mock và provider thật. Khi provider Workshops sẵn sàng, đăng ký suite với fixture PostgreSQL chứa hộ active, suspended và ID thiếu. Bổ sung suite cho các operation mới cùng lúc triển khai provider.
 
 Tình huống ghép bắt buộc gồm cấp hộ thất bại sau chuyển quota, chốt đua với rút/tạm ngừng, hai phương án cùng version nhưng khác ID, cùng idempotency key khác payload, lịch sử ảnh có quyền khác ảnh current, và hủy đua với xác nhận nhận đủ.
+
+## Quy ước exception
+
+Domain/application ném BusinessRuleException từ common/domain/errors với code trong BusinessRuleCode, theo ma trận lỗi của operation. Ví dụ lockAndAssertActive ném new BusinessRuleException('WORKSHOP_SUSPENDED'). Promise bị reject làm lỗi thoát khỏi transaction. Consumer chỉ bắt lỗi khi thực sự xử lý được; lỗi cần rollback phải tiếp tục được ném.
+
+ProblemDetailsFilter ánh xạ code sang HTTP qua statusByCode và trả thông báo công khai cố định. ApiProblem dùng ở tầng HTTP. Lỗi DB/hạ tầng giữ nguyên để runner nhận diện lỗi có thể retry và filter trả INTERNAL_SERVER_ERROR. Adapter chỉ chuyển lỗi DB thành BusinessRuleException khi xác định đúng vi phạm nghiệp vụ, chẳng hạn ràng buộc unique username; không chuyển mọi lỗi DB thành một lỗi nghiệp vụ chung.
+
+Với operation quy định rõ dịch vụ không khả dụng, dùng ServiceUnavailableException thuần TypeScript tại common/application/errors. Ba mã được hỗ trợ là SECURITY_SERVICE_UNAVAILABLE, STORAGE_CAPACITY_LOW và IMAGE_PROCESSING_UNAVAILABLE, đều ánh xạ HTTP 503. Ví dụ resolveSession gặp kho phiên không khả dụng phải ném SECURITY_SERVICE_UNAVAILABLE; không trả null như trường hợp không có phiên.
+
+## Sử dụng transaction
+
+Workflow inject TRANSACTION_RUNNER với kiểu TransactionRunner từ common/application/ports. Adapter database inject PrismaTransactionRunner và gọi getClient(tx) trước thao tác Prisma. Prisma client chỉ xuất hiện trong infrastructure/adapters. Context hợp lệ phải thuộc runner đang dùng, còn trong callback và đúng luồng bất đồng bộ hiện tại. Context hết hạn, giả hoặc dùng từ transaction khác bị từ chối. Mọi công việc trong callback phải được await.
+
+Runner dùng interactive transaction, tối đa ba lần thử. Chỉ retry P2034 hoặc lỗi raw-query P2010 có SQLSTATE 40001/40P01. Mỗi lần thử tạo context mới và chạy lại toàn bộ callback. Lỗi nghiệp vụ, unique conflict và lỗi khác được ném ngay. Transaction lồng bị từ chối; operation con nhận tx hiện tại.
+
+Giới hạn hiện tại là chờ lấy transaction tối đa 2 giây và chạy mỗi lần tối đa 5 giây; retry chờ 25 rồi 50 ms. Đây là giới hạn mỗi lần thử. HTTP timeout không tự hủy callback hoặc transaction đang chạy, nên workflow cần idempotency theo đặc tả. Các lời gọi mạng, băm mật khẩu, xử lý ảnh và tác dụng phụ ngoài DB phải nằm ngoài callback có thể retry.
+
+## Đăng ký module và DI
+
+IdentityModule, WorkshopsModule, CatalogModule, TraceabilityModule, MediaModule và TradingModule có register(implementation, dependencies). implementation phải triển khai đúng public interface. dependencies nhận imports, providers và controllers nội bộ. Module tự import DatabaseModule, đăng ký implementation một lần và dùng useExisting để export contract token cùng instance.
+
+Ví dụ khi WorkshopService đã triển khai IWorkshopContract:
+
+```typescript
+const workshopsModule = WorkshopsModule.register(WorkshopService, {
+  providers: [WorkshopRepository],
+  controllers: [WorkshopController],
+});
+
+@Module({
+  imports: [DatabaseModule, workshopsModule],
+  providers: [AcceptQuotationWorkflow],
+})
+export class TradingWorkflowsModule {}
+```
+
+Consumer inject WORKSHOP_CONTRACT với kiểu IWorkshopContract. Module workflow import module provider đã đăng ký; AppModule import module workflow. Tái sử dụng cùng cấu hình đăng ký provider trong composition root. Service cần provider từ module khác thì truyền module đó qua dependencies.imports. Dùng workflow để điều phối các thao tác ghi liên module và hạn chế phụ thuộc vòng.
+
+AppModule hiện chỉ nối DatabaseModule vì các service nghiệp vụ chưa triển khai. Khi ghép, truyền class thật vào register. Mock chỉ được đăng ký trong test.

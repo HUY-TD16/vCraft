@@ -2,7 +2,9 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@n
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { InputValidationError } from '../pipes/zod-validation.pipe';
-import { ApiProblem } from './api-problem';
+import { ApiProblem, statusByCode } from './api-problem';
+import { BusinessRuleException } from '../../domain/errors/business-rule.exception';
+import { ServiceUnavailableException } from '../../application/errors/service-unavailable.exception';
 
 const problems = {
   400: ['INVALID_INPUT', 'Dữ liệu không hợp lệ', 'Kiểm tra lại dữ liệu đã gửi.'],
@@ -25,14 +27,17 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     let status = 500;
-    if (error instanceof HttpException) {
+    const contractError = error instanceof BusinessRuleException || error instanceof ServiceUnavailableException;
+    if (contractError) {
+      status = statusByCode[error.code];
+    } else if (error instanceof HttpException) {
       status = error.getStatus();
     } else if (error instanceof Error && 'type' in error && 'status' in error && typeof error.status === 'number') {
       status = error.status;
     }
     const httpStatus = Object.hasOwn(problems, status) ? status : 500;
     const [defaultCode, title, detail] = problems[httpStatus as keyof typeof problems];
-    const code = error instanceof ApiProblem ? error.code : defaultCode;
+    const code = error instanceof ApiProblem || contractError ? error.code : defaultCode;
     if (error instanceof ApiProblem && error.retryAfter !== undefined) {
       response.setHeader('Retry-After', Math.ceil(error.retryAfter));
     }
