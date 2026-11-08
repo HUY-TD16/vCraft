@@ -3,19 +3,21 @@ import type { Response } from 'express';
 import { map } from 'rxjs';
 import { ProblemDetailsFilter } from '../filters/problem-details.filter';
 import { appLogger, type AppLogger } from '../../observability/app-logger';
+import { createPageResult, type Pagination, type PaginationParams } from '../../application/types/pagination';
+import type { OperationMetadata } from '../../application/types/operation-metadata';
 
-export interface Pagination {
-  page: number;
-  limit: number;
-  total_records: number;
-  total_pages: number;
-}
+export type { Pagination } from '../../application/types/pagination';
 
-export class HttpResult<T> {
+export class HttpResult<T, TState = unknown> {
   constructor(readonly data: T, readonly metadata: {
     pagination?: Pagination;
-    operation?: { id: string; replayed: boolean; committed_at: string; current_state: unknown };
+    operation?: OperationMetadata<TState>;
   } = {}) {}
+
+  static paginated<T>(data: readonly T[], totalRecords: number, params: PaginationParams): HttpResult<readonly T[]> {
+    const page = createPageResult(data, totalRecords, params);
+    return new HttpResult(page.data, { pagination: page.pagination });
+  }
 }
 
 export class ResponseEnvelopeInterceptor implements NestInterceptor {

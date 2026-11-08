@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { statusByCode } from '../filters/api-problem';
 import { requestIdHeader } from './api-schemas';
 import { problems } from '../filters/problem-details.filter';
+import { PAGINATION } from '../../application/types/pagination';
 import { deferSchemaDecorator } from './deferred-schema.decorators';
 
 export function schemaFor(schema: z.ZodType, io: 'input' | 'output' = 'output'): SchemaObject {
@@ -69,8 +70,8 @@ export const ApiEmptyResponse = () => ApiResponse({ status: 204, description: 'T
 export const ApiIdempotencyKey = () => ApiHeader({ name: 'X-Idempotency-Key', required: true,
   description: 'Chỉ gắn vào mutation được yêu cầu tại API mục 1.4.', schema: { type: 'string', format: 'uuid' } });
 export const ApiPaginationQuery = () => applyDecorators(
-  ApiQuery({ name: 'page', required: false, schema: { type: 'integer', minimum: 1, default: 1 } }),
-  ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } }),
+  ApiQuery({ name: 'page', required: false, schema: { type: 'integer', minimum: 1, default: PAGINATION.defaultPage } }),
+  ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: PAGINATION.maxLimit, default: PAGINATION.defaultLimit } }),
 );
 export const ApiImageResponse = () => ApiResponse({
   status: 200, description: 'Byte ảnh đã xử lý, không bọc JSON.',

@@ -1,9 +1,9 @@
 import { SetMetadata } from '@nestjs/common';
-import type { Role } from '../../application/types/contract-types';
+import type { Role, SessionLevel } from '../../application/types/contract-types';
 
 export const ACCESS_POLICY = Symbol('ACCESS_POLICY');
 export const SESSION_LEVELS = Symbol('SESSION_LEVELS');
-export type SessionLevel = 'normal' | 'temp_password';
+export type { SessionLevel } from '../../application/types/contract-types';
 export type AccessPolicy = { kind: 'public' } | { kind: 'roles'; roles: readonly Role[] };
 
 export const Public = () => SetMetadata(ACCESS_POLICY, { kind: 'public' } satisfies AccessPolicy);

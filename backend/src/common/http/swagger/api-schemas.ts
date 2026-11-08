@@ -1,5 +1,6 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { statusByCode } from '../filters/api-problem';
+import { PAGINATION } from '../../application/types/pagination';
 
 export const problemSchema: SchemaObject = {
   type: 'object', required: ['type', 'title', 'status', 'detail', 'code', 'tracking_id'],
@@ -22,8 +23,8 @@ export const problemSchema: SchemaObject = {
 export const paginationSchema: SchemaObject = {
   type: 'object', required: ['page', 'limit', 'total_records', 'total_pages'],
   properties: {
-    page: { type: 'integer', minimum: 1, example: 1 },
-    limit: { type: 'integer', minimum: 1, maximum: 100, example: 20 },
+    page: { type: 'integer', minimum: 1, example: PAGINATION.defaultPage },
+    limit: { type: 'integer', minimum: 1, maximum: PAGINATION.maxLimit, example: PAGINATION.defaultLimit },
     total_records: { type: 'integer', minimum: 0, example: 0 },
     total_pages: { type: 'integer', minimum: 0, example: 0 },
   },

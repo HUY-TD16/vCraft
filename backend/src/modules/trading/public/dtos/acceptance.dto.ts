@@ -1,4 +1,5 @@
 import type { Id, Instant } from '../../../../common/application/types/contract-types';
+import type { OperationMetadata } from '../../../../common/application/types/operation-metadata';
 
 export type RequestStatus =
   | 'draft_request' | 'sent_to_artisans' | 'artisans_bidding'
@@ -36,13 +37,8 @@ export interface AcceptanceDto {
   allocations: AllocationDto[];
 }
 
-export interface AcceptanceOperationDto {
-  id: Id;
-  replayed: boolean;
-  committed_at: Instant;
-  current_state: {
+export type AcceptanceOperationDto = OperationMetadata<{
     request: { id: Id; status: RequestStatus; version: number; cancelled_at: Instant | null };
     quote?: { id: Id; status: 'active' | 'withdrawn' | 'accepted'; version: number } | null;
     proposal?: { id: Id; status: 'proposed' | 'accepted' | 'expired'; version: number } | null;
-  };
-}
+}>;

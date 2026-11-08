@@ -1,6 +1,7 @@
 import { InternalServerErrorException, type ArgumentMetadata, type PipeTransform } from '@nestjs/common';
 import { z } from 'zod';
 import { ZodValidationPipe } from './zod-validation.pipe';
+import { PAGINATION, type PaginationParams } from '../../application/types/pagination';
 
 type StrictSchema = z.ZodObject<z.core.$ZodShape, z.core.$strict>;
 
@@ -24,6 +25,6 @@ export const queryInteger = (minimum: number, maximum = Number.MAX_SAFE_INTEGER)
 export const queryBoolean = z.enum(['true', 'false']).transform(value => value === 'true');
 
 export const paginationQuery = z.strictObject({
-  page: queryInteger(1).default(1),
-  limit: queryInteger(1, 100).default(20),
-});
+  page: queryInteger(1).default(PAGINATION.defaultPage),
+  limit: queryInteger(1, PAGINATION.maxLimit).default(PAGINATION.defaultLimit),
+}) satisfies z.ZodType<PaginationParams>;
