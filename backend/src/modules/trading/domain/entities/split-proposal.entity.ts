@@ -516,7 +516,11 @@ export class SplitProposal {
     });
   }
 
-  expire(reason: SplitProposalExpireReason, now: Date): SplitProposal {
+  expire(
+    reason: SplitProposalExpireReason,
+    now: Date,
+    expiredAt?: Date,
+  ): SplitProposal {
     if (this.status === 'accepted') {
       throw new InvalidStateTransitionError(
         'An accepted SplitProposal is immutable and cannot be expired.',
@@ -537,10 +541,12 @@ export class SplitProposal {
       );
     }
 
+    const effectiveExpiredAt = expiredAt ?? now;
+
     return new SplitProposal({
       ...this,
       status: 'expired',
-      expired_at: new Date(now.getTime()),
+      expired_at: new Date(effectiveExpiredAt.getTime()),
       expire_reason: reason,
       version: Version.of(this.version).next().value,
       updated_at: now,
