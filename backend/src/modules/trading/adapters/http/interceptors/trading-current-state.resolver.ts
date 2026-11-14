@@ -6,14 +6,12 @@ import type {
   IQuoteRequestRepository,
   IAllocationRepository,
   IQuoteRepository,
-  ISplitProposalRepository,
   IRequestRecipientRepository,
 } from '../../../application/ports/repositories/trading-repositories.port';
 import {
   QUOTE_REQUEST_REPOSITORY,
   ALLOCATION_REPOSITORY,
   QUOTE_REPOSITORY,
-  SPLIT_PROPOSAL_REPOSITORY,
   REQUEST_RECIPIENT_REPOSITORY,
 } from '../../../application/ports/repositories/trading-repositories.port';
 
@@ -36,8 +34,6 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
     private readonly allocationRepo: IAllocationRepository,
     @Inject(QUOTE_REPOSITORY)
     private readonly quoteRepo: IQuoteRepository,
-    @Inject(SPLIT_PROPOSAL_REPOSITORY)
-    private readonly proposalRepo: ISplitProposalRepository,
     @Inject(REQUEST_RECIPIENT_REPOSITORY)
     private readonly recipientRepo: IRequestRecipientRepository,
   ) {}
@@ -133,37 +129,6 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
           id: quote.id,
           status: quote.status,
           version: quote.version,
-        },
-      };
-    }
-
-    if (normalizedType === 'splitproposal') {
-      const proposal = await this.proposalRepo.findById(objectId, tx);
-      if (!proposal) {
-        return {
-          request: { id: '0', status: 'artisans_bidding', version: 0, cancelled_at: null },
-          proposal: { id: objectId, status: 'proposed', version: 0 },
-        };
-      }
-      const parentRequest = await this.quoteRequestRepo.findById(
-        proposal.request_id,
-        tx,
-      );
-      return {
-        request: {
-          id: parentRequest?.id ?? proposal.request_id,
-          status: parentRequest?.status ?? 'artisans_bidding',
-          version: parentRequest?.version ?? 1,
-          cancelled_at: parentRequest?.cancelled_at
-            ? parentRequest.cancelled_at instanceof Date
-              ? parentRequest.cancelled_at.toISOString()
-              : String(parentRequest.cancelled_at)
-            : null,
-        },
-        proposal: {
-          id: proposal.id,
-          status: proposal.status,
-          version: proposal.version,
         },
       };
     }

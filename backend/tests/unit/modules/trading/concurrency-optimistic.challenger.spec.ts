@@ -40,7 +40,6 @@ import {
   AllocationBatchLink,
   Quote,
   QuoteRequest,
-  SplitProposal,
   ConcurrencyConflictError,
   IdempotencyConflictError,
   InvalidStateTransitionError,
@@ -86,8 +85,6 @@ function buildSentRequest(overrides: Partial<Parameters<typeof QuoteRequest.reco
     bidding_deadline: BIDDING_DEADLINE,
     delivery_deadline: DELIVERY_DEADLINE,
     admin_note: null,
-    split_requested_at: null,
-    split_request_reason: null,
     cancelled_at: null,
     cancelled_by: null,
     cancel_reason: null,
@@ -114,48 +111,6 @@ function buildQuote(overrides: Partial<Parameters<typeof Quote.reconstitute>[0]>
     withdraw_reason: null,
     withdrawn_by: null,
     withdrawn_at: null,
-    created_at: BASE_NOW,
-    updated_at: BASE_NOW,
-    ...overrides,
-  });
-}
-
-function buildSplitProposal(overrides: Partial<Parameters<typeof SplitProposal.reconstitute>[0]> = {}): SplitProposal {
-  return SplitProposal.reconstitute({
-    id: '501',
-    request_id: '100',
-    created_by: '999',
-    status: 'proposed',
-    version: 1,
-    reject_reason: null,
-    rejected_by: null,
-    rejected_at: null,
-    expire_reason: null,
-    expired_at: null,
-    items: [
-      {
-        id: '601',
-        proposal_id: '501',
-        request_id: '100',
-        workshop_id: '201',
-        quote_id: '401',
-        quote_version: 1,
-        allocated_quantity: 60,
-        unit_price: 150000,
-        committed_delivery_at: COMMITTED_DELIVERY,
-      },
-      {
-        id: '602',
-        proposal_id: '501',
-        request_id: '100',
-        workshop_id: '202',
-        quote_id: '402',
-        quote_version: 1,
-        allocated_quantity: 40,
-        unit_price: 155000,
-        committed_delivery_at: COMMITTED_DELIVERY,
-      },
-    ],
     created_at: BASE_NOW,
     updated_at: BASE_NOW,
     ...overrides,
@@ -221,7 +176,6 @@ class OptimisticConcurrencyTestHarness {
   private readonly idempotencyStore = new Map<string, StoredIdempotencyRow>();
   private readonly quoteRequestStore = new Map<string, QuoteRequest>();
   private readonly quoteStore = new Map<string, Quote>();
-  private readonly splitProposalStore = new Map<string, SplitProposal>();
   private readonly allocationStore = new Map<string, Allocation>();
 
   private nextId = 5000n;
@@ -238,10 +192,6 @@ class OptimisticConcurrencyTestHarness {
     this.quoteStore.set(quote.id, quote);
   }
 
-  seedSplitProposal(proposal: SplitProposal): void {
-    this.splitProposalStore.set(proposal.id, proposal);
-  }
-
   seedAllocation(alloc: Allocation): void {
     this.allocationStore.set(alloc.id, alloc);
   }
@@ -252,10 +202,6 @@ class OptimisticConcurrencyTestHarness {
 
   getQuote(id: string): Quote | undefined {
     return this.quoteStore.get(id);
-  }
-
-  getSplitProposal(id: string): SplitProposal | undefined {
-    return this.splitProposalStore.get(id);
   }
 
   getAllocation(id: string): Allocation | undefined {
@@ -282,7 +228,6 @@ class OptimisticConcurrencyTestHarness {
       const stagedIdempotency = new Map<string, StoredIdempotencyRow>();
       const stagedRequests = new Map<string, { entity: QuoteRequest; expectedVersion: number }>();
       const stagedQuotes = new Map<string, { entity: Quote; expectedVersion: number }>();
-      const stagedProposals = new Map<string, { entity: SplitProposal; expectedVersion: number }>();
       const stagedAllocations = new Map<string, { entity: Allocation; expectedVersion: number }>();
 
       const txCtx = {
@@ -290,7 +235,6 @@ class OptimisticConcurrencyTestHarness {
         stagedIdempotency,
         stagedRequests,
         stagedQuotes,
-        stagedProposals,
         stagedAllocations,
       } as unknown as TransactionContext;
 
@@ -321,15 +265,6 @@ class OptimisticConcurrencyTestHarness {
             );
           }
         }
-        for (const [id, { expectedVersion }] of stagedProposals.entries()) {
-          const current = this.splitProposalStore.get(id);
-          if (current && current.version !== expectedVersion) {
-            throw new ConcurrencyConflictError(
-              `SplitProposal ${id} version conflict (expected ${expectedVersion}, actual ${current.version}).`,
-              { invariant: TRADING_INVARIANTS.INV_05_CONCURRENCY_AND_IDEMPOTENCY, entity: 'SplitProposal' },
-            );
-          }
-        }
         for (const [id, { expectedVersion }] of stagedAllocations.entries()) {
           const current = this.allocationStore.get(id);
           if (current && current.version !== expectedVersion) {
@@ -349,9 +284,6 @@ class OptimisticConcurrencyTestHarness {
         }
         for (const [id, { entity }] of stagedQuotes.entries()) {
           this.quoteStore.set(id, entity);
-        }
-        for (const [id, { entity }] of stagedProposals.entries()) {
-          this.splitProposalStore.set(id, entity);
         }
         for (const [id, { entity }] of stagedAllocations.entries()) {
           this.allocationStore.set(id, entity);
@@ -497,23 +429,6 @@ class OptimisticConcurrencyTestHarness {
     const staged = (tx as any)?.stagedAllocations as Map<string, { entity: Allocation; expectedVersion: number }>;
     staged.set(allocation.id, { entity: allocation, expectedVersion });
     return allocation;
-  }
-
-  async updateSplitProposal(
-    proposal: SplitProposal,
-    expectedVersion: number,
-    tx: TransactionContext,
-  ): Promise<SplitProposal> {
-    const current = this.splitProposalStore.get(proposal.id);
-    if (!current || current.version !== expectedVersion) {
-      throw new ConcurrencyConflictError(
-        `SplitProposal ${proposal.id} version conflict (expected ${expectedVersion}, actual ${current?.version}).`,
-        { invariant: TRADING_INVARIANTS.INV_05_CONCURRENCY_AND_IDEMPOTENCY, entity: 'SplitProposal' },
-      );
-    }
-    const staged = (tx as any)?.stagedProposals as Map<string, { entity: SplitProposal; expectedVersion: number }>;
-    staged.set(proposal.id, { entity: proposal, expectedVersion });
-    return proposal;
   }
 }
 
@@ -1080,41 +995,6 @@ describe('Milestone 2 Concurrency Empirical Challenger Suite', () => {
       expect(currentQuote.version).toBe(3);
       expect(currentQuote.unit_price).toBe(150000);
       expect(currentQuote.status).toBe('active');
-      expect(harness.countIdempotencyRecords()).toBe(0);
-    });
-
-    it('2.3 Stale SplitProposal version: throws ConcurrencyConflictError and MUST NOT expire proposal (BR-18, BR-27)', async () => {
-      // Per BR-18, BR-27: "Không expire phương án chỉ vì version client cũ."
-      const initialProposal = buildSplitProposal({
-        id: '501',
-        version: 2,
-        status: 'proposed',
-      });
-      harness.seedSplitProposal(initialProposal);
-
-      const staleKey = randomUUID();
-
-      await expect(
-        idempotencyService.executeWithIdempotency({
-          accountId: '10',
-          action: 'reject_split_proposal',
-          objectType: 'SplitProposal',
-          objectId: '501',
-          idempotencyKey: staleKey,
-          payload: { expected_proposal_version: 1, reason: 'Từ chối với version cũ' },
-          execute: async (tx) => {
-            const p = harness.getSplitProposal('501')!;
-            p.assertVersionMatches(1); // Fails!
-            return { result: {}, currentState: {} as any };
-          },
-        }),
-      ).rejects.toThrow(ConcurrencyConflictError);
-
-      const currentProposal = harness.getSplitProposal('501')!;
-      expect(currentProposal.version).toBe(2);
-      expect(currentProposal.status).toBe('proposed'); // Still PROPOSED, NOT expired!
-      expect(currentProposal.expire_reason).toBeNull();
-      expect(currentProposal.expired_at).toBeNull();
       expect(harness.countIdempotencyRecords()).toBe(0);
     });
 

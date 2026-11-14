@@ -32,8 +32,6 @@ model Account {
   contactEditHistories             ContactEditHistory[]
   requestRecipients                RequestRecipient[]
   quotes                           Quote[]
-  splitProposalsAsCreatedBy        SplitProposal[]              @relation("SplitProposal_createdBy")
-  splitProposalsAsRejectedBy       SplitProposal[]              @relation("SplitProposal_rejectedBy")
   allocationsAsStartedBy           Allocation[]                 @relation("Allocation_startedBy")
   allocationsAsHandedOverBy        Allocation[]                 @relation("Allocation_handedOverBy")
   allocationBatches                AllocationBatch[]
@@ -71,7 +69,6 @@ model Workshop {
   batches                    Batch[]
   requestRecipients          RequestRecipient[]
   quotes                     Quote[]
-  splitProposalItems         SplitProposalItem[]
   allocations                Allocation[]
   storageQuota               StorageQuota?
   initialWorkshopUploadScope InitialWorkshopUploadScope?
@@ -204,7 +201,6 @@ model QuoteRequest {
   bidding_deadline     DateTime?            @db.Timestamptz(3)
   delivery_deadline    DateTime?            @db.Timestamptz(3)
   bidding_closed_at    DateTime?            @db.Timestamptz(3)
-  split_requested_at   DateTime?            @db.Timestamptz(3)
   version              Int                  @default(1)
   cancelled_at         DateTime?            @db.Timestamptz(3)
   cancelled_by         BigInt?
@@ -217,7 +213,6 @@ model QuoteRequest {
   contactEditHistories ContactEditHistory[]
   requestRecipients    RequestRecipient[]
   quotes               Quote[]
-  splitProposals       SplitProposal[]
   allocations          Allocation[]
   statusLogs           StatusLog[]
 
@@ -278,48 +273,11 @@ model Quote {
   withdrawnBy                Account?                   @relation(fields: [withdrawn_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
   recipientResponseHistories RecipientResponseHistory[]
   recipient                  RequestRecipient           @relation(fields: [request_id, workshop_id], references: [request_id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
-  splitProposalItems         SplitProposalItem[]
   allocation                 Allocation?
 
   @@unique([request_id, workshop_id])
   @@unique([id, request_id, workshop_id])
   @@index([request_id, status, bid_accept_deadline])
-}
-
-model SplitProposal {
-  id                 BigInt              @id @default(autoincrement())
-  request_id         BigInt
-  created_by         BigInt
-  status             String              @db.VarChar(10)
-  version            Int                 @default(1)
-  expired_at         DateTime?           @db.Timestamptz(3)
-  expire_reason      String?             @db.VarChar(40)
-  reject_reason      String?
-  rejected_by        BigInt?
-  rejected_at        DateTime?           @db.Timestamptz(3)
-  created_at         DateTime            @default(now()) @db.Timestamptz(3)
-  updated_at         DateTime            @updatedAt @db.Timestamptz(3)
-  request            QuoteRequest        @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  createdBy          Account             @relation("SplitProposal_createdBy", fields: [created_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  rejectedBy         Account?            @relation("SplitProposal_rejectedBy", fields: [rejected_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  splitProposalItems SplitProposalItem[]
-
-  @@unique([id, request_id])
-}
-
-model SplitProposalItem {
-  id                 BigInt        @id @default(autoincrement())
-  request_id         BigInt
-  quote_version      Int
-  proposal_id        BigInt
-  workshop_id        BigInt
-  quote_id           BigInt
-  allocated_quantity Int
-  workshop           Workshop      @relation(fields: [workshop_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  proposal           SplitProposal @relation(fields: [proposal_id, request_id], references: [id, request_id], onDelete: Restrict, onUpdate: NoAction)
-  quote              Quote         @relation(fields: [quote_id, request_id, workshop_id], references: [id, request_id, workshop_id], onDelete: Restrict, onUpdate: NoAction)
-
-  @@unique([proposal_id, workshop_id])
 }
 
 model Allocation {

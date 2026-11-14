@@ -5,7 +5,6 @@ import type {
   IQuoteRequestRepository,
   IAllocationRepository,
   IQuoteRepository,
-  ISplitProposalRepository,
   IRequestRecipientRepository,
 } from '../../../../src/modules/trading/application/ports/repositories/trading-repositories.port';
 import { TradingCurrentStateResolver } from '../../../../src/modules/trading/adapters/http/interceptors/trading-current-state.resolver';
@@ -14,7 +13,6 @@ describe('TradingCurrentStateResolver', () => {
   let quoteRequestRepo: { findById: ReturnType<typeof vi.fn> };
   let allocationRepo: { findById: ReturnType<typeof vi.fn> };
   let quoteRepo: { findById: ReturnType<typeof vi.fn> };
-  let proposalRepo: { findById: ReturnType<typeof vi.fn> };
   let recipientRepo: { findById: ReturnType<typeof vi.fn> };
   let dummyTx: TransactionContext;
   let resolver: TradingCurrentStateResolver;
@@ -23,7 +21,6 @@ describe('TradingCurrentStateResolver', () => {
     quoteRequestRepo = { findById: vi.fn() };
     allocationRepo = { findById: vi.fn() };
     quoteRepo = { findById: vi.fn() };
-    proposalRepo = { findById: vi.fn() };
     recipientRepo = { findById: vi.fn() };
     dummyTx = { txId: 'tx-test-999' } as unknown as TransactionContext;
 
@@ -31,7 +28,6 @@ describe('TradingCurrentStateResolver', () => {
       quoteRequestRepo as unknown as IQuoteRequestRepository,
       allocationRepo as unknown as IAllocationRepository,
       quoteRepo as unknown as IQuoteRepository,
-      proposalRepo as unknown as ISplitProposalRepository,
       recipientRepo as unknown as IRequestRecipientRepository,
     );
   });
@@ -258,70 +254,6 @@ describe('TradingCurrentStateResolver', () => {
       expect(state).toEqual({
         request: { id: '0', status: 'artisans_bidding', version: 0, cancelled_at: null },
         quote: { id: 'quote-missing', status: 'active', version: 0 },
-      });
-    });
-  });
-
-  // ==========================================================================
-  // Branch 4: SplitProposal
-  // ==========================================================================
-  describe('SplitProposal branch', () => {
-    it('resolves existing SplitProposal and its parent QuoteRequest', async () => {
-      proposalRepo.findById.mockResolvedValueOnce({
-        id: 'prop-401',
-        request_id: 'req-400',
-        status: 'proposed',
-        version: 1,
-      });
-      quoteRequestRepo.findById.mockResolvedValueOnce({
-        id: 'req-400',
-        status: 'artisans_bidding',
-        version: 4,
-        cancelled_at: null,
-      });
-
-      const state = await resolver.resolveCurrentState('SplitProposal', 'prop-401', dummyTx);
-
-      expect(proposalRepo.findById).toHaveBeenCalledWith('prop-401', dummyTx);
-      expect(quoteRequestRepo.findById).toHaveBeenCalledWith('req-400', dummyTx);
-      expect(state).toEqual({
-        request: {
-          id: 'req-400',
-          status: 'artisans_bidding',
-          version: 4,
-          cancelled_at: null,
-        },
-        proposal: {
-          id: 'prop-401',
-          status: 'proposed',
-          version: 1,
-        },
-      });
-    });
-
-    it('normalizes type variants (e.g. split_proposal, split-proposal)', async () => {
-      proposalRepo.findById.mockResolvedValueOnce({
-        id: 'prop-402',
-        request_id: 'req-402',
-        status: 'accepted',
-        version: 2,
-      });
-      quoteRequestRepo.findById.mockResolvedValueOnce(null);
-
-      const state = await resolver.resolveCurrentState('split_proposal', 'prop-402', dummyTx);
-
-      expect(proposalRepo.findById).toHaveBeenCalledWith('prop-402', dummyTx);
-      expect(state.proposal?.status).toBe('accepted');
-    });
-
-    it('returns empty proposal fallback when SplitProposal entity is not found', async () => {
-      proposalRepo.findById.mockResolvedValueOnce(null);
-
-      const state = await resolver.resolveCurrentState('SplitProposal', 'prop-missing', dummyTx);
-
-      expect(state).toEqual({
-        request: { id: '0', status: 'artisans_bidding', version: 0, cancelled_at: null },
-        proposal: { id: 'prop-missing', status: 'proposed', version: 0 },
       });
     });
   });

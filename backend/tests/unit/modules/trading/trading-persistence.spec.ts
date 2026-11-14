@@ -15,8 +15,6 @@ import {
   Quote,
   QuoteRequest,
   RequestRecipient,
-  SplitProposal,
-  SplitProposalItem,
   TradingPermissionDeniedError,
 } from '../../../../src/modules/trading/domain';
 import {
@@ -34,15 +32,11 @@ import {
   PrismaQuoteRequestRepository,
   PrismaRecipientResponseHistoryRepository,
   PrismaRequestRecipientRepository,
-  PrismaSplitProposalItemRepository,
-  PrismaSplitProposalRepository,
   PrismaStatusLogRepository,
   QuoteMapper,
   QuoteRequestMapper,
   RecipientResponseHistoryMapper,
   RequestRecipientMapper,
-  SplitProposalItemMapper,
-  SplitProposalMapper,
   StatusLogMapper,
   TRADING_PERSISTENCE_PROVIDERS,
   bigintToId,
@@ -93,7 +87,6 @@ function buildSentQuoteRequestPrismaRow(
     bidding_deadline: Date | null;
     delivery_deadline: Date | null;
     bidding_closed_at: Date | null;
-    split_requested_at: Date | null;
     version: number;
     cancelled_at: Date | null;
     cancelled_by: bigint | null;
@@ -119,7 +112,6 @@ function buildSentQuoteRequestPrismaRow(
     bidding_deadline: BIDDING_DEADLINE,
     delivery_deadline: DELIVERY_DEADLINE,
     bidding_closed_at: null,
-    split_requested_at: null,
     version: 2,
     cancelled_at: null,
     cancelled_by: null,
@@ -166,12 +158,12 @@ describe('Trading Application Layer Purity & Persistence Exports', () => {
     }
   });
 
-  it('registers all 12 repository classes and token bindings in TRADING_PERSISTENCE_PROVIDERS', () => {
-    expect(TRADING_PERSISTENCE_PROVIDERS).toHaveLength(24);
+  it('registers all 10 repository classes and token bindings in TRADING_PERSISTENCE_PROVIDERS', () => {
+    expect(TRADING_PERSISTENCE_PROVIDERS).toHaveLength(20);
   });
 });
 
-describe('Trading Persistence Mappers (12 Tables)', () => {
+describe('Trading Persistence Mappers (10 Tables)', () => {
   it('converts shared primitive types (BigInt, Decimal, Date, ActorDto, WorkshopRefDto, CategoryRefDto) safely', () => {
     expect(bigintToId(42n)).toBe('42');
     expect(idToBigInt('42')).toBe(42n);
@@ -436,85 +428,6 @@ describe('Trading Persistence Mappers (12 Tables)', () => {
     expect(quoteDto.ineligible_reasons).toEqual([]);
   });
 
-  it('6 & 7. SplitProposalItemMapper and SplitProposalMapper map items, decision_deadline, and total_amount', () => {
-    const item1Row = {
-      id: 601n,
-      proposal_id: 600n,
-      request_id: 100n,
-      workshop_id: 20n,
-      quote_id: 501n,
-      quote_version: 1,
-      allocated_quantity: 30,
-    };
-    const item2Row = {
-      id: 602n,
-      proposal_id: 600n,
-      request_id: 100n,
-      workshop_id: 21n,
-      quote_id: 502n,
-      quote_version: 1,
-      allocated_quantity: 20,
-    };
-    const proposalRow = {
-      id: 600n,
-      request_id: 100n,
-      created_by: 1n,
-      status: 'proposed',
-      version: 1,
-      expired_at: null,
-      expire_reason: null,
-      reject_reason: null,
-      rejected_by: null,
-      rejected_at: null,
-      created_at: NOW,
-      updated_at: NOW,
-      splitProposalItems: [item1Row, item2Row],
-    };
-
-    const proposal = SplitProposalMapper.toDomain(proposalRow);
-    expect(proposal.items).toHaveLength(2);
-
-    const earlierAcceptDeadline = new Date('2026-11-12T10:00:00.000Z');
-    const laterAcceptDeadline = new Date('2026-11-13T10:00:00.000Z');
-
-    const dto = SplitProposalMapper.toDto(proposal, {
-      quoteMetadataByQuoteId: new Map([
-        [
-          '501',
-          {
-            workshopName: 'Workshop 20',
-            unitPrice: 100000,
-            committedDeliveryAt: COMMITTED_DELIVERY,
-            bidAcceptDeadline: laterAcceptDeadline,
-          },
-        ],
-        [
-          '502',
-          {
-            workshopName: 'Workshop 21',
-            unitPrice: 150000,
-            committedDeliveryAt: COMMITTED_DELIVERY,
-            bidAcceptDeadline: earlierAcceptDeadline,
-          },
-        ],
-      ]),
-    });
-
-    // 30 * 100,000 + 20 * 150,000 = 3,000,000 + 3,000,000 = 6,000,000
-    expect(dto.total_amount).toBe('6000000');
-    expect(dto.decision_deadline).toBe(earlierAcceptDeadline.toISOString());
-    expect(dto.items[0]).toEqual({
-      workshop_id: '20',
-      workshop_name: 'Workshop 20',
-      quote_id: '501',
-      quote_version: 1,
-      quantity: 30,
-      unit_price: 100000,
-      committed_delivery_at: COMMITTED_DELIVERY.toISOString(),
-      line_total: '3000000',
-    });
-  });
-
   it('8 & 9. AllocationBatchMapper and AllocationMapper enforce trace_url masking on draft batches and derive traceability_warning', () => {
     const batchRow = {
       id: 801n,
@@ -717,7 +630,7 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
     expect(sqlArg.values).toEqual([2n, 10n]);
   });
 
-  it('enforces optimistic concurrency control (ConcurrencyConflictError) on QuoteRequest, Quote, SplitProposal, and Allocation updates', async () => {
+  it('enforces optimistic concurrency control (ConcurrencyConflictError) on QuoteRequest, Quote, and Allocation updates', async () => {
     const sentRow = buildSentQuoteRequestPrismaRow({ version: 2 });
     const domainRequest = QuoteRequestMapper.toDomain(sentRow);
 
@@ -740,114 +653,6 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
         ),
       ),
     ).rejects.toThrow(ConcurrencyConflictError);
-  });
-
-  it('handles SplitProposal atomic replacement and workshop suspension lookup', async () => {
-    const item1Row = {
-      id: 601n,
-      proposal_id: 600n,
-      request_id: 100n,
-      workshop_id: 20n,
-      quote_id: 501n,
-      quote_version: 1,
-      allocated_quantity: 30,
-    };
-    const item2Row = {
-      id: 602n,
-      proposal_id: 600n,
-      request_id: 100n,
-      workshop_id: 21n,
-      quote_id: 502n,
-      quote_version: 1,
-      allocated_quantity: 20,
-    };
-    const newProposalDomain = SplitProposalMapper.toDomain({
-      id: 600n,
-      request_id: 100n,
-      created_by: 1n,
-      status: 'proposed',
-      version: 1,
-      expired_at: null,
-      expire_reason: null,
-      reject_reason: null,
-      rejected_by: null,
-      rejected_at: null,
-      created_at: NOW,
-      updated_at: NOW,
-      splitProposalItems: [item2Row, item1Row],
-    });
-
-    const replacedProposalDomain = SplitProposalMapper.toDomain({
-      id: 599n,
-      request_id: 100n,
-      created_by: 1n,
-      status: 'expired',
-      version: 2,
-      expired_at: NOW,
-      expire_reason: 'replaced',
-      reject_reason: null,
-      rejected_by: null,
-      rejected_at: null,
-      created_at: NOW,
-      updated_at: NOW,
-      splitProposalItems: [
-        { ...item1Row, proposal_id: 599n },
-        { ...item2Row, proposal_id: 599n },
-      ],
-    });
-
-    const createdWorkshopsOrder: bigint[] = [];
-    const mockClient = {
-      splitProposal: {
-        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-        create: vi.fn().mockResolvedValue({
-          id: 600n,
-          request_id: 100n,
-          created_by: 1n,
-          status: 'proposed',
-          version: 1,
-          expired_at: null,
-          expire_reason: null,
-          reject_reason: null,
-          rejected_by: null,
-          rejected_at: null,
-          created_at: NOW,
-          updated_at: NOW,
-        }),
-        findMany: vi
-          .fn()
-          .mockResolvedValue([{ request_id: 200n }, { request_id: 100n }]),
-      },
-      splitProposalItem: {
-        create: vi.fn().mockImplementation(async ({ data }) => {
-          createdWorkshopsOrder.push(data.workshop_id);
-          return data.workshop_id === 20n ? item1Row : item2Row;
-        }),
-      },
-    };
-
-    const { txRunner } = createMockTxRunner(mockClient);
-    const repo = new PrismaSplitProposalRepository(txRunner);
-
-    const created = await txRunner.run((tx) =>
-      repo.createProposal(
-        {
-          proposal: newProposalDomain,
-          replacedProposal: replacedProposalDomain,
-        },
-        tx,
-      ),
-    );
-
-    expect(created.id).toBe('600');
-    expect(mockClient.splitProposal.updateMany).toHaveBeenCalledTimes(1);
-    // Items inserted in ascending workshop_id order (20n then 21n)
-    expect(createdWorkshopsOrder).toEqual([20n, 21n]);
-
-    const affectedRequestIds = await txRunner.run((tx) =>
-      repo.findProposedRequestIdsByWorkshopId('20', tx),
-    );
-    expect(affectedRequestIds).toEqual(['100', '200']);
   });
 
   it('handles AllocationBatch replacement, RecipientResponseHistory snapshot lookup, History/Log repositories, and IdempotencyRecord replay & conflict', async () => {
@@ -994,7 +799,7 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
     expect(deletedCount).toBe(4);
   });
 
-  it('exercises remaining repositories (ContactEditHistory, RequestRecipient, Quote, SplitProposalItem, Allocation, AllocationLog, StatusLog)', async () => {
+  it('exercises remaining repositories (ContactEditHistory, RequestRecipient, Quote, Allocation, AllocationLog, StatusLog)', async () => {
     const mockClient = {
       contactEditHistory: {
         create: vi.fn().mockResolvedValue({
@@ -1048,13 +853,6 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
           created_at: NOW,
           updated_at: NOW,
         }),
-      },
-      splitProposalItem: {
-        create: vi.fn().mockImplementation(async ({ data }) => ({
-          id: 601n,
-          ...data,
-        })),
-        findMany: vi.fn().mockResolvedValue([]),
       },
       allocation: {
         create: vi.fn().mockResolvedValue({
@@ -1117,7 +915,6 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
     const contactRepo = new PrismaContactEditHistoryRepository(txRunner);
     const recipientRepo = new PrismaRequestRecipientRepository(txRunner);
     const quoteRepo = new PrismaQuoteRepository(txRunner);
-    const itemRepo = new PrismaSplitProposalItemRepository(txRunner);
     const allocationRepo = new PrismaAllocationRepository(txRunner);
     const allocationLogRepo = new PrismaAllocationLogRepository(txRunner);
     const statusLogRepo = new PrismaStatusLogRepository(txRunner);
@@ -1174,22 +971,6 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
 
       const savedQuote = await quoteRepo.create(submission, tx);
       expect(savedQuote.id).toBe('500');
-
-      const savedItems = await itemRepo.createMany(
-        [
-          SplitProposalItem.reconstitute({
-            id: '601',
-            proposal_id: '600',
-            request_id: '100',
-            workshop_id: '20',
-            quote_id: '500',
-            quote_version: 1,
-            allocated_quantity: 30,
-          }),
-        ],
-        tx,
-      );
-      expect(savedItems).toHaveLength(1);
 
       const { allocation, log } = Allocation.createFromAcceptedQuote({
         id: '700',

@@ -9,17 +9,20 @@ import type {
   QuoteRequest,
   QuoteSnapshotData,
   RecipientResponseRecord,
+  RecipientResponseStatus,
   RequestRecipient,
-  SplitProposal,
-  SplitProposalExpireReason,
-  SplitProposalItem,
+  RequestStatus,
   StatusLogRecord,
 } from '../../../domain';
 import type {
+  ActorDto,
   AllocationEventDto,
+  BuyerRequestSummaryDto,
+  CategoryRefDto,
   ContactEventDto,
   CreateIdempotencyRecordInput,
   IdempotencyScopeKey,
+  InvitedRequestDto,
   PersistedAllocationLogRecord,
   PersistedContactEditRecord,
   PersistedIdempotencyRecord,
@@ -27,6 +30,7 @@ import type {
   PersistedStatusLogRecord,
   RecipientEventDto,
   RequestEventDto,
+  WorkshopRefDto,
 } from '../../dtos/trading-persistence.dtos';
 
 export const QUOTE_REQUEST_REPOSITORY = Symbol('QUOTE_REQUEST_REPOSITORY');
@@ -40,10 +44,6 @@ export const RECIPIENT_RESPONSE_HISTORY_REPOSITORY = Symbol(
   'RECIPIENT_RESPONSE_HISTORY_REPOSITORY',
 );
 export const QUOTE_REPOSITORY = Symbol('QUOTE_REPOSITORY');
-export const SPLIT_PROPOSAL_REPOSITORY = Symbol('SPLIT_PROPOSAL_REPOSITORY');
-export const SPLIT_PROPOSAL_ITEM_REPOSITORY = Symbol(
-  'SPLIT_PROPOSAL_ITEM_REPOSITORY',
-);
 export const ALLOCATION_REPOSITORY = Symbol('ALLOCATION_REPOSITORY');
 export const ALLOCATION_BATCH_REPOSITORY = Symbol('ALLOCATION_BATCH_REPOSITORY');
 export const ALLOCATION_LOG_REPOSITORY = Symbol('ALLOCATION_LOG_REPOSITORY');
@@ -79,11 +79,123 @@ export interface IQuoteRequestRepository {
     tx: TransactionContext,
   ): Promise<void>;
   findById(requestId: Id, tx: TransactionContext): Promise<QuoteRequest | null>;
+  findDetailById(
+    requestId: Id,
+    tx?: TransactionContext,
+  ): Promise<QuoteRequestDetailRecord | null>;
   lockById(requestId: Id, tx: TransactionContext): Promise<QuoteRequest | null>;
   lockByIds(
     requestIds: readonly Id[],
     tx: TransactionContext,
   ): Promise<readonly QuoteRequest[]>;
+  findBuyerQuoteRequests(
+    input: FindBuyerQuoteRequestsInput,
+    tx: TransactionContext,
+  ): Promise<FindBuyerQuoteRequestsResult>;
+  findArtisanQuoteRequests(
+    input: FindArtisanQuoteRequestsInput,
+    tx: TransactionContext,
+  ): Promise<FindArtisanQuoteRequestsResult>;
+  findAdminQuoteRequests(
+    input: FindAdminQuoteRequestsInput,
+    tx: TransactionContext,
+  ): Promise<FindAdminQuoteRequestsResult>;
+}
+
+export interface RequestRecipientDetailItem {
+  readonly entity: RequestRecipient;
+  readonly workshop: WorkshopRefDto & { readonly status?: string };
+  readonly quote?: {
+    readonly id: Id;
+    readonly status: string;
+    readonly bid_accept_deadline: Date;
+  } | null;
+}
+
+export interface QuoteDetailItem {
+  readonly entity: Quote;
+  readonly workshop: WorkshopRefDto & { readonly status: string };
+}
+
+export interface AllocationDetailItem {
+  readonly entity: Allocation;
+}
+
+export interface StatusLogDetailItem {
+  readonly entity: PersistedStatusLogRecord;
+  readonly performedBy: ActorDto | null;
+}
+
+export interface QuoteRequestDetailRecord {
+  readonly entity: QuoteRequest;
+  readonly category: CategoryRefDto | null;
+  readonly recipients: readonly RequestRecipientDetailItem[];
+  readonly quotes: readonly QuoteDetailItem[];
+  readonly allocations: readonly AllocationDetailItem[];
+  readonly statusLogs: readonly StatusLogDetailItem[];
+}
+
+export interface FindAdminQuoteRequestsInput {
+  readonly buyerId?: Id;
+  readonly categoryId?: Id;
+  readonly page: number;
+  readonly limit: number;
+  readonly status?: RequestStatus | string | readonly string[];
+  readonly cancelled?: boolean;
+  readonly sortBy?: string;
+  readonly order?: 'asc' | 'desc';
+  readonly search?: string;
+  readonly now?: Date;
+}
+
+export interface FindAdminQuoteRequestsResult {
+  readonly items: readonly BuyerRequestSummaryDto[];
+  readonly total: number;
+}
+
+export interface FindBuyerQuoteRequestsInput {
+  readonly buyerId: Id;
+  readonly page: number;
+  readonly limit: number;
+  readonly status?: RequestStatus | string | readonly string[];
+  readonly cancelled?: boolean;
+  readonly sortBy?: string;
+  readonly order?: 'asc' | 'desc';
+  readonly search?: string;
+  readonly now?: Date;
+}
+
+export interface FindBuyerQuoteRequestsResult {
+  readonly items: readonly BuyerRequestSummaryDto[];
+  readonly total: number;
+}
+
+export interface FindArtisanQuoteRequestsInput {
+  readonly workshopId: Id;
+  readonly page: number;
+  readonly limit: number;
+  readonly status?: RequestStatus | string | readonly string[];
+  readonly responseStatus?: string;
+  readonly sortBy?: string;
+  readonly order?: 'asc' | 'desc';
+  readonly search?: string;
+  readonly now?: Date;
+}
+
+export interface FindArtisanQuoteRequestsResult {
+  readonly items: readonly InvitedRequestDto[];
+  readonly total: number;
+}
+
+export interface FindContactEventsInput {
+  readonly requestId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindContactEventsResult {
+  readonly rows: readonly ContactEventDto[];
+  readonly totalRecords: number;
 }
 
 export interface IContactEditHistoryRepository {
@@ -99,6 +211,10 @@ export interface IContactEditHistoryRepository {
     requestId: Id,
     tx: TransactionContext,
   ): Promise<readonly ContactEventDto[]>;
+  findEventsWithPagination(
+    input: FindContactEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindContactEventsResult>;
 }
 
 export interface IRequestRecipientRepository {
@@ -148,6 +264,18 @@ export interface IRequestRecipientRepository {
     recipientIds: readonly Id[],
     tx: TransactionContext,
   ): Promise<readonly RequestRecipient[]>;
+  findRecipientsWithDetails(
+    input: {
+      readonly requestId: string;
+      readonly responseStatus?: RecipientResponseStatus;
+      readonly page?: number;
+      readonly limit?: number;
+    },
+    tx?: TransactionContext,
+  ): Promise<{
+    readonly rows: readonly RequestRecipientDetailItem[];
+    readonly totalRecords: number;
+  }>;
 }
 
 export interface IRecipientResponseHistoryRepository {
@@ -208,71 +336,6 @@ export interface IQuoteRepository {
     quoteIds: readonly Id[],
     tx: TransactionContext,
   ): Promise<readonly Quote[]>;
-}
-
-export interface ISplitProposalRepository {
-  createProposal(
-    input: {
-      readonly proposal: SplitProposal;
-      readonly replacedProposal?: SplitProposal | null;
-    },
-    tx: TransactionContext,
-  ): Promise<SplitProposal>;
-  updateStatus(
-    input: {
-      readonly proposal: SplitProposal;
-      readonly expectedVersion?: number;
-    },
-    tx: TransactionContext,
-  ): Promise<SplitProposal>;
-  expireProposedByRequestId(
-    input: {
-      readonly requestId: Id;
-      readonly reason: SplitProposalExpireReason;
-      readonly now: Date;
-      readonly expiredAt?: Date;
-    },
-    tx: TransactionContext,
-  ): Promise<SplitProposal | null>;
-  findProposedRequestIdsByWorkshopId(
-    workshopId: Id,
-    tx: TransactionContext,
-  ): Promise<readonly Id[]>;
-  findById(
-    proposalId: Id,
-    tx: TransactionContext,
-  ): Promise<SplitProposal | null>;
-  findProposedByRequestId(
-    requestId: Id,
-    tx: TransactionContext,
-  ): Promise<SplitProposal | null>;
-  listByRequestId(
-    requestId: Id,
-    tx: TransactionContext,
-  ): Promise<readonly SplitProposal[]>;
-  lockById(
-    proposalId: Id,
-    tx: TransactionContext,
-  ): Promise<SplitProposal | null>;
-  lockProposedByRequestId(
-    requestId: Id,
-    tx: TransactionContext,
-  ): Promise<SplitProposal | null>;
-  lockByIds(
-    proposalIds: readonly Id[],
-    tx: TransactionContext,
-  ): Promise<readonly SplitProposal[]>;
-}
-
-export interface ISplitProposalItemRepository {
-  createMany(
-    items: readonly SplitProposalItem[],
-    tx: TransactionContext,
-  ): Promise<readonly SplitProposalItem[]>;
-  listByProposalId(
-    proposalId: Id,
-    tx: TransactionContext,
-  ): Promise<readonly SplitProposalItem[]>;
 }
 
 export interface IAllocationRepository {

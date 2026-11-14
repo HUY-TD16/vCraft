@@ -9,7 +9,6 @@ import {
 } from '../errors/trading-domain.errors';
 import {
   type AllocationStatus,
-  type CoordinationState,
   type DeliveryMode,
   EntityId,
   Quantity,
@@ -278,7 +277,6 @@ export interface QuoteRequestProps {
   readonly bidding_deadline: Date | null;
   readonly delivery_deadline: Date | null;
   readonly bidding_closed_at: Date | null;
-  readonly split_requested_at: Date | null;
   readonly version: number;
   readonly cancelled_at: Date | null;
   readonly cancelled_by: string | null;
@@ -332,7 +330,6 @@ export class QuoteRequest {
   readonly bidding_deadline: Date | null;
   readonly delivery_deadline: Date | null;
   readonly bidding_closed_at: Date | null;
-  readonly split_requested_at: Date | null;
   readonly version: number;
   readonly cancelled_at: Date | null;
   readonly cancelled_by: string | null;
@@ -366,9 +363,6 @@ export class QuoteRequest {
       : null;
     this.bidding_closed_at = props.bidding_closed_at
       ? new Date(props.bidding_closed_at.getTime())
-      : null;
-    this.split_requested_at = props.split_requested_at
-      ? new Date(props.split_requested_at.getTime())
       : null;
     this.version = Version.of(props.version, 'request.version').value;
     this.cancelled_at = props.cancelled_at ? new Date(props.cancelled_at.getTime()) : null;
@@ -495,7 +489,6 @@ export class QuoteRequest {
       bidding_deadline: input.draft.bidding_deadline ?? null,
       delivery_deadline: input.draft.delivery_deadline ?? null,
       bidding_closed_at: null,
-      split_requested_at: null,
       version: 1,
       cancelled_at: null,
       cancelled_by: null,
@@ -637,6 +630,19 @@ export class QuoteRequest {
         ? input.draft.delivery_mode
         : this.delivery_mode;
 
+    const nextBiddingDeadline =
+      input.draft.bidding_deadline !== undefined
+        ? input.draft.bidding_deadline
+        : this.bidding_deadline;
+    const nextDeliveryDeadline =
+      input.draft.delivery_deadline !== undefined
+        ? input.draft.delivery_deadline
+        : this.delivery_deadline;
+
+    if (nextBiddingDeadline !== null && nextDeliveryDeadline !== null) {
+      RequestDeadlines.fromPersisted(nextBiddingDeadline, nextDeliveryDeadline);
+    }
+
     return new QuoteRequest({
       ...this,
       category_id:
@@ -671,14 +677,8 @@ export class QuoteRequest {
         input.draft.recipient_phone !== undefined
           ? input.draft.recipient_phone
           : this.recipient_phone,
-      bidding_deadline:
-        input.draft.bidding_deadline !== undefined
-          ? input.draft.bidding_deadline
-          : this.bidding_deadline,
-      delivery_deadline:
-        input.draft.delivery_deadline !== undefined
-          ? input.draft.delivery_deadline
-          : this.delivery_deadline,
+      bidding_deadline: nextBiddingDeadline,
+      delivery_deadline: nextDeliveryDeadline,
       version: Version.of(this.version).next().value,
       updated_at: input.now,
     });
@@ -894,123 +894,6 @@ export class QuoteRequest {
     });
 
     return { request: updated, statusLog };
-  }
-
-  requestSplit(input: {
-    readonly buyerId: string;
-    readonly expectedVersion: number;
-    readonly hasEligibleQuotes: boolean;
-    readonly eligibleQuoteCount?: number;
-    readonly eligibleCapacitySum?: bigint;
-    readonly now: Date;
-  }): { readonly request: QuoteRequest; readonly statusLogs: readonly StatusLogRecord[] } {
-    this.assertOwner(input.buyerId);
-    this.assertNotCancelled();
-    this.assertVersionMatches(input.expectedVersion);
-
-    if (this.status !== 'artisans_bidding') {
-      throw new InvalidStateTransitionError(
-        'Split support can only be requested when QuoteRequest is in "artisans_bidding" status.',
-        {
-          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
-          entity: 'QuoteRequest',
-        },
-      );
-    }
-
-    if (this.split_requested_at !== null) {
-      throw new InvalidStateTransitionError(
-        'Split support has already been requested for this QuoteRequest.',
-        {
-          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
-          entity: 'QuoteRequest',
-        },
-      );
-    }
-
-    if (!input.hasEligibleQuotes) {
-      throw new InvalidStateTransitionError(
-        'Cannot request split support when there are no eligible quotes.',
-        {
-          invariant: TRADING_INVARIANTS.INV_03_QUANTITY_AND_SPLIT_PROPOSAL,
-          entity: 'QuoteRequest',
-        },
-      );
-    }
-
-    if (input.eligibleQuoteCount !== undefined && input.eligibleQuoteCount < 2) {
-      throw new InsufficientCapacityError(
-        'Requesting split support requires at least 2 eligible quotes.',
-        {
-          invariant: TRADING_INVARIANTS.INV_03_QUANTITY_AND_SPLIT_PROPOSAL,
-          entity: 'QuoteRequest',
-        },
-      );
-    }
-
-    if (
-      input.eligibleCapacitySum !== undefined &&
-      this.quantity !== null &&
-      input.eligibleCapacitySum < BigInt(this.quantity)
-    ) {
-      throw new InsufficientCapacityError(
-        'Total eligible quote capacity is insufficient to fulfill request.quantity.',
-        {
-          invariant: TRADING_INVARIANTS.INV_03_QUANTITY_AND_SPLIT_PROPOSAL,
-          entity: 'QuoteRequest',
-        },
-      );
-    }
-
-    const logs: StatusLogRecord[] = [];
-    let closedAt = this.bidding_closed_at;
-    if (closedAt === null && this.bidding_deadline !== null) {
-      closedAt =
-        input.now.getTime() >= this.bidding_deadline.getTime()
-          ? new Date(this.bidding_deadline.getTime())
-          : new Date(input.now.getTime());
-
-      logs.push(
-        Object.freeze({
-          request_id: this.id,
-          event_type: 'bidding_closed',
-          prev_status: this.status,
-          new_status: this.status,
-          performed_by:
-            input.now.getTime() >= this.bidding_deadline.getTime()
-              ? null
-              : this.buyer_id,
-          is_admin_action: false,
-          note: null,
-          evidence: null,
-          created_at: closedAt,
-        }),
-      );
-    }
-
-    const updated = new QuoteRequest({
-      ...this,
-      bidding_closed_at: closedAt,
-      split_requested_at: new Date(input.now.getTime()),
-      version: Version.of(this.version).next().value,
-      updated_at: input.now,
-    });
-
-    logs.push(
-      Object.freeze({
-        request_id: updated.id,
-        event_type: 'split_requested',
-        prev_status: this.status,
-        new_status: updated.status,
-        performed_by: updated.buyer_id,
-        is_admin_action: false,
-        note: null,
-        evidence: null,
-        created_at: new Date(input.now.getTime()),
-      }),
-    );
-
-    return { request: updated, statusLogs: Object.freeze(logs) };
   }
 
   markBuyerAccepted(input: {
@@ -1351,35 +1234,6 @@ export class QuoteRequest {
     });
 
     return { request: updated, contactEditHistory };
-  }
-
-  deriveCoordinationState(context: {
-    readonly hasProposedSplitProposal: boolean;
-    readonly hasExpiredSplitProposal: boolean;
-    readonly eligibleCapacitySum: bigint;
-  }): CoordinationState | null {
-    if (
-      this.split_requested_at === null ||
-      this.isCancelled() ||
-      this.isAcceptedOrBeyond()
-    ) {
-      return null;
-    }
-
-    if (context.hasProposedSplitProposal) {
-      return 'awaiting_buyer';
-    }
-
-    const requiredQty = BigInt(this.quantity ?? 0);
-    if (context.eligibleCapacitySum < requiredQty) {
-      return 'insufficient_capacity';
-    }
-
-    if (context.hasExpiredSplitProposal) {
-      return 'needs_revision';
-    }
-
-    return 'awaiting_admin';
   }
 
   deriveNoValidQuotes(eligibleQuoteCount: number): boolean {

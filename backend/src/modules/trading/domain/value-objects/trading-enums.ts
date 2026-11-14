@@ -26,21 +26,6 @@ export type RecipientResponseStatus = (typeof RECIPIENT_RESPONSE_STATUSES)[numbe
 export const QUOTE_STATUSES = ['active', 'withdrawn', 'accepted'] as const;
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
 
-export const SPLIT_PROPOSAL_STATUSES = ['proposed', 'accepted', 'expired'] as const;
-export type SplitProposalStatus = (typeof SPLIT_PROPOSAL_STATUSES)[number];
-
-export const SPLIT_PROPOSAL_EXPIRE_REASONS = [
-  'quote_changed',
-  'quote_withdrawn',
-  'quote_expired',
-  'workshop_suspended',
-  'replaced',
-  'buyer_rejected',
-  'request_accepted',
-  'request_cancelled',
-] as const;
-export type SplitProposalExpireReason = (typeof SPLIT_PROPOSAL_EXPIRE_REASONS)[number];
-
 export const ALLOCATION_STATUSES = [
   'not_started',
   'in_production',
@@ -76,7 +61,6 @@ export const STATUS_LOG_EVENT_TYPES = [
   'sent',
   'first_quote',
   'bidding_closed',
-  'split_requested',
   'accepted',
   'production_started',
   'received_by_buyer',
