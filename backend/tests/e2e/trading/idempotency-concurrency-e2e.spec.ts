@@ -17,12 +17,10 @@ import {
   InvalidStateTransitionError,
   InvalidTradingInputError,
   Money,
-  ProposalExpectationVO,
   Quantity,
   Quote,
   QuoteRequest,
   RequestRecipient,
-  SplitProposal,
   TRADING_INVARIANTS,
   TradingIdempotencyPolicy,
   TradingPermissionDeniedError,
@@ -472,7 +470,6 @@ function buildSentRequest(overrides: Partial<Parameters<typeof QuoteRequest.reco
     bidding_deadline: BIDDING_DEADLINE,
     delivery_deadline: DELIVERY_DEADLINE,
     bidding_closed_at: null,
-    split_requested_at: null,
     version: 1,
     cancelled_at: null,
     cancelled_by: null,
@@ -512,44 +509,6 @@ function buildQuote(overrides: Partial<Parameters<typeof Quote.reconstitute>[0]>
     withdraw_reason: null,
     withdrawn_by: null,
     withdrawn_at: null,
-    created_at: BASE_NOW,
-    updated_at: BASE_NOW,
-    ...overrides,
-  });
-}
-
-function buildSplitProposal(overrides: Partial<Parameters<typeof SplitProposal.reconstitute>[0]> = {}): SplitProposal {
-  return SplitProposal.reconstitute({
-    id: '501',
-    request_id: '100',
-    created_by: '999',
-    status: 'proposed',
-    version: 1,
-    reject_reason: null,
-    rejected_by: null,
-    rejected_at: null,
-    expire_reason: null,
-    expired_at: null,
-    items: [
-      {
-        id: '601',
-        proposal_id: '501',
-        request_id: '100',
-        quote_id: '401',
-        workshop_id: '201',
-        allocated_quantity: 60,
-        quote_version: 1,
-      },
-      {
-        id: '602',
-        proposal_id: '501',
-        request_id: '100',
-        quote_id: '402',
-        workshop_id: '202',
-        allocated_quantity: 40,
-        quote_version: 1,
-      },
-    ],
     created_at: BASE_NOW,
     updated_at: BASE_NOW,
     ...overrides,
@@ -1732,112 +1691,6 @@ describe('Trading Idempotency & Optimistic Concurrency E2E Test Suite', () => {
       });
     });
 
-    describe('Feature 11: Optimistic Concurrency on SplitProposal (≥5 tests)', () => {
-      const closedDeadline = new Date(BASE_NOW.getTime() - 1000);
-
-      it('F11-1: proposes split with matching request version and increments proposal version', () => {
-        const req = buildSentRequest({
-          version: 3,
-          status: 'artisans_bidding',
-          bidding_deadline: closedDeadline,
-          bidding_closed_at: BASE_NOW,
-          split_requested_at: BASE_NOW,
-        });
-        const q1 = buildQuote({ id: '401', workshop_id: '201', max_quantity: 60, version: 1 });
-        const q2 = buildQuote({ id: '402', workshop_id: '202', max_quantity: 40, version: 1 });
-
-        const { proposal } = SplitProposal.propose({
-          id: '501',
-          request: req,
-          expectedRequestVersion: 3,
-          adminId: '999',
-          proposalExpectation: { expected_proposal_id: null, expected_proposal_version: null },
-          currentProposedProposal: null,
-          candidates: [
-            { itemId: '601', workshop_id: '201', quote_id: '401', expected_quote_version: 1, allocated_quantity: 60, quote: q1, workshopIsActive: true },
-            { itemId: '602', workshop_id: '202', quote_id: '402', expected_quote_version: 1, allocated_quantity: 40, quote: q2, workshopIsActive: true },
-          ],
-          now: BASE_NOW,
-        });
-
-        expect(proposal.version).toBe(1);
-        expect(proposal.status).toBe('proposed');
-      });
-
-      it('F11-2: throws 409 CONCURRENCY_CONFLICT when proposalExpectation mismatches', () => {
-        const expectationVO = ProposalExpectationVO.of({
-          expected_proposal_id: '999',
-          expected_proposal_version: 1,
-        });
-
-        expect(() =>
-          expectationVO.assertMatchesCurrent({ id: '501', version: 1 }),
-        ).toThrow(ConcurrencyConflictError);
-      });
-
-      it('F11-3: rejects proposal when expected_request_version is stale', () => {
-        const req = buildSentRequest({
-          version: 4,
-          status: 'artisans_bidding',
-          bidding_deadline: closedDeadline,
-          bidding_closed_at: BASE_NOW,
-          split_requested_at: BASE_NOW,
-        });
-        const q1 = buildQuote({ id: '401', workshop_id: '201', max_quantity: 60, version: 1 });
-        const q2 = buildQuote({ id: '402', workshop_id: '202', max_quantity: 40, version: 1 });
-
-        expect(() =>
-          SplitProposal.propose({
-            id: '502',
-            request: req,
-            expectedRequestVersion: 2, // stale
-            adminId: '999',
-            proposalExpectation: { expected_proposal_id: null, expected_proposal_version: null },
-            currentProposedProposal: null,
-            candidates: [
-              { itemId: '601', workshop_id: '201', quote_id: '401', expected_quote_version: 1, allocated_quantity: 60, quote: q1, workshopIsActive: true },
-              { itemId: '602', workshop_id: '202', quote_id: '402', expected_quote_version: 1, allocated_quantity: 40, quote: q2, workshopIsActive: true },
-            ],
-            now: BASE_NOW,
-          }),
-        ).toThrow(ConcurrencyConflictError);
-      });
-
-      it('F11-4: rejects split proposal when quote version changes under proposed item', () => {
-        const req = buildSentRequest({
-          version: 3,
-          status: 'artisans_bidding',
-          bidding_deadline: closedDeadline,
-          bidding_closed_at: BASE_NOW,
-          split_requested_at: BASE_NOW,
-        });
-        const q1 = buildQuote({ id: '401', workshop_id: '201', max_quantity: 60, version: 2 }); // version 2 in DB
-        const q2 = buildQuote({ id: '402', workshop_id: '202', max_quantity: 40, version: 1 });
-
-        expect(() =>
-          SplitProposal.propose({
-            id: '501',
-            request: req,
-            expectedRequestVersion: 3,
-            adminId: '999',
-            proposalExpectation: { expected_proposal_id: null, expected_proposal_version: null },
-            currentProposedProposal: null,
-            candidates: [
-              { itemId: '601', workshop_id: '201', quote_id: '401', expected_quote_version: 1, allocated_quantity: 60, quote: q1, workshopIsActive: true }, // stale expectation 1!
-              { itemId: '602', workshop_id: '202', quote_id: '402', expected_quote_version: 1, allocated_quantity: 40, quote: q2, workshopIsActive: true },
-            ],
-            now: BASE_NOW,
-          }),
-        ).toThrow(ConcurrencyConflictError);
-      });
-
-      it('F11-5: rejecting proposal with stale expected_proposal_version throws 409 without expiring proposal', () => {
-        const proposal = buildSplitProposal({ version: 2, status: 'proposed' });
-        expect(() => proposal.assertVersionMatches(1)).toThrow(ConcurrencyConflictError);
-        expect(proposal.status).toBe('proposed'); // NOT expired!
-      });
-    });
-
     describe('Feature 12: Optimistic Concurrency on Allocation (≥5 tests)', () => {
       it('F12-1: starting production with matching expected_allocation_version increments version', () => {
         const alloc = buildAllocation({ version: 1, status: 'not_started' });
@@ -2545,42 +2398,6 @@ describe('Trading Idempotency & Optimistic Concurrency E2E Test Suite', () => {
         status: 409,
       });
       expect(harness.countStoredRecords()).toBe(0); // Nothing committed
-    });
-
-    it('Scenario 3: Split Proposal Rejection with Stale Version (No Proposal Expiration)', async () => {
-      // Flow: Admin had updated split proposal to version 2. Buyer attempts to reject the proposal
-      // sending expected_proposal_version: 1.
-      // Expected: System rejects with 409 CONCURRENCY_CONFLICT. Per BR-18 and PROJECT.md, the proposal
-      // must NOT be expired or transitioned to expired merely due to client's stale version.
-      const harness = createInMemoryTradingE2EHarness();
-      const idempotencyKey = 'd0b80101-0000-4000-8000-000000000003';
-
-      const currentProposal = buildSplitProposal({
-        id: '501',
-        version: 2, // Current version is 2
-        status: 'proposed',
-      });
-
-      const res = await harness.executeHttpMutation(
-        {
-          headers: { 'X-Idempotency-Key': idempotencyKey },
-          accountId: '10',
-          action: 'reject_split_proposal',
-          objectType: 'SplitProposal',
-          objectId: '501',
-          body: { expected_proposal_version: 1, reason: 'Không đồng ý phương án' },
-        },
-        async () => {
-          currentProposal.assertVersionMatches(1); // throws ConcurrencyConflictError!
-          return { result: { ok: true }, currentState: {} };
-        },
-        async () => ({ status: currentProposal.status }),
-      );
-
-      expect(res.status).toBe(409);
-      expect(res.body).toMatchObject({ code: 'CONCURRENCY_CONFLICT' });
-      expect(currentProposal.status).toBe('proposed'); // Crucial: NOT expired!
-      expect(harness.countStoredRecords()).toBe(0);
     });
 
     it('Scenario 4: Independent Artisan Allocations Progress Concurrency', async () => {

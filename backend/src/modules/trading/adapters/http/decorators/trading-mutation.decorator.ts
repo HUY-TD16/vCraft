@@ -19,7 +19,7 @@ export interface TradingMutationOptions {
   readonly action: string;
 
   /**
-   * Target domain entity type (e.g. 'QuoteRequest', 'Allocation', 'Quote', 'SplitProposal').
+   * Target domain entity type (e.g. 'QuoteRequest', 'Allocation', 'Quote').
    */
   readonly objectType: string;
 

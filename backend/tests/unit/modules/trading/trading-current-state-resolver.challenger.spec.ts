@@ -5,7 +5,6 @@ import type {
   IQuoteRequestRepository,
   IAllocationRepository,
   IQuoteRepository,
-  ISplitProposalRepository,
   IRequestRecipientRepository,
 } from '../../../../src/modules/trading/application/ports/repositories/trading-repositories.port';
 import { TradingCurrentStateResolver } from '../../../../src/modules/trading/adapters/http/interceptors/trading-current-state.resolver';
@@ -23,7 +22,6 @@ describe('Adversarial Challenger: TradingCurrentStateResolver & RFC 9457 Boundar
   let quoteRequestRepo: { findById: ReturnType<typeof vi.fn> };
   let allocationRepo: { findById: ReturnType<typeof vi.fn> };
   let quoteRepo: { findById: ReturnType<typeof vi.fn> };
-  let proposalRepo: { findById: ReturnType<typeof vi.fn> };
   let recipientRepo: { findById: ReturnType<typeof vi.fn> };
   let dummyTx: TransactionContext;
   let resolver: TradingCurrentStateResolver;
@@ -32,7 +30,6 @@ describe('Adversarial Challenger: TradingCurrentStateResolver & RFC 9457 Boundar
     quoteRequestRepo = { findById: vi.fn() };
     allocationRepo = { findById: vi.fn() };
     quoteRepo = { findById: vi.fn() };
-    proposalRepo = { findById: vi.fn() };
     recipientRepo = { findById: vi.fn() };
     dummyTx = { txId: 'tx-challenger-001' } as unknown as TransactionContext;
 
@@ -40,7 +37,6 @@ describe('Adversarial Challenger: TradingCurrentStateResolver & RFC 9457 Boundar
       quoteRequestRepo as unknown as IQuoteRequestRepository,
       allocationRepo as unknown as IAllocationRepository,
       quoteRepo as unknown as IQuoteRepository,
-      proposalRepo as unknown as ISplitProposalRepository,
       recipientRepo as unknown as IRequestRecipientRepository,
     );
   });
@@ -72,16 +68,14 @@ describe('Adversarial Challenger: TradingCurrentStateResolver & RFC 9457 Boundar
         expect(result.request.cancelled_at).toBeNull();
         expect(result.recipient).toBeUndefined();
         expect(result.quote).toBeUndefined();
-        expect(result.proposal).toBeUndefined();
         expect(result.allocation).toBeUndefined();
       }
     });
 
-    it('accurately handles unknown entity IDs across all 5 registered entity branches', async () => {
+    it('accurately handles unknown entity IDs across registered entity branches', async () => {
       quoteRequestRepo.findById.mockResolvedValue(null);
       allocationRepo.findById.mockResolvedValue(null);
       quoteRepo.findById.mockResolvedValue(null);
-      proposalRepo.findById.mockResolvedValue(null);
       recipientRepo.findById.mockResolvedValue(null);
 
       // 1. QuoteRequest unknown ID
@@ -100,12 +94,7 @@ describe('Adversarial Challenger: TradingCurrentStateResolver & RFC 9457 Boundar
       expect(r3.quote).toEqual({ id: 'missing-quote-1', status: 'active', version: 0 });
       expect(r3.request).toEqual({ id: '0', status: 'artisans_bidding', version: 0, cancelled_at: null });
 
-      // 4. SplitProposal unknown ID
-      const r4 = await resolver.resolveCurrentState('SplitProposal', 'missing-prop-1', dummyTx);
-      expect(r4.proposal).toEqual({ id: 'missing-prop-1', status: 'proposed', version: 0 });
-      expect(r4.request).toEqual({ id: '0', status: 'artisans_bidding', version: 0, cancelled_at: null });
-
-      // 5. RequestRecipient unknown ID
+      // 4. RequestRecipient unknown ID
       const r5 = await resolver.resolveCurrentState('RequestRecipient', 'missing-rec-1', dummyTx);
       expect(r5.request.id).toBe('missing-rec-1');
       expect(r5.request.status).toBe('draft_request');

@@ -4,8 +4,6 @@ export * from './contact-edit-history.mapper';
 export * from './request-recipient.mapper';
 export * from './recipient-response-history.mapper';
 export * from './quote.mapper';
-export * from './split-proposal-item.mapper';
-export * from './split-proposal.mapper';
 export * from './allocation-batch.mapper';
 export * from './allocation.mapper';
 export * from './allocation-log.mapper';

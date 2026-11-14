@@ -45,12 +45,22 @@ export interface BuyerRequestDtoMapperContext {
   readonly deliveryConfirmation?: DeliveryConfirmationDto | null;
 }
 
+export interface QuoteSummaryEvaluationItem {
+  readonly status: string;
+  readonly bid_accept_deadline: Date;
+  readonly committed_delivery_at: Date;
+  readonly workshop?: {
+    readonly status: string;
+  } | null;
+}
+
 export interface BuyerRequestSummaryDtoMapperContext {
   readonly category: CategoryRefDto | null;
   readonly now: Date;
   readonly coordinationState?: CoordinationState | null;
   readonly noValidQuotes?: boolean;
   readonly nearestAcceptDeadline?: Date | Instant | null;
+  readonly quotes?: readonly QuoteSummaryEvaluationItem[] | null;
 }
 
 export interface InvitedRequestDtoMapperContext {
@@ -108,7 +118,6 @@ export class QuoteRequestMapper {
       bidding_deadline: row.bidding_deadline ?? null,
       delivery_deadline: row.delivery_deadline ?? null,
       bidding_closed_at: row.bidding_closed_at ?? null,
-      split_requested_at: row.split_requested_at ?? null,
       version: row.version,
       cancelled_at: row.cancelled_at ?? null,
       cancelled_by: nullableBigintToId(
@@ -145,7 +154,6 @@ export class QuoteRequestMapper {
       bidding_deadline: entity.bidding_deadline,
       delivery_deadline: entity.delivery_deadline,
       bidding_closed_at: entity.bidding_closed_at,
-      split_requested_at: entity.split_requested_at,
       version: entity.version,
       cancelled_at: entity.cancelled_at,
       cancelled_by: nullableIdToBigInt(
@@ -179,7 +187,6 @@ export class QuoteRequestMapper {
       bidding_deadline: entity.bidding_deadline,
       delivery_deadline: entity.delivery_deadline,
       bidding_closed_at: entity.bidding_closed_at,
-      split_requested_at: entity.split_requested_at,
       version: entity.version,
       cancelled_at: entity.cancelled_at,
       cancelled_by: nullableIdToBigInt(
@@ -232,14 +239,12 @@ export class QuoteRequestMapper {
     const base = QuoteRequestMapper.toBaseDto(entity, context);
     return Object.freeze({
       ...base,
+      buyer_id: entity.buyer_id,
       recipient_name: entity.recipient_name,
       recipient_phone: entity.recipient_phone,
       delivery_address: entity.delivery_address,
       cancel_reason: entity.cancel_reason,
-      split_requested_at: nullableDateToInstant(
-        entity.split_requested_at,
-        'split_requested_at',
-      ),
+      split_requested_at: null,
       coordination_state: context.coordinationState ?? null,
       no_valid_quotes: context.noValidQuotes ?? false,
       nearest_accept_deadline: normalizeNearestDeadline(
@@ -260,6 +265,50 @@ export class QuoteRequestMapper {
     entity: QuoteRequest,
     context: BuyerRequestSummaryDtoMapperContext,
   ): BuyerRequestSummaryDto {
+    let noValidQuotes = context.noValidQuotes ?? false;
+    let nearestAcceptDeadline = context.nearestAcceptDeadline;
+
+    if (context.quotes !== undefined && context.quotes !== null) {
+      const eligibleQuotes = context.quotes.filter((q) => {
+        if (entity.isCancelled() || entity.isAcceptedOrBeyond()) {
+          return false;
+        }
+        if (q.status !== 'active') {
+          return false;
+        }
+        const isWorkshopActive = q.workshop?.status === 'active';
+        if (!isWorkshopActive) {
+          return false;
+        }
+        if (context.now.getTime() >= q.bid_accept_deadline.getTime()) {
+          return false;
+        }
+        if (
+          entity.delivery_deadline !== null &&
+          q.committed_delivery_at.getTime() > entity.delivery_deadline.getTime()
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      const validQuoteCount = eligibleQuotes.length;
+      noValidQuotes = entity.deriveNoValidQuotes(validQuoteCount);
+
+      if (
+        eligibleQuotes.length > 0 &&
+        !entity.isCancelled() &&
+        !entity.isAcceptedOrBeyond()
+      ) {
+        const minTime = Math.min(
+          ...eligibleQuotes.map((q) => q.bid_accept_deadline.getTime()),
+        );
+        nearestAcceptDeadline = new Date(minTime);
+      } else {
+        nearestAcceptDeadline = null;
+      }
+    }
+
     return Object.freeze({
       id: entity.id,
       status: entity.status,
@@ -277,15 +326,10 @@ export class QuoteRequestMapper {
       ),
       is_bidding_open: entity.isBiddingOpenAt(context.now),
       cancelled_at: nullableDateToInstant(entity.cancelled_at, 'cancelled_at'),
-      split_requested_at: nullableDateToInstant(
-        entity.split_requested_at,
-        'split_requested_at',
-      ),
+      split_requested_at: null,
       coordination_state: context.coordinationState ?? null,
-      no_valid_quotes: context.noValidQuotes ?? false,
-      nearest_accept_deadline: normalizeNearestDeadline(
-        context.nearestAcceptDeadline,
-      ),
+      no_valid_quotes: noValidQuotes,
+      nearest_accept_deadline: normalizeNearestDeadline(nearestAcceptDeadline),
       created_at: dateToInstant(entity.created_at, 'created_at'),
     });
   }

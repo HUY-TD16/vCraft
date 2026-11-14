@@ -81,7 +81,7 @@ export class DeadlineViolationError extends TradingDomainError {
 }
 
 /**
- * INV-02: Bidding window is already closed (or still open when split proposal requires closed bidding).
+ * INV-02: Bidding window is already closed.
  */
 export class BiddingClosedError extends TradingDomainError {
   constructor(
@@ -96,7 +96,7 @@ export class BiddingClosedError extends TradingDomainError {
 }
 
 /**
- * INV-02: Quote or split proposal acceptance deadline has passed (`now >= bid_accept_deadline`).
+ * INV-02: Quote acceptance deadline has passed (`now >= bid_accept_deadline`).
  */
 export class QuoteExpiredError extends TradingDomainError {
   constructor(
@@ -141,7 +141,7 @@ export class NoEligibleWorkshopError extends TradingDomainError {
 }
 
 /**
- * INV-03: Direct accept capacity < 100% or split proposal quantities violate capacity/sum constraints.
+ * INV-03: Direct accept capacity < 100% or quantity violates capacity constraints.
  */
 export class InsufficientCapacityError extends TradingDomainError {
   constructor(
@@ -156,11 +156,11 @@ export class InsufficientCapacityError extends TradingDomainError {
 }
 
 /**
- * INV-05: Optimistic concurrency version mismatch or ProposalExpectation mismatch.
+ * INV-05: Optimistic concurrency version mismatch.
  */
 export class ConcurrencyConflictError extends TradingDomainError {
   constructor(
-    message: string = 'Expected entity version or proposal expectation does not match current state.',
+    message: string = 'Expected entity version does not match current state.',
     details: TradingErrorDetails = {},
   ) {
     super('CONCURRENCY_CONFLICT', message, {
@@ -222,6 +222,35 @@ export class TradingResourceNotFoundError extends TradingDomainError {
 }
 
 /**
+ * Resource not found error specifically for QuoteRequest entities.
+ * Maps to HTTP 404 RESOURCE_NOT_FOUND.
+ */
+export class QuoteRequestNotFoundError extends TradingResourceNotFoundError {
+  constructor(
+    message: string = 'QuoteRequest was not found.',
+    details: TradingErrorDetails = {},
+  ) {
+    super(message, {
+      entity: 'QuoteRequest',
+      ...details,
+    });
+  }
+}
+
+/**
+ * General permission denied error.
+ * Maps to HTTP 403 PERMISSION_DENIED.
+ */
+export class PermissionDeniedError extends TradingPermissionDeniedError {
+  constructor(
+    message: string = 'Actor does not have permission to perform this trading operation.',
+    details: TradingErrorDetails = {},
+  ) {
+    super(message, details);
+  }
+}
+
+/**
  * Explicit INV-01 error class: 6-step QuoteRequest state machine & cancellation invariants.
  */
 export class Invariant01StateMachineError extends InvalidStateTransitionError {
@@ -246,7 +275,7 @@ export class Invariant02DeadlineBiddingError extends DeadlineViolationError {
 }
 
 /**
- * Explicit INV-03 error class: Quantity bounds, direct accept 100% capacity, & SplitProposal sum invariants.
+ * Explicit INV-03 error class: Quantity bounds & direct accept 100% capacity invariants.
  */
 export class Invariant03QuantitySplitError extends InsufficientCapacityError {
   constructor(message: string, details: Omit<TradingErrorDetails, 'invariant'> = {}) {

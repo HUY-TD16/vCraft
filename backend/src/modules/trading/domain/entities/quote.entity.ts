@@ -496,55 +496,6 @@ export class Quote {
     return { quote: updatedQuote, recipientHistory };
   }
 
-  acceptInSplitProposal(input: {
-    readonly request: QuoteRequest;
-    readonly recipientId: string;
-    readonly actorId: string;
-    readonly expectedQuoteVersion: number;
-    readonly allocatedQuantity: number;
-    readonly workshopIsActive: boolean;
-    readonly now: Date;
-  }): { readonly quote: Quote; readonly recipientHistory: RecipientResponseRecord } {
-    this.assertVersionMatches(input.expectedQuoteVersion);
-    this.assertEligibleForAcceptance({
-      request: input.request,
-      workshopIsActive: input.workshopIsActive,
-      now: input.now,
-    });
-
-    const allocated = Quantity.of(input.allocatedQuantity, 'allocated_quantity');
-    if (allocated.value > this.max_quantity) {
-      throw new InsufficientCapacityError(
-        `Allocated quantity (${allocated.value}) exceeds quote max_quantity (${this.max_quantity}).`,
-        {
-          invariant: TRADING_INVARIANTS.INV_03_QUANTITY_AND_SPLIT_PROPOSAL,
-          entity: 'Quote',
-        },
-      );
-    }
-
-    const updatedQuote = new Quote({
-      ...this,
-      status: 'accepted',
-      version: Version.of(this.version).next().value,
-      updated_at: input.now,
-    });
-
-    const recipientHistory: RecipientResponseRecord = Object.freeze({
-      recipient_id: EntityId.of(input.recipientId, 'recipientId').value,
-      quote_id: updatedQuote.id,
-      event_type: 'quote_accepted',
-      prev_status: 'quoted',
-      new_status: 'quoted',
-      reason: null,
-      quote_snapshot: updatedQuote.toSnapshot(),
-      performed_by: EntityId.of(input.actorId, 'actorId').value,
-      created_at: new Date(input.now.getTime()),
-    });
-
-    return { quote: updatedQuote, recipientHistory };
-  }
-
   evaluateEligibility(context: {
     readonly request: QuoteRequest;
     readonly workshopIsActive: boolean;

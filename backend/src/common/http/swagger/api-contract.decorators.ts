@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiBody, ApiHeader, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import type { ReferenceObject, SchemaObject } from '@nestjs/swagger';
 import { z } from 'zod';
 import { statusByCode } from '../filters/api-problem';
 import { requestIdHeader } from './api-schemas';
@@ -18,7 +18,8 @@ export const ApiZodBody = (dto: { schema: z.ZodType }, openApiSchema?: SchemaObj
 export function ApiZodParameters(dto: { schema: z.ZodType }, location: 'query' | 'path' = 'query', openApiSchema?: SchemaObject) {
   return deferSchemaDecorator(() => {
     const schema = openApiSchema ?? schemaFor(dto.schema, 'input');
-    return applyDecorators(...Object.entries(schema.properties ?? {}).map(([name, property]) => {
+    const entries = Object.entries(schema.properties ?? {}) as [string, SchemaObject | ReferenceObject][];
+    return applyDecorators(...entries.map(([name, property]) => {
       if (!('$ref' in property) && property.type === 'string' && typeof property.default === 'number') {
         property.default = String(property.default);
       }

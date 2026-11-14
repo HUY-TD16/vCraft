@@ -1,19 +1,28 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '../../../../../generated/prisma/client';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
+import { PrismaService } from '../../../../../infrastructure/database/prisma/prisma.service';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
-import type { IRequestRecipientRepository } from '../../../application/ports/repositories/trading-repositories.port';
+import type {
+  IRequestRecipientRepository,
+  RequestRecipientDetailItem,
+} from '../../../application/ports/repositories/trading-repositories.port';
 import {
   ConcurrencyConflictError,
   EntityId,
   type RecipientResponseRecord,
+  type RecipientResponseStatus,
   type RequestRecipient,
   TRADING_INVARIANTS,
 } from '../../../domain';
 import { RecipientResponseHistoryMapper } from '../mappers/recipient-response-history.mapper';
 import { RequestRecipientMapper } from '../mappers/request-recipient.mapper';
-import { idToBigInt } from '../mappers/shared-persistence.mapper';
+import {
+  bigintToId,
+  idToBigInt,
+  toWorkshopRefDto,
+} from '../mappers/shared-persistence.mapper';
 
 @Injectable()
 export class PrismaRequestRecipientRepository
@@ -22,6 +31,9 @@ export class PrismaRequestRecipientRepository
   constructor(
     @Inject(PrismaTransactionRunner)
     private readonly txRunner: PrismaTransactionRunner,
+    @Optional()
+    @Inject(PrismaService)
+    private readonly prisma?: PrismaService,
   ) {}
 
   async createMany(
@@ -248,5 +260,92 @@ export class PrismaRequestRecipientRepository
     });
 
     return rows.map((row) => RequestRecipientMapper.toDomain(row));
+  }
+
+  async findRecipientsWithDetails(
+    input: {
+      readonly requestId: string;
+      readonly responseStatus?: RecipientResponseStatus;
+      readonly page?: number;
+      readonly limit?: number;
+    },
+    tx?: TransactionContext,
+  ): Promise<{
+    readonly rows: readonly RequestRecipientDetailItem[];
+    readonly totalRecords: number;
+  }> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindRecipientsWithDetails(client, input);
+    }
+    if (this.prisma) {
+      return this.executeFindRecipientsWithDetails(this.prisma, input);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindRecipientsWithDetails(client, input);
+    });
+  }
+
+  private async executeFindRecipientsWithDetails(
+    client: Prisma.TransactionClient | PrismaService,
+    input: {
+      readonly requestId: string;
+      readonly responseStatus?: RecipientResponseStatus;
+      readonly page?: number;
+      readonly limit?: number;
+    },
+  ): Promise<{
+    readonly rows: readonly RequestRecipientDetailItem[];
+    readonly totalRecords: number;
+  }> {
+    const reqIdBigInt = idToBigInt(
+      input.requestId,
+      'request_recipient.request_id',
+    );
+    const where: Prisma.RequestRecipientWhereInput = {
+      request_id: reqIdBigInt,
+      ...(input.responseStatus
+        ? { response_status: input.responseStatus }
+        : {}),
+    };
+
+    const page = input.page && input.page > 0 ? input.page : 1;
+    const limit = input.limit && input.limit > 0 ? input.limit : 20;
+    const skip = (page - 1) * limit;
+
+    const [totalRecords, rows] = await Promise.all([
+      client.requestRecipient.count({ where }),
+      client.requestRecipient.findMany({
+        where,
+        include: {
+          workshop: true,
+          quote: true,
+        },
+        orderBy: { id: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const items: RequestRecipientDetailItem[] = rows.map((row) => ({
+      entity: RequestRecipientMapper.toDomain(row),
+      workshop: {
+        ...toWorkshopRefDto(row.workshop),
+        status: row.workshop.status,
+      },
+      quote: row.quote
+        ? {
+            id: bigintToId(row.quote.id, 'quote.id'),
+            status: row.quote.status,
+            bid_accept_deadline: row.quote.bid_accept_deadline,
+          }
+        : null,
+    }));
+
+    return {
+      rows: items,
+      totalRecords,
+    };
   }
 }

@@ -33,12 +33,10 @@ export interface AcceptanceDto {
   request_id: Id;
   request_status: RequestStatus;
   request_version: number;
-  accepted_proposal_id: Id | null;
   allocations: AllocationDto[];
 }
 
 export type AcceptanceOperationDto = OperationMetadata<{
     request: { id: Id; status: RequestStatus; version: number; cancelled_at: Instant | null };
     quote?: { id: Id; status: 'active' | 'withdrawn' | 'accepted'; version: number } | null;
-    proposal?: { id: Id; status: 'proposed' | 'accepted' | 'expired'; version: number } | null;
 }>;

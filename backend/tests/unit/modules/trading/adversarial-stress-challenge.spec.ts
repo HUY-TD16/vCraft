@@ -22,7 +22,6 @@ import type {
   IRequestRecipientRepository,
   IAllocationRepository,
   IQuoteRepository,
-  ISplitProposalRepository,
 } from '../../../../src/modules/trading/application/ports/repositories/trading-repositories.port';
 import {
   ConcurrencyConflictError,
@@ -269,7 +268,6 @@ class AdversarialStressHarness {
 
   readonly allocationRepo = { findById: vi.fn() } as unknown as IAllocationRepository;
   readonly quoteRepo = { findById: vi.fn() } as unknown as IQuoteRepository;
-  readonly proposalRepo = { findById: vi.fn() } as unknown as ISplitProposalRepository;
 }
 
 function buildMockExecutionContext(options: {
@@ -351,7 +349,6 @@ describe('Adversarial Verification & Stress Testing (Milestone 3 Challenger)', (
       harness.quoteRequestRepo,
       harness.allocationRepo,
       harness.quoteRepo,
-      harness.proposalRepo,
       harness.recipientRepo,
     );
     reflector = new Reflector();

@@ -9,8 +9,6 @@ import {
   QUOTE_REQUEST_REPOSITORY,
   RECIPIENT_RESPONSE_HISTORY_REPOSITORY,
   REQUEST_RECIPIENT_REPOSITORY,
-  SPLIT_PROPOSAL_ITEM_REPOSITORY,
-  SPLIT_PROPOSAL_REPOSITORY,
   STATUS_LOG_REPOSITORY,
 } from '../../../application/ports/repositories/trading-repositories.port';
 import { PrismaAllocationBatchRepository } from './allocation-batch.repository';
@@ -22,8 +20,6 @@ import { PrismaQuoteRequestRepository } from './quote-request.repository';
 import { PrismaQuoteRepository } from './quote.repository';
 import { PrismaRecipientResponseHistoryRepository } from './recipient-response-history.repository';
 import { PrismaRequestRecipientRepository } from './request-recipient.repository';
-import { PrismaSplitProposalItemRepository } from './split-proposal-item.repository';
-import { PrismaSplitProposalRepository } from './split-proposal.repository';
 import { PrismaStatusLogRepository } from './status-log.repository';
 
 export * from './quote-request.repository';
@@ -31,8 +27,6 @@ export * from './contact-edit-history.repository';
 export * from './request-recipient.repository';
 export * from './recipient-response-history.repository';
 export * from './quote.repository';
-export * from './split-proposal.repository';
-export * from './split-proposal-item.repository';
 export * from './allocation.repository';
 export * from './allocation-batch.repository';
 export * from './allocation-log.repository';
@@ -64,16 +58,6 @@ export const TRADING_PERSISTENCE_PROVIDERS: readonly Provider[] = [
   {
     provide: QUOTE_REPOSITORY,
     useExisting: PrismaQuoteRepository,
-  },
-  PrismaSplitProposalRepository,
-  {
-    provide: SPLIT_PROPOSAL_REPOSITORY,
-    useExisting: PrismaSplitProposalRepository,
-  },
-  PrismaSplitProposalItemRepository,
-  {
-    provide: SPLIT_PROPOSAL_ITEM_REPOSITORY,
-    useExisting: PrismaSplitProposalItemRepository,
   },
   PrismaAllocationRepository,
   {

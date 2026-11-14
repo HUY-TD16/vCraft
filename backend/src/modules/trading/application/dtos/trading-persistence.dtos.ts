@@ -19,8 +19,6 @@ import type {
   RecipientResponseRecord,
   RecipientResponseStatus,
   RequestUnit,
-  SplitProposalExpireReason,
-  SplitProposalStatus,
   StatusLogEventType,
   StatusLogRecord,
   TraceabilityWarning,
@@ -78,6 +76,7 @@ export interface RequestBaseDto {
  * Full QuoteRequest DTO for Buyer owner and Admin (`docsAI/04-architecture/api-dtos.md` §2.2).
  */
 export interface BuyerRequestDto extends RequestBaseDto {
+  readonly buyer_id: Id;
   readonly recipient_name: string | null;
   readonly recipient_phone: string | null;
   readonly delivery_address: string | null;
@@ -174,55 +173,6 @@ export interface InvitedRequestWithAllocationDto extends InvitedRequestBaseDto {
 }
 
 export type InvitedRequestDto = InvitedRequestBaseDto | InvitedRequestWithAllocationDto;
-
-/**
- * SplitProposalItem DTO (`docsAI/04-architecture/api-dtos.md` §2.3).
- */
-export interface SplitProposalItemDto {
-  readonly workshop_id: Id;
-  readonly workshop_name: string;
-  readonly quote_id: Id;
-  readonly quote_version: number;
-  readonly quantity: number;
-  readonly unit_price: number;
-  readonly committed_delivery_at: Instant;
-  readonly line_total: string;
-}
-
-/**
- * SplitProposal DTO (`docsAI/04-architecture/api-dtos.md` §2.3).
- */
-export interface SplitProposalDto {
-  readonly id: Id;
-  readonly request_id: Id;
-  readonly status: SplitProposalStatus;
-  readonly version: number;
-  readonly created_at: Instant;
-  readonly decision_deadline: Instant;
-  readonly expired_at: Instant | null;
-  readonly expire_reason: SplitProposalExpireReason | null;
-  readonly rejected_by: ActorDto | null;
-  readonly rejected_at: Instant | null;
-  readonly reject_reason: string | null;
-  readonly items: readonly SplitProposalItemDto[];
-  readonly total_amount: string;
-}
-
-/**
- * Admin Split Queue item DTO (`docsAI/04-architecture/api-dtos.md` §2.3).
- */
-export interface SplitQueueItemDto {
-  readonly request_id: Id;
-  readonly request_version: number;
-  readonly split_requested_at: Instant;
-  readonly waiting_seconds: number;
-  readonly coordination_state: CoordinationState;
-  readonly revision_reason: SplitProposalExpireReason | null;
-  readonly nearest_accept_deadline: Instant | null;
-  readonly eligible_quote_count: number;
-  readonly eligible_capacity: string;
-  readonly required_quantity: number;
-}
 
 /**
  * AllocationBatch DTO (`docsAI/04-architecture/api-dtos.md` §2.3).
@@ -374,7 +324,6 @@ export interface TradingCurrentStateDto {
   };
   readonly recipient?: TradingObjectStateSummary<RecipientResponseStatus> | null;
   readonly quote?: TradingObjectStateSummary<QuoteStatus> | null;
-  readonly proposal?: TradingObjectStateSummary<SplitProposalStatus> | null;
   readonly allocation?: TradingObjectStateSummary<AllocationStatus> | null;
 }
 

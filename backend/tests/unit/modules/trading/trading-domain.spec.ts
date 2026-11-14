@@ -19,7 +19,6 @@ import {
   Invariant05ConcurrencyIdempotencyError,
   Money,
   NoEligibleWorkshopError,
-  ProposalExpectationVO,
   Quantity,
   Quote,
   QuoteDeadlines,
@@ -28,8 +27,6 @@ import {
   RecipientContact,
   RequestDeadlines,
   RequestRecipient,
-  SplitProposal,
-  SplitProposalInvalidationPolicy,
   TRADING_INVARIANTS,
   TradingDomainError,
   TradingIdempotencyPolicy,
@@ -206,7 +203,7 @@ describe('Trading Module — Clean Architecture & Domain Core (Task 1)', () => {
       expect(lockPlan.quoteIds).toEqual(['3', '20', '100']);
     });
 
-    it('validates Version, ProposalExpectationVO, and Idempotency fingerprint (INV-05)', () => {
+    it('validates Version and Idempotency fingerprint (INV-05)', () => {
       const v1 = Version.initial();
       expect(v1.value).toBe(1);
       expect(v1.next().value).toBe(2);
@@ -214,28 +211,6 @@ describe('Trading Module — Clean Architecture & Domain Core (Task 1)', () => {
       expect(() => v1.assertMatches(2, 'QuoteRequest')).toThrow(
         ConcurrencyConflictError,
       );
-
-      const emptyExpectation = ProposalExpectationVO.of({
-        expected_proposal_id: null,
-        expected_proposal_version: null,
-      });
-      expect(() =>
-        emptyExpectation.assertMatchesCurrent({ id: '50', version: 1 }),
-      ).toThrow(ConcurrencyConflictError);
-
-      const specificExpectation = ProposalExpectationVO.of({
-        expected_proposal_id: '50',
-        expected_proposal_version: 2,
-      });
-      expect(() =>
-        specificExpectation.assertMatchesCurrent({ id: '51', version: 2 }),
-      ).toThrow(ConcurrencyConflictError);
-      expect(() =>
-        specificExpectation.assertMatchesCurrent({ id: '50', version: 1 }),
-      ).toThrow(ConcurrencyConflictError);
-      expect(() =>
-        specificExpectation.assertMatchesCurrent({ id: '50', version: 2 }),
-      ).not.toThrow();
 
       expect(() =>
         TradingIdempotencyPolicy.assertFingerprintMatches('fp-a', 'fp-b'),
@@ -430,7 +405,7 @@ describe('Trading Module — Clean Architecture & Domain Core (Task 1)', () => {
     });
   });
 
-  describe('Quote & SplitProposal Entities — INV-02, INV-03, INV-05', () => {
+  describe('Quote Entity — INV-02, INV-03, INV-05', () => {
     it('validates Quote submission, withdrawal after bidding closed, and direct acceptance capacity', () => {
       const sent = createSentRequest();
       const recipient1 = createRecipient('301', sent.id, '201');
@@ -519,166 +494,6 @@ describe('Trading Module — Clean Architecture & Domain Core (Task 1)', () => {
         });
       expect(withdrawnQuote.status).toBe('withdrawn');
       expect(withdrawnRecipient.response_status).toBe('withdrawn');
-    });
-
-    it('validates SplitProposal creation (>= 2 workshops, exact sum, ProposalExpectation) and invalidation', () => {
-      const sent = createSentRequest();
-      const { request: bidding } = sent.recordFirstQuoteReceived({
-        actorId: '21',
-        now: baseNow,
-      });
-
-      const r1 = createRecipient('301', bidding.id, '201');
-      const r2 = createRecipient('302', bidding.id, '202');
-
-      const { quote: q1 } = Quote.submitNew({
-        id: '401',
-        request: bidding,
-        recipient: r1,
-        actorId: '21',
-        workshopIsActive: true,
-        unitPrice: 200_000,
-        maxQuantity: 60,
-        bidAcceptDeadline,
-        committedDeliveryAt,
-        now: baseNow,
-      });
-
-      const { quote: q2 } = Quote.submitNew({
-        id: '402',
-        request: bidding,
-        recipient: r2,
-        actorId: '22',
-        workshopIsActive: true,
-        unitPrice: 220_000,
-        maxQuantity: 50,
-        bidAcceptDeadline: new Date('2026-11-14T12:00:00.000Z'),
-        committedDeliveryAt,
-        now: baseNow,
-      });
-
-      const { request: splitRequested } = bidding.requestSplit({
-        buyerId: '10',
-        expectedVersion: 3,
-        hasEligibleQuotes: true,
-        now: baseNow,
-      });
-      expect(splitRequested.isBiddingOpenAt(baseNow)).toBe(false);
-
-      // Sum != 100 (60 + 30 = 90) must fail with InsufficientCapacityError (INV-03)
-      expect(() =>
-        SplitProposal.propose({
-          id: '501',
-          request: splitRequested,
-          expectedRequestVersion: 4,
-          adminId: '999',
-          proposalExpectation: {
-            expected_proposal_id: null,
-            expected_proposal_version: null,
-          },
-          currentProposedProposal: null,
-          candidates: [
-            {
-              itemId: '601',
-              workshop_id: '201',
-              quote_id: q1.id,
-              expected_quote_version: 1,
-              allocated_quantity: 60,
-              quote: q1,
-              workshopIsActive: true,
-            },
-            {
-              itemId: '602',
-              workshop_id: '202',
-              quote_id: q2.id,
-              expected_quote_version: 1,
-              allocated_quantity: 30,
-              quote: q2,
-              workshopIsActive: true,
-            },
-          ],
-          now: baseNow,
-        }),
-      ).toThrow(InsufficientCapacityError);
-
-      // Valid split proposal (60 + 40 = 100)
-      const { proposal } = SplitProposal.propose({
-        id: '501',
-        request: splitRequested,
-        expectedRequestVersion: 4,
-        adminId: '999',
-        proposalExpectation: {
-          expected_proposal_id: null,
-          expected_proposal_version: null,
-        },
-        currentProposedProposal: null,
-        candidates: [
-          {
-            itemId: '601',
-            workshop_id: '201',
-            quote_id: q1.id,
-            expected_quote_version: 1,
-            allocated_quantity: 60,
-            quote: q1,
-            workshopIsActive: true,
-          },
-          {
-            itemId: '602',
-            workshop_id: '202',
-            quote_id: q2.id,
-            expected_quote_version: 1,
-            allocated_quantity: 40,
-            quote: q2,
-            workshopIsActive: true,
-          },
-        ],
-        now: baseNow,
-      });
-
-      expect(proposal.status).toBe('proposed');
-      expect(
-        proposal.computeTotalAmount(
-          new Map([
-            [q1.id, q1.unit_price],
-            [q2.id, q2.unit_price],
-          ]),
-        ),
-      ).toBe('20800000'); // 60*200,000 + 40*220,000 = 12,000,000 + 8,800,000
-
-      // Detect invalidation when a workshop is suspended
-      const reason = SplitProposalInvalidationPolicy.detectExpiryReason({
-        proposal,
-        request: splitRequested,
-        quotesById: new Map([
-          [q1.id, { quote: q1, workshopIsActive: false }],
-          [q2.id, { quote: q2, workshopIsActive: true }],
-        ]),
-        now: baseNow,
-      });
-      expect(reason).toBe('workshop_suspended');
-
-      // Buyer rejection requires a non-empty rejectReason
-      expect(() =>
-        proposal.rejectByBuyer({
-          request: splitRequested,
-          buyerId: '10',
-          expectedRequestVersion: splitRequested.version,
-          expectedProposalVersion: 1,
-          rejectReason: '   ',
-          now: baseNow,
-        }),
-      ).toThrow(InvalidTradingInputError);
-
-      const rejectedProposal = proposal.rejectByBuyer({
-        request: splitRequested,
-        buyerId: '10',
-        expectedRequestVersion: splitRequested.version,
-        expectedProposalVersion: 1,
-        rejectReason: 'Thời gian giao chưa phù hợp',
-        now: baseNow,
-      });
-      expect(rejectedProposal.status).toBe('expired');
-      expect(rejectedProposal.expire_reason).toBe('buyer_rejected');
     });
   });
 
