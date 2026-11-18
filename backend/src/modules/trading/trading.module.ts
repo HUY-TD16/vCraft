@@ -32,6 +32,8 @@ import { SendQuoteRequestUseCase } from './application/use-cases/requests/send-q
 import { DeclineQuoteRequestUseCase } from './application/use-cases/quotations/decline-quote-request.use-case';
 import { GetRecipientResponseHistoryUseCase } from './application/use-cases/quotations/get-recipient-response-history.use-case';
 import { ListQuoteRequestQuotesUseCase } from './application/use-cases/quotations/list-quote-request-quotes.use-case';
+import { ListQuoteRequestAllocationsUseCase } from './application/use-cases/fulfillment/list-quote-request-allocations.use-case';
+
 import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-quote.use-case';
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
 import { AcceptQuoteUseCase } from './application/use-cases/quotations/accept-quote.use-case';
@@ -393,6 +395,25 @@ const defaultProviders = [
     ],
   },
   {
+    provide: ListQuoteRequestAllocationsUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      quoteRequestRepo: IQuoteRequestRepository,
+      allocationRepo: IAllocationRepository,
+    ) => {
+      return new ListQuoteRequestAllocationsUseCase(
+        txRunner,
+        quoteRequestRepo,
+        allocationRepo,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      QUOTE_REQUEST_REPOSITORY,
+      ALLOCATION_REPOSITORY,
+    ],
+  },
+  {
     provide: GetRecipientResponseHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -477,6 +498,7 @@ const defaultExports = [
   DeclineQuoteRequestUseCase,
   GetRecipientResponseHistoryUseCase,
   ListQuoteRequestQuotesUseCase,
+  ListQuoteRequestAllocationsUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

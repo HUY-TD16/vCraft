@@ -16,7 +16,9 @@ import type {
 } from '../../../domain';
 import type {
   ActorDto,
+  AllocationDto,
   AllocationEventDto,
+  AllocationStatus,
   BuyerRequestSummaryDto,
   CategoryRefDto,
   ContactEventDto,
@@ -370,6 +372,19 @@ export interface IQuoteRepository {
   ): Promise<readonly Quote[]>;
 }
 
+export interface FindAllocationsWithDetailsInput {
+  readonly requestId: Id;
+  readonly workshopId?: Id;
+  readonly status?: AllocationStatus | string;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindAllocationsWithDetailsResult {
+  readonly rows: readonly AllocationDto[];
+  readonly totalRecords: number;
+}
+
 export interface IAllocationRepository {
   create(
     input: {
@@ -409,6 +424,10 @@ export interface IAllocationRepository {
     workshopId: Id,
     tx: TransactionContext,
   ): Promise<readonly Allocation[]>;
+  findAllocationsWithDetails(
+    input: FindAllocationsWithDetailsInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationsWithDetailsResult>;
   lockById(allocationId: Id, tx: TransactionContext): Promise<Allocation | null>;
   lockByRequestId(
     requestId: Id,
