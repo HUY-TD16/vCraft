@@ -1,6 +1,7 @@
 import {
   Injectable,
   Inject,
+  InternalServerErrorException,
   Optional,
   type CallHandler,
   type ExecutionContext,
@@ -16,8 +17,10 @@ import type { TransactionContext } from '../../../../../common/application/ports
 import {
   EntityId,
   InvalidTradingInputError,
+  REQUEST_STATUSES,
   TradingPermissionDeniedError,
   TRADING_INVARIANTS,
+  type RequestStatus,
 } from '../../../domain';
 import { validateUuidV4 } from '../../../domain/utilities';
 import { TradingIdempotencyService } from '../../../application/services/trading-idempotency.service';
@@ -31,6 +34,7 @@ import {
 import {
   TRADING_CURRENT_STATE_RESOLVER,
   type ITradingCurrentStateResolver,
+  type TradingCurrentStateContext,
 } from './trading-current-state.resolver';
 
 export {
@@ -46,11 +50,46 @@ export interface HandlerMutationResult<T = unknown> {
   readonly currentState?: TradingCurrentStateDto;
 }
 
+interface LegacyRequestActor {
+  readonly accountId?: Id;
+  readonly id?: Id;
+  readonly workshopId?: Id | null;
+}
+
+type TradingMutationRequest = Request & {
+  [TRADING_TX_REQUEST_KEY]?: TransactionContext;
+  readonly user?: LegacyRequestActor;
+  readonly actor?: LegacyRequestActor;
+};
+
+function isTradingCurrentStateDto(
+  value: unknown,
+): value is TradingCurrentStateDto {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'request' in value &&
+    value.request !== null &&
+    typeof value.request === 'object'
+  );
+}
+
+function isRequestStatus(value: unknown): value is RequestStatus {
+  return (
+    typeof value === 'string' &&
+    (REQUEST_STATUSES as readonly string[]).includes(value)
+  );
+}
+
 @Injectable()
 export class TradingMutationInterceptor implements NestInterceptor {
   constructor(
-    private readonly reflector: Reflector,
-    private readonly idempotencyService: TradingIdempotencyService,
+    @Optional()
+    @Inject(Reflector)
+    private readonly reflector?: Reflector,
+    @Optional()
+    @Inject(TradingIdempotencyService)
+    private readonly idempotencyService?: TradingIdempotencyService,
     @Optional()
     @Inject(TRADING_CURRENT_STATE_RESOLVER)
     private readonly stateResolver?: ITradingCurrentStateResolver,
@@ -60,12 +99,13 @@ export class TradingMutationInterceptor implements NestInterceptor {
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<unknown>> {
+    const reflector = this.reflector ?? new Reflector();
     const options =
-      this.reflector.getAllAndOverride<TradingMutationOptions>(
+      reflector.getAllAndOverride<TradingMutationOptions>(
         TRADING_MUTATION_METADATA_KEY,
         [context.getHandler(), context.getClass()],
       ) ??
-      this.reflector.getAllAndOverride<TradingMutationOptions>(
+      reflector.getAllAndOverride<TradingMutationOptions>(
         'trading:mutation',
         [context.getHandler(), context.getClass()],
       );
@@ -76,9 +116,7 @@ export class TradingMutationInterceptor implements NestInterceptor {
     }
 
     const http = context.switchToHttp();
-    const req = http.getRequest<
-      Request & { [TRADING_TX_REQUEST_KEY]?: TransactionContext }
-    >();
+    const req = http.getRequest<TradingMutationRequest>();
     const res = http.getResponse<Response>();
 
     // 2. Extract and validate X-Idempotency-Key (RFC 4122 UUID v4)
@@ -102,9 +140,9 @@ export class TradingMutationInterceptor implements NestInterceptor {
     const actor = authenticatedActors.get(req);
     const rawAccountId =
       actor?.accountId ??
-      (req as any).user?.accountId ??
-      (req as any).user?.id ??
-      (req as any).actor?.accountId;
+      req.user?.accountId ??
+      req.user?.id ??
+      req.actor?.accountId;
 
     if (
       rawAccountId === undefined ||
@@ -121,6 +159,18 @@ export class TradingMutationInterceptor implements NestInterceptor {
     }
     const account_id = EntityId.of(rawAccountId, 'account_id').value;
 
+    const rawWorkshopId =
+      actor?.workshopId ??
+      req.user?.workshopId ??
+      req.actor?.workshopId ??
+      null;
+    const workshopId =
+      rawWorkshopId !== null &&
+      rawWorkshopId !== undefined &&
+      String(rawWorkshopId).trim().length > 0
+        ? String(rawWorkshopId).trim()
+        : null;
+
     // 4. Extract target object ID
     const object_id = this.extractObjectId(req, options);
 
@@ -134,25 +184,81 @@ export class TradingMutationInterceptor implements NestInterceptor {
       next,
       options,
       account_id,
+      workshopId,
       object_id,
       idempotencyKey: normalizedKey,
     });
+
+    if (
+      options.resolveHttpStatus &&
+      res &&
+      !res.headersSent &&
+      res.statusCode !== 204
+    ) {
+      const resolvedStatus = options.resolveHttpStatus({
+        body: req.body,
+        data: result.data,
+        replayed: Boolean(result.metadata?.operation?.replayed),
+      });
+      if (
+        typeof resolvedStatus === 'number' &&
+        typeof res.status === 'function'
+      ) {
+        res.status(resolvedStatus);
+      }
+    }
 
     return of(result);
   }
 
   private async executeMutationPipeline(params: {
-    readonly req: Request & { [TRADING_TX_REQUEST_KEY]?: TransactionContext };
+    readonly req: TradingMutationRequest;
     readonly res: Response;
     readonly next: CallHandler;
     readonly options: TradingMutationOptions;
     readonly account_id: Id;
+    readonly workshopId: Id | null;
     readonly object_id: Id;
     readonly idempotencyKey: string;
   }): Promise<HttpResult<unknown, TradingCurrentStateDto>> {
-    const { req, res, next, options, account_id, object_id, idempotencyKey } = params;
+    const {
+      req,
+      res,
+      next,
+      options,
+      account_id,
+      workshopId,
+      object_id,
+      idempotencyKey,
+    } = params;
 
     const payload = req.body ?? {};
+    const bodyQuoteId =
+      options.action === 'accept_quote' &&
+      payload !== null &&
+      typeof payload === 'object' &&
+      'quote_id' in payload &&
+      typeof (payload as Record<string, unknown>).quote_id === 'string' &&
+      /^[1-9][0-9]*$/.test(
+        ((payload as Record<string, unknown>).quote_id as string).trim(),
+      )
+        ? ((payload as Record<string, unknown>).quote_id as string).trim()
+        : undefined;
+
+    const stateContext: TradingCurrentStateContext | undefined =
+      workshopId || bodyQuoteId
+        ? {
+            ...(workshopId ? { workshopId } : {}),
+            ...(bodyQuoteId ? { quoteId: bodyQuoteId } : {}),
+            action: options.action,
+          }
+        : undefined;
+
+    if (!this.idempotencyService) {
+      throw new InternalServerErrorException(
+        'TradingIdempotencyService is required for @TradingMutation routes.',
+      );
+    }
 
     const executionResult = await this.idempotencyService.executeWithIdempotency<
       unknown,
@@ -173,11 +279,18 @@ export class TradingMutationInterceptor implements NestInterceptor {
       // Query fresh state for fast replay
       getCurrentState: async (tx: TransactionContext) => {
         if (this.stateResolver) {
-          return this.stateResolver.resolveCurrentState(
-            options.objectType,
-            object_id,
-            tx,
-          );
+          return stateContext
+            ? this.stateResolver.resolveCurrentState(
+                options.objectType,
+                object_id,
+                tx,
+                stateContext,
+              )
+            : this.stateResolver.resolveCurrentState(
+                options.objectType,
+                object_id,
+                tx,
+              );
         }
         return {
           request: {
@@ -202,8 +315,10 @@ export class TradingMutationInterceptor implements NestInterceptor {
 
           if (handlerOutput instanceof HttpResult) {
             resultData = handlerOutput.data;
-            explicitCurrentState = (handlerOutput.metadata as any)?.operation
-              ?.current_state;
+            const opState = handlerOutput.metadata?.operation?.current_state;
+            explicitCurrentState = isTradingCurrentStateDto(opState)
+              ? opState
+              : undefined;
           } else if (
             handlerOutput &&
             typeof handlerOutput === 'object' &&
@@ -215,25 +330,44 @@ export class TradingMutationInterceptor implements NestInterceptor {
             explicitCurrentState = typedOutput.currentState;
           }
 
-          const handlerObj =
+          const handlerObj: Record<string, unknown> =
             handlerOutput && typeof handlerOutput === 'object'
-              ? (handlerOutput as Record<string, any>)
+              ? Object.fromEntries(Object.entries(handlerOutput))
               : {};
-          const fallbackStatus =
-            handlerObj.request_status ?? handlerObj.status ?? 'draft_request';
+          const rawFallbackStatus =
+            handlerObj.request_status ?? handlerObj.status;
+          const fallbackStatus: RequestStatus = isRequestStatus(rawFallbackStatus)
+            ? rawFallbackStatus
+            : 'draft_request';
+          const rawFallbackVersion =
+            handlerObj.request_version ?? handlerObj.version;
           const fallbackVersion =
-            handlerObj.request_version ?? handlerObj.version ?? 1;
-          const fallbackId = handlerObj.request_id ?? handlerObj.id ?? object_id;
-          const fallbackCancelledAt = handlerObj.cancelled_at ?? null;
+            typeof rawFallbackVersion === 'number' ? rawFallbackVersion : 1;
+          const rawFallbackId = handlerObj.request_id ?? handlerObj.id;
+          const fallbackId: Id =
+            typeof rawFallbackId === 'string' || typeof rawFallbackId === 'number'
+              ? String(rawFallbackId)
+              : object_id;
+          const fallbackCancelledAt =
+            typeof handlerObj.cancelled_at === 'string'
+              ? handlerObj.cancelled_at
+              : null;
 
           const currentState =
             explicitCurrentState ??
             (this.stateResolver
-              ? await this.stateResolver.resolveCurrentState(
-                  options.objectType,
-                  object_id,
-                  tx,
-                )
+              ? await (stateContext
+                  ? this.stateResolver.resolveCurrentState(
+                      options.objectType,
+                      object_id,
+                      tx,
+                      stateContext,
+                    )
+                  : this.stateResolver.resolveCurrentState(
+                      options.objectType,
+                      object_id,
+                      tx,
+                    ))
               : ({
                   request: {
                     id: fallbackId,

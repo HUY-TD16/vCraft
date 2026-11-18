@@ -15,10 +15,11 @@ import type {
 } from '../../../application/ports/repositories/trading-repositories.port';
 import {
   ConcurrencyConflictError,
-   type ContactEditRecord,
+  type ContactEditRecord,
   EntityId,
   InvalidStateTransitionError,
   type QuoteRequest,
+  type RequestStatus,
   type StatusLogRecord,
   TRADING_INVARIANTS,
   TradingPermissionDeniedError,
@@ -375,6 +376,102 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     return rows.map((row) => QuoteRequestMapper.toDomain(row));
   }
 
+  private buildStatusConditions(
+    status?: string | readonly string[],
+    cancelled?: boolean,
+  ): Prisma.QuoteRequestWhereInput {
+    const hasExplicitCancelled = typeof cancelled === 'boolean';
+    const explicitCancelledAt = hasExplicitCancelled
+      ? cancelled
+        ? { not: null }
+        : null
+      : undefined;
+
+    const cancelledClause =
+      explicitCancelledAt !== undefined ? explicitCancelledAt : null;
+
+    if (status === 'cancelled') {
+      return { cancelled_at: { not: null } };
+    }
+    if (Array.isArray(status)) {
+      return {
+        status: { in: [...status] as RequestStatus[] },
+        cancelled_at: cancelledClause,
+      };
+    }
+    if (status === 'draft' || status === 'draft_request') {
+      return { status: 'draft_request', cancelled_at: cancelledClause };
+    }
+    if (status === 'bidding') {
+      return {
+        status: { in: ['sent_to_artisans', 'artisans_bidding'] },
+        cancelled_at: cancelledClause,
+      };
+    }
+    if (status === 'sent_to_artisans') {
+      return { status: 'sent_to_artisans', cancelled_at: cancelledClause };
+    }
+    if (status === 'artisans_bidding') {
+      return { status: 'artisans_bidding', cancelled_at: cancelledClause };
+    }
+    if (status === 'accepted' || status === 'buyer_accepted') {
+      return { status: 'buyer_accepted', cancelled_at: cancelledClause };
+    }
+    if (status === 'in_production') {
+      return { status: 'in_production', cancelled_at: cancelledClause };
+    }
+    if (status === 'delivered') {
+      return { status: 'delivered', cancelled_at: cancelledClause };
+    }
+    if (hasExplicitCancelled) {
+      return { cancelled_at: explicitCancelledAt };
+    }
+    return {};
+  }
+
+  private buildSearchConditions(search?: string): Prisma.QuoteRequestWhereInput {
+    const trimmedSearch = search?.trim();
+    if (!trimmedSearch || trimmedSearch.length === 0) {
+      return {};
+    }
+
+    const searchOr: Prisma.QuoteRequestWhereInput[] = [
+      { spec: { contains: trimmedSearch, mode: 'insensitive' } },
+      {
+        category: {
+          is: {
+            name: { contains: trimmedSearch, mode: 'insensitive' },
+          },
+        },
+      },
+    ];
+
+    if (/^[1-9][0-9]*$/.test(trimmedSearch)) {
+      const parsedId = BigInt(trimmedSearch);
+      if (parsedId <= 9223372036854775807n) {
+        searchOr.push({ id: parsedId });
+      }
+    }
+
+    return { OR: searchOr };
+  }
+
+  private buildDeterministicOrderBy(
+    sortBy: string | undefined,
+    order: 'asc' | 'desc' | undefined,
+    allowedSortFields: readonly string[],
+  ): Prisma.QuoteRequestOrderByWithRelationInput[] {
+    const sortField =
+      sortBy !== undefined && allowedSortFields.includes(sortBy)
+        ? sortBy
+        : 'created_at';
+    const sortOrder: Prisma.SortOrder = order === 'asc' ? 'asc' : 'desc';
+
+    return sortField === 'id'
+      ? [{ id: sortOrder }]
+      : [{ [sortField]: sortOrder }, { id: 'desc' }];
+  }
+
   async findBuyerQuoteRequests(
     input: FindBuyerQuoteRequestsInput,
     tx: TransactionContext,
@@ -383,89 +480,12 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     const buyerIdBigInt = idToBigInt(input.buyerId, 'quote_request.buyer_id');
     const now = input.now ?? new Date();
 
-    // 1. Build status and cancelled filter
-    const hasExplicitCancelled = typeof input.cancelled === 'boolean';
-    const explicitCancelledAt = hasExplicitCancelled
-      ? input.cancelled
-        ? { not: null }
-        : null
-      : undefined;
+    const statusConditions = this.buildStatusConditions(
+      input.status,
+      input.cancelled,
+    );
+    const searchConditions = this.buildSearchConditions(input.search);
 
-    let statusConditions: Prisma.QuoteRequestWhereInput = {};
-
-    if (input.status === 'cancelled') {
-      statusConditions = { cancelled_at: { not: null } };
-    } else if (Array.isArray(input.status)) {
-      statusConditions = {
-        status: { in: [...input.status] },
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'draft' || input.status === 'draft_request') {
-      statusConditions = {
-        status: 'draft_request',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'bidding') {
-      statusConditions = {
-        status: { in: ['sent_to_artisans', 'artisans_bidding'] },
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'sent_to_artisans') {
-      statusConditions = {
-        status: 'sent_to_artisans',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'artisans_bidding') {
-      statusConditions = {
-        status: 'artisans_bidding',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'accepted' || input.status === 'buyer_accepted') {
-      statusConditions = {
-        status: 'buyer_accepted',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'in_production') {
-      statusConditions = {
-        status: 'in_production',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'delivered') {
-      statusConditions = {
-        status: 'delivered',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (hasExplicitCancelled) {
-      statusConditions = { cancelled_at: explicitCancelledAt };
-    }
-
-    // 2. Build search filter
-    let searchConditions: Prisma.QuoteRequestWhereInput = {};
-    const trimmedSearch = input.search?.trim();
-    if (trimmedSearch && trimmedSearch.length > 0) {
-      const searchOr: Prisma.QuoteRequestWhereInput[] = [
-        { spec: { contains: trimmedSearch, mode: 'insensitive' } },
-        {
-          category: {
-            is: {
-              name: { contains: trimmedSearch, mode: 'insensitive' },
-            },
-          },
-        },
-      ];
-
-      if (/^[1-9][0-9]*$/.test(trimmedSearch)) {
-        try {
-          searchOr.push({ id: BigInt(trimmedSearch) });
-        } catch {
-          // ignore parsing error
-        }
-      }
-
-      searchConditions = { OR: searchOr };
-    }
-
-    // 3. Assemble composite where
     const whereAnd: Prisma.QuoteRequestWhereInput[] = [
       { buyer_id: buyerIdBigInt },
     ];
@@ -479,31 +499,20 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     const where: Prisma.QuoteRequestWhereInput =
       whereAnd.length === 1 ? whereAnd[0] : { AND: whereAnd };
 
-    // 4. Build deterministic orderBy
-    const allowedSortFields = [
+    const orderBy = this.buildDeterministicOrderBy(input.sortBy, input.order, [
       'created_at',
+      'updated_at',
       'bidding_deadline',
       'delivery_deadline',
       'quantity',
       'id',
-    ] as const;
-    const sortField = allowedSortFields.includes(input.sortBy as any)
-      ? input.sortBy!
-      : 'created_at';
-    const sortOrder: Prisma.SortOrder = input.order === 'asc' ? 'asc' : 'desc';
+    ]);
 
-    const orderBy: Prisma.QuoteRequestOrderByWithRelationInput[] =
-      sortField === 'id'
-        ? [{ id: sortOrder }]
-        : [{ [sortField]: sortOrder }, { id: 'desc' }];
-
-    // 5. Pagination bounds
     const page = Math.max(1, input.page);
     const limit = Math.max(1, input.limit);
     const skip = (page - 1) * limit;
     const take = limit;
 
-    // 6. Parallel execution
     const [total, rows] = await Promise.all([
       client.quoteRequest.count({ where }),
       client.quoteRequest.findMany({
@@ -522,7 +531,6 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
       }),
     ]);
 
-    // 7. Map to BuyerRequestSummaryDto
     const items = rows.map((row) => {
       const entity = QuoteRequestMapper.toDomain(row);
       const categoryDto = toCategoryRefDto(row.category);
@@ -547,89 +555,12 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     const client = this.txRunner.getClient(tx);
     const now = input.now ?? new Date();
 
-    // 1. Build status and cancelled filter
-    const hasExplicitCancelled = typeof input.cancelled === 'boolean';
-    const explicitCancelledAt = hasExplicitCancelled
-      ? input.cancelled
-        ? { not: null }
-        : null
-      : undefined;
+    const statusConditions = this.buildStatusConditions(
+      input.status,
+      input.cancelled,
+    );
+    const searchConditions = this.buildSearchConditions(input.search);
 
-    let statusConditions: Prisma.QuoteRequestWhereInput = {};
-
-    if (input.status === 'cancelled') {
-      statusConditions = { cancelled_at: { not: null } };
-    } else if (Array.isArray(input.status)) {
-      statusConditions = {
-        status: { in: [...input.status] },
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'draft' || input.status === 'draft_request') {
-      statusConditions = {
-        status: 'draft_request',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'bidding') {
-      statusConditions = {
-        status: { in: ['sent_to_artisans', 'artisans_bidding'] },
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'sent_to_artisans') {
-      statusConditions = {
-        status: 'sent_to_artisans',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'artisans_bidding') {
-      statusConditions = {
-        status: 'artisans_bidding',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'accepted' || input.status === 'buyer_accepted') {
-      statusConditions = {
-        status: 'buyer_accepted',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'in_production') {
-      statusConditions = {
-        status: 'in_production',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (input.status === 'delivered') {
-      statusConditions = {
-        status: 'delivered',
-        cancelled_at: explicitCancelledAt !== undefined ? explicitCancelledAt : null,
-      };
-    } else if (hasExplicitCancelled) {
-      statusConditions = { cancelled_at: explicitCancelledAt };
-    }
-
-    // 2. Build search filter
-    let searchConditions: Prisma.QuoteRequestWhereInput = {};
-    const trimmedSearch = input.search?.trim();
-    if (trimmedSearch && trimmedSearch.length > 0) {
-      const searchOr: Prisma.QuoteRequestWhereInput[] = [
-        { spec: { contains: trimmedSearch, mode: 'insensitive' } },
-        {
-          category: {
-            is: {
-              name: { contains: trimmedSearch, mode: 'insensitive' },
-            },
-          },
-        },
-      ];
-
-      if (/^[1-9][0-9]*$/.test(trimmedSearch)) {
-        try {
-          searchOr.push({ id: BigInt(trimmedSearch) });
-        } catch {
-          // ignore parsing error
-        }
-      }
-
-      searchConditions = { OR: searchOr };
-    }
-
-    // 3. Assemble composite where
     const whereAnd: Prisma.QuoteRequestWhereInput[] = [];
 
     if (input.buyerId !== undefined) {
@@ -656,32 +587,20 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
           ? whereAnd[0]
           : { AND: whereAnd };
 
-    // 4. Build deterministic orderBy
-    const allowedSortFields = [
+    const orderBy = this.buildDeterministicOrderBy(input.sortBy, input.order, [
       'created_at',
       'updated_at',
       'bidding_deadline',
       'delivery_deadline',
       'quantity',
       'id',
-    ] as const;
-    const sortField = allowedSortFields.includes(input.sortBy as any)
-      ? input.sortBy!
-      : 'created_at';
-    const sortOrder: Prisma.SortOrder = input.order === 'asc' ? 'asc' : 'desc';
+    ]);
 
-    const orderBy: Prisma.QuoteRequestOrderByWithRelationInput[] =
-      sortField === 'id'
-        ? [{ id: sortOrder }]
-        : [{ [sortField]: sortOrder }, { id: 'desc' }];
-
-    // 5. Pagination bounds
     const page = Math.max(1, input.page);
     const limit = Math.max(1, input.limit);
     const skip = (page - 1) * limit;
     const take = limit;
 
-    // 6. Parallel execution
     const [total, rows] = await Promise.all([
       client.quoteRequest.count({ where }),
       client.quoteRequest.findMany({
@@ -700,7 +619,6 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
       }),
     ]);
 
-    // 7. Map to BuyerRequestSummaryDto (without sensitive recipient / delivery details)
     const items = rows.map((row) => {
       const entity = QuoteRequestMapper.toDomain(row);
       const categoryDto = toCategoryRefDto(row.category);
@@ -729,86 +647,14 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     );
     const now = input.now ?? new Date();
 
-    // 1. Build status filter
-    let statusConditions: Prisma.QuoteRequestWhereInput = {};
+    const statusConditions = this.buildStatusConditions(input.status);
+    const searchConditions = this.buildSearchConditions(input.search);
 
-    if (input.status === 'cancelled') {
-      statusConditions = { cancelled_at: { not: null } };
-    } else if (Array.isArray(input.status)) {
-      statusConditions = {
-        status: { in: [...input.status] },
-        cancelled_at: null,
-      };
-    } else if (input.status === 'draft_request') {
-      statusConditions = {
-        status: 'draft_request',
-        cancelled_at: null,
-      };
-    } else if (input.status === 'bidding') {
-      statusConditions = {
-        status: { in: ['sent_to_artisans', 'artisans_bidding'] },
-        cancelled_at: null,
-      };
-    } else if (input.status === 'sent_to_artisans') {
-      statusConditions = {
-        status: 'sent_to_artisans',
-        cancelled_at: null,
-      };
-    } else if (input.status === 'artisans_bidding') {
-      statusConditions = {
-        status: 'artisans_bidding',
-        cancelled_at: null,
-      };
-    } else if (input.status === 'accepted' || input.status === 'buyer_accepted') {
-      statusConditions = {
-        status: 'buyer_accepted',
-        cancelled_at: null,
-      };
-    } else if (input.status === 'in_production') {
-      statusConditions = {
-        status: 'in_production',
-        cancelled_at: null,
-      };
-    } else if (input.status === 'delivered') {
-      statusConditions = {
-        status: 'delivered',
-        cancelled_at: null,
-      };
-    }
-
-    // 2. Build search filter
-    let searchConditions: Prisma.QuoteRequestWhereInput = {};
-    const trimmedSearch = input.search?.trim();
-    if (trimmedSearch && trimmedSearch.length > 0) {
-      const searchOr: Prisma.QuoteRequestWhereInput[] = [
-        { spec: { contains: trimmedSearch, mode: 'insensitive' } },
-        {
-          category: {
-            is: {
-              name: { contains: trimmedSearch, mode: 'insensitive' },
-            },
-          },
-        },
-      ];
-
-      if (/^[1-9][0-9]*$/.test(trimmedSearch)) {
-        try {
-          searchOr.push({ id: BigInt(trimmedSearch) });
-        } catch {
-          // ignore parsing error
-        }
-      }
-
-      searchConditions = { OR: searchOr };
-    }
-
-    // 3. Build recipient conditions (BR-13)
     const recipientWhere: Prisma.RequestRecipientWhereInput = {
       workshop_id: workshopIdBigInt,
       ...(input.responseStatus ? { response_status: input.responseStatus } : {}),
     };
 
-    // 4. Assemble composite where
     const whereAnd: Prisma.QuoteRequestWhereInput[] = [
       { requestRecipients: { some: recipientWhere } },
     ];
@@ -822,25 +668,14 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     const where: Prisma.QuoteRequestWhereInput =
       whereAnd.length === 1 ? whereAnd[0] : { AND: whereAnd };
 
-    // 5. Build deterministic orderBy
-    const allowedSortFields = [
+    const orderBy = this.buildDeterministicOrderBy(input.sortBy, input.order, [
       'created_at',
       'bidding_deadline',
       'delivery_deadline',
       'quantity',
       'id',
-    ] as const;
-    const sortField = allowedSortFields.includes(input.sortBy as any)
-      ? input.sortBy!
-      : 'created_at';
-    const sortOrder: Prisma.SortOrder = input.order === 'asc' ? 'asc' : 'desc';
+    ]);
 
-    const orderBy: Prisma.QuoteRequestOrderByWithRelationInput[] =
-      sortField === 'id'
-        ? [{ id: sortOrder }]
-        : [{ [sortField]: sortOrder }, { id: 'desc' }];
-
-    // 6. Pagination bounds
     const page = Math.max(1, input.page);
     const limit = Math.max(1, input.limit);
     const skip = (page - 1) * limit;

@@ -278,6 +278,17 @@ export interface IRequestRecipientRepository {
   }>;
 }
 
+export interface FindRecipientResponseEventsInput {
+  readonly recipientId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindRecipientResponseEventsResult {
+  readonly rows: readonly RecipientEventDto[];
+  readonly totalRecords: number;
+}
+
 export interface IRecipientResponseHistoryRepository {
   create(
     record: RecipientResponseRecord & { readonly id?: Id },
@@ -291,11 +302,27 @@ export interface IRecipientResponseHistoryRepository {
     recipientId: Id,
     tx: TransactionContext,
   ): Promise<readonly RecipientEventDto[]>;
+  findEventsWithPagination(
+    input: FindRecipientResponseEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindRecipientResponseEventsResult>;
   findSnapshotByQuoteVersion(
     quoteId: Id,
     quoteVersion: number,
     tx: TransactionContext,
   ): Promise<QuoteSnapshotData | null>;
+}
+
+export interface FindQuotesWithDetailsInput {
+  readonly requestId: Id;
+  readonly workshopId?: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindQuotesWithDetailsResult {
+  readonly rows: readonly QuoteDetailItem[];
+  readonly totalRecords: number;
 }
 
 export interface IQuoteRepository {
@@ -304,6 +331,7 @@ export interface IQuoteRepository {
       readonly quote: Quote;
       readonly recipient?: RequestRecipient;
       readonly recipientHistory?: RecipientResponseRecord;
+      readonly useEntityId?: boolean;
     },
     tx: TransactionContext,
   ): Promise<Quote>;
@@ -326,6 +354,10 @@ export interface IQuoteRepository {
     requestId: Id,
     tx: TransactionContext,
   ): Promise<readonly Quote[]>;
+  findQuotesWithDetails(
+    input: FindQuotesWithDetailsInput,
+    tx?: TransactionContext,
+  ): Promise<FindQuotesWithDetailsResult>;
   lockById(quoteId: Id, tx: TransactionContext): Promise<Quote | null>;
   lockByRequestAndWorkshop(
     requestId: Id,
@@ -343,6 +375,7 @@ export interface IAllocationRepository {
     input: {
       readonly allocation: Allocation;
       readonly log?: AllocationLogRecord;
+      readonly useEntityId?: boolean;
     },
     tx: TransactionContext,
   ): Promise<Allocation>;
@@ -421,6 +454,19 @@ export interface IAllocationLogRepository {
   ): Promise<readonly AllocationEventDto[]>;
 }
 
+export interface FindStatusLogEventsInput {
+  readonly requestId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindStatusLogEventsResult {
+  readonly rows: readonly RequestEventDto[];
+  readonly totalRecords: number;
+  readonly items: readonly RequestEventDto[];
+  readonly total: number;
+}
+
 export interface IStatusLogRepository {
   create(
     record: StatusLogRecord & { readonly id?: Id },
@@ -438,6 +484,10 @@ export interface IStatusLogRepository {
     requestId: Id,
     tx: TransactionContext,
   ): Promise<readonly RequestEventDto[]>;
+  findEventsWithPagination(
+    input: FindStatusLogEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindStatusLogEventsResult>;
 }
 
 export interface IIdempotencyRecordRepository {

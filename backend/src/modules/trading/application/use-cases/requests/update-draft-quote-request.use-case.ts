@@ -8,6 +8,7 @@ import {
   type RequestUnit,
   type DeliveryMode,
   type DraftQuoteRequestInput,
+  TradingDomainError,
   TradingPermissionDeniedError,
   QuoteRequestNotFoundError,
   InvalidTradingInputError,
@@ -75,6 +76,16 @@ export class UpdateDraftQuoteRequestUseCase {
   ) {}
 
   async execute(input: UpdateDraftQuoteRequestInput): Promise<QuoteRequest> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot update draft quote requests.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError(
         'Only buyers can update draft quote requests.',

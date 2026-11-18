@@ -10,6 +10,7 @@ import {
   InvalidTradingInputError,
   QuoteRequest,
   QuoteRequestNotFoundError,
+  TradingDomainError,
   TradingPermissionDeniedError,
 } from '../../../domain';
 import type { IQuoteRequestRepository } from '../../ports/repositories/trading-repositories.port';
@@ -31,6 +32,16 @@ export class CloseBiddingUseCase {
   ) {}
 
   async execute(input: CloseBiddingInput): Promise<QuoteRequest> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot close bidding.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError('Only buyers can close bidding.');
     }

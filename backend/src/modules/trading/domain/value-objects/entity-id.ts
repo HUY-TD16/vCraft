@@ -59,8 +59,14 @@ export class EntityId {
   }
 
   static sortAscending(ids: readonly (EntityId | string)[]): string[] {
-    return [...ids]
-      .map((item) => (item instanceof EntityId ? item.value : EntityId.of(item).value))
-      .sort((a, b) => EntityId.compare(a, b));
+    if (ids.length === 0) {
+      return [];
+    }
+    const parsed = ids.map((item) => {
+      const entityId = item instanceof EntityId ? item : EntityId.of(item);
+      return { value: entityId.value, num: BigInt(entityId.value) };
+    });
+    parsed.sort((a, b) => (a.num < b.num ? -1 : a.num > b.num ? 1 : 0));
+    return parsed.map((entry) => entry.value);
   }
 }

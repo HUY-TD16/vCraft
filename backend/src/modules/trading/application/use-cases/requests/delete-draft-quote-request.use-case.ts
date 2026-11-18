@@ -5,6 +5,7 @@ import type {
 } from '../../../../../common/application/types/contract-types';
 import {
   QuoteRequestNotFoundError,
+  TradingDomainError,
   TradingPermissionDeniedError,
   InvalidTradingInputError,
 } from '../../../domain';
@@ -25,6 +26,16 @@ export class DeleteDraftQuoteRequestUseCase {
   ) {}
 
   async execute(input: DeleteDraftQuoteRequestInput): Promise<void> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot delete draft quote requests.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError(
         'Only buyers can delete draft quote requests.',

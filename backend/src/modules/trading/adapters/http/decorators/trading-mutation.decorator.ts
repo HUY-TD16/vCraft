@@ -66,6 +66,15 @@ export interface TradingMutationOptions {
    * Custom TTL duration in hours for idempotency record persistence (defaults to 24).
    */
   readonly ttlHours?: number;
+
+  /**
+   * Optional HTTP status resolver applied on both initial execution and idempotency replay.
+   */
+  readonly resolveHttpStatus?: (params: {
+    readonly body: unknown;
+    readonly data: unknown;
+    readonly replayed: boolean;
+  }) => number | undefined;
 }
 
 /**

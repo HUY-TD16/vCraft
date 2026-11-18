@@ -106,6 +106,93 @@ describe('TradingCurrentStateResolver', () => {
         },
       });
     });
+
+    it('resolves request, recipient, and quote when workshopId and submit_quote action context are provided', async () => {
+      const recRepoWithLookup = {
+        findById: vi.fn(),
+        findByRequestAndWorkshop: vi.fn().mockResolvedValueOnce({
+          id: 'rec-901',
+          response_status: 'quoted',
+          version: 2,
+        }),
+      };
+      const qRepoWithLookup = {
+        findById: vi.fn(),
+        findByRequestAndWorkshop: vi
+          .fn()
+          .mockResolvedValueOnce({
+            id: 'quote-901',
+            status: 'active',
+            version: 1,
+          })
+          .mockResolvedValueOnce(null),
+      };
+      const scopedResolver = new TradingCurrentStateResolver(
+        quoteRequestRepo as unknown as IQuoteRequestRepository,
+        allocationRepo as unknown as IAllocationRepository,
+        qRepoWithLookup as unknown as IQuoteRepository,
+        recRepoWithLookup as unknown as IRequestRecipientRepository,
+      );
+
+      quoteRequestRepo.findById.mockResolvedValueOnce({
+        id: 'req-901',
+        status: 'artisans_bidding',
+        version: 3,
+        cancelled_at: null,
+      });
+
+      const stateWithQuote = await scopedResolver.resolveCurrentState(
+        'QuoteRequest',
+        'req-901',
+        dummyTx,
+        { workshopId: '301', action: 'submit_quote' },
+      );
+
+      expect(stateWithQuote).toEqual({
+        request: {
+          id: 'req-901',
+          status: 'artisans_bidding',
+          version: 3,
+          cancelled_at: null,
+        },
+        recipient: {
+          id: 'rec-901',
+          status: 'quoted',
+          version: 2,
+        },
+        quote: {
+          id: 'quote-901',
+          status: 'active',
+          version: 1,
+        },
+      });
+
+      quoteRequestRepo.findById.mockResolvedValueOnce({
+        id: 'req-901',
+        status: 'sent_to_artisans',
+        version: 2,
+        cancelled_at: null,
+      });
+      recRepoWithLookup.findByRequestAndWorkshop.mockResolvedValueOnce(null);
+
+      const stateWithoutQuote = await scopedResolver.resolveCurrentState(
+        'QuoteRequest',
+        'req-901',
+        dummyTx,
+        { workshopId: '301', action: 'submit_quote' },
+      );
+
+      expect(stateWithoutQuote).toEqual({
+        request: {
+          id: 'req-901',
+          status: 'sent_to_artisans',
+          version: 2,
+          cancelled_at: null,
+        },
+        recipient: null,
+        quote: null,
+      });
+    });
   });
 
   // ==========================================================================

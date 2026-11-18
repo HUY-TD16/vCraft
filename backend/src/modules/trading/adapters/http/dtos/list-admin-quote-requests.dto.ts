@@ -44,10 +44,16 @@ export const listAdminQuoteRequestsSchema = paginationQuery.extend({
   buyer_id: z
     .string()
     .regex(/^[1-9]\d*$/, 'buyer_id must be a positive integer ID')
+    .refine((val) => BigInt(val) <= 9223372036854775807n, {
+      message: 'buyer_id exceeds the 64-bit signed integer range.',
+    })
     .optional(),
   category_id: z
     .string()
     .regex(/^[1-9]\d*$/, 'category_id must be a positive integer ID')
+    .refine((val) => BigInt(val) <= 9223372036854775807n, {
+      message: 'category_id exceeds the 64-bit signed integer range.',
+    })
     .optional(),
   sort_by: z.enum(ADMIN_QUOTE_REQUEST_SORT_FIELDS).optional(),
   order: z.enum(['asc', 'desc']).optional(),
@@ -88,3 +94,21 @@ export const buyerRequestSummarySchema = z.strictObject({
 export class BuyerRequestSummaryResponseDto extends createZodDto(
   buyerRequestSummarySchema,
 ) {}
+
+export const buyerRequestSummaryResponseSchema = z.strictObject({
+  id: z.string().regex(/^[1-9][0-9]*$/),
+  status: z.enum(REQUEST_STATUSES),
+  version: z.int().min(1).max(2_147_483_647),
+  category: categoryRefDtoSchema.nullable(),
+  quantity: z.int().min(1).max(2_147_483_647).nullable(),
+  unit: z.enum(REQUEST_UNITS).nullable(),
+  bidding_deadline: z.string().nullable(),
+  delivery_deadline: z.string().nullable(),
+  is_bidding_open: z.boolean(),
+  cancelled_at: z.string().nullable(),
+  split_requested_at: z.string().nullable(),
+  coordination_state: z.enum(COORDINATION_STATES).nullable(),
+  no_valid_quotes: z.boolean(),
+  nearest_accept_deadline: z.string().nullable(),
+  created_at: z.string(),
+});

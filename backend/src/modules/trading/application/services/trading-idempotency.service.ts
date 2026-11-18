@@ -14,8 +14,11 @@ import type {
 import type { IIdempotencyRecordRepository } from '../ports/repositories/trading-repositories.port';
 import {
   EntityId,
+  IdempotencyConflictError,
   InvalidTradingInputError,
+  TradingDomainError,
   TradingIdempotencyPolicy,
+  TradingPermissionDeniedError,
 } from '../../domain';
 import { computeCanonicalFingerprint } from '../../domain/utilities';
 
@@ -256,6 +259,43 @@ export class TradingIdempotencyService {
             incomingFingerprint,
           );
         }
+      } else if (this.isConcurrentRaceDomainError(error)) {
+        // 5b. Handle FOR UPDATE lock serialization race:
+        // Request 1 committed state mutation + IdempotencyRecord while Request 2 waited on lock,
+        // causing Request 2's business check (e.g. expected_*_version / state / bidding) to throw
+        // before idempotencyRepo.save() could run (BR-27, api-design.md §1.4).
+        const concurrentReplay = await this.txRunner.run(async (replayTx) => {
+          const existingRecord = await this.idempotencyRepo.findByScope<TResult>(
+            scope,
+            replayTx,
+            input.snapshotParser,
+          );
+          if (
+            !existingRecord ||
+            (input.now !== undefined &&
+              existingRecord.expires_at.getTime() < input.now.getTime())
+          ) {
+            return null;
+          }
+
+          TradingIdempotencyPolicy.assertFingerprintMatches(
+            existingRecord.request_fingerprint,
+            incomingFingerprint,
+          );
+
+          const currentState = await input.getCurrentState(replayTx);
+          return { existingRecord, currentState };
+        });
+
+        if (concurrentReplay !== null) {
+          return this.buildResult({
+            result: concurrentReplay.existingRecord.result_snapshot,
+            recordId: concurrentReplay.existingRecord.id,
+            replayed: true,
+            committedAt: concurrentReplay.existingRecord.created_at,
+            currentState: concurrentReplay.currentState,
+          });
+        }
       }
 
       // Re-throw any business or unrecoverable error (transaction already rolled back)
@@ -361,6 +401,15 @@ export class TradingIdempotencyService {
       currentState: params.currentState,
       recordId: params.recordId,
     });
+  }
+
+  private isConcurrentRaceDomainError(error: unknown): boolean {
+    return (
+      error instanceof TradingDomainError &&
+      !(error instanceof IdempotencyConflictError) &&
+      !(error instanceof InvalidTradingInputError) &&
+      !(error instanceof TradingPermissionDeniedError)
+    );
   }
 
   private isP2002Error(error: unknown): boolean {

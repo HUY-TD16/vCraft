@@ -6,6 +6,7 @@ import type {
 import {
   QuoteRequest,
   QuoteRequestNotFoundError,
+  TradingDomainError,
   TradingPermissionDeniedError,
   InvalidTradingInputError,
 } from '../../../domain';
@@ -35,6 +36,16 @@ export class CopyQuoteRequestUseCase {
    * - Operational artifacts, child entities, deadlines, and cancellations are completely reset.
    */
   async execute(input: CopyQuoteRequestInput): Promise<QuoteRequest> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot copy quote requests.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError(
         'Only buyers can copy quote requests.',

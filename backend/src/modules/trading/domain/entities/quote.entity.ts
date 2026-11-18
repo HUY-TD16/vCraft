@@ -24,6 +24,8 @@ import {
   type RequestRecipient,
 } from './quote-request.entity';
 
+export const MAX_WITHDRAW_REASON_LENGTH = 10_000;
+
 export interface QuoteProps {
   readonly id: string;
   readonly request_id: string;
@@ -344,7 +346,11 @@ export class Quote {
     this.assertVersionMatches(input.expectedQuoteVersion);
     input.request.assertNotCancelled();
 
-    if (input.request.isAcceptedOrBeyond() || this.status !== 'active') {
+    if (
+      input.request.status === 'draft_request' ||
+      input.request.isAcceptedOrBeyond() ||
+      this.status !== 'active'
+    ) {
       throw new InvalidStateTransitionError(
         `Only active quotes on an unaccepted QuoteRequest can be withdrawn (current status: "${this.status}").`,
         {
@@ -359,6 +365,14 @@ export class Quote {
       throw new InvalidTradingInputError('withdraw_reason is required when withdrawing a quote.', {
         field: 'withdraw_reason',
       });
+    }
+    if (trimmedReason.length > MAX_WITHDRAW_REASON_LENGTH) {
+      throw new InvalidTradingInputError(
+        `withdraw_reason cannot exceed ${MAX_WITHDRAW_REASON_LENGTH} characters.`,
+        {
+          field: 'withdraw_reason',
+        },
+      );
     }
 
     const actor = EntityId.of(input.actorId, 'actorId').value;

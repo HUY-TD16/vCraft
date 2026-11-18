@@ -32,6 +32,7 @@ import type {
 export interface GetQuoteRequestByIdCommand {
   readonly actor: AuthenticatedActor;
   readonly id: string;
+  readonly tx?: TransactionContext;
 }
 
 export type GetQuoteRequestByIdResult =
@@ -60,9 +61,11 @@ export class GetQuoteRequestByIdUseCase {
     const entityId = EntityId.of(command.id, 'id');
 
     // 3. Truy vấn nạp chi tiết thực thể và các quan hệ
-    const detail = await this.txRunner.run(async (tx: TransactionContext) => {
-      return this.quoteRequestRepo.findDetailById(entityId.value, tx);
-    });
+    const detail = command.tx
+      ? await this.quoteRequestRepo.findDetailById(entityId.value, command.tx)
+      : await this.txRunner.run(async (tx: TransactionContext) => {
+          return this.quoteRequestRepo.findDetailById(entityId.value, tx);
+        });
 
     if (!detail) {
       throw new QuoteRequestNotFoundError('QuoteRequest was not found.');

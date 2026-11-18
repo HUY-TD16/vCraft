@@ -27,6 +27,7 @@ export class PrismaAllocationRepository implements IAllocationRepository {
     input: {
       readonly allocation: Allocation;
       readonly log?: AllocationLogRecord;
+      readonly useEntityId?: boolean;
     },
     tx: TransactionContext,
   ): Promise<Allocation> {
@@ -35,7 +36,10 @@ export class PrismaAllocationRepository implements IAllocationRepository {
     let createdRow;
     try {
       createdRow = await client.allocation.create({
-        data: AllocationMapper.toPrismaCreateInput(input.allocation),
+        data: AllocationMapper.toPrismaCreateInput(
+          input.allocation,
+          input.useEntityId ?? false,
+        ),
         include: {
           allocationBatches: {
             orderBy: { id: 'asc' },

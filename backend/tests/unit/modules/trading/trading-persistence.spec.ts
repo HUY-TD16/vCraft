@@ -1080,4 +1080,140 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
       },
     });
   });
+
+  it('paginates RecipientResponseHistory chronologically with actor projection and strips unallowlisted quote_snapshot keys in PrismaRecipientResponseHistoryRepository.findEventsWithPagination', async () => {
+    const t1 = new Date('2026-11-10T08:00:00.000Z');
+    const t2 = new Date('2026-11-10T09:00:00.000Z');
+    const mockRows = [
+      {
+        id: 501n,
+        recipient_id: 300n,
+        quote_id: null,
+        event_type: 'declined',
+        prev_status: 'pending',
+        new_status: 'declined',
+        reason: 'Xưởng đang quá tải đơn cuối năm',
+        quote_snapshot: null,
+        performed_by: 21n,
+        created_at: t1,
+        performedBy: {
+          id: 21n,
+          display_name: null,
+        },
+      },
+      {
+        id: 502n,
+        recipient_id: 300n,
+        quote_id: 700n,
+        event_type: 'quote_submitted',
+        prev_status: 'declined',
+        new_status: 'quoted',
+        reason: null,
+        quote_snapshot: {
+          unit_price: 45000,
+          max_quantity: 3000,
+          bid_accept_deadline: QUOTE_ACCEPT_DEADLINE.toISOString(),
+          committed_delivery_at: COMMITTED_DELIVERY.toISOString(),
+          status: 'active',
+          version: 1,
+          internal_secret: 'must-be-stripped',
+          withdraw_reason: 'must-be-stripped',
+        },
+        performed_by: 21n,
+        created_at: t2,
+        performedBy: {
+          id: 21n,
+          display_name: 'Xưởng Gốm Minh Long',
+        },
+      },
+    ];
+
+    const mockClient = {
+      recipientResponseHistory: {
+        count: vi.fn().mockResolvedValue(5),
+        findMany: vi.fn().mockResolvedValue(mockRows),
+      },
+    };
+
+    const { txRunner } = createMockTxRunner(mockClient);
+    const repo = new PrismaRecipientResponseHistoryRepository(txRunner);
+
+    const pageResult = await repo.findEventsWithPagination({
+      recipientId: '300',
+      page: 2,
+      limit: 2,
+    });
+
+    expect(mockClient.recipientResponseHistory.count).toHaveBeenCalledWith({
+      where: { recipient_id: 300n },
+    });
+    expect(mockClient.recipientResponseHistory.findMany).toHaveBeenCalledWith({
+      where: { recipient_id: 300n },
+      include: {
+        performedBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+      },
+      orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+      skip: 2,
+      take: 2,
+    });
+
+    expect(pageResult.totalRecords).toBe(5);
+    expect(pageResult.rows).toHaveLength(2);
+    expect(Object.keys(pageResult.rows[0]).sort()).toEqual([
+      'created_at',
+      'event_type',
+      'id',
+      'new_status',
+      'performed_by',
+      'prev_status',
+      'quote_snapshot',
+      'reason',
+    ]);
+    expect(pageResult.rows[0].quote_snapshot).toBeNull();
+    expect(pageResult.rows[0].performed_by).toEqual({
+      id: '21',
+      display_name: null,
+    });
+    expect(pageResult.rows[1].quote_snapshot).toEqual({
+      unit_price: 45000,
+      max_quantity: 3000,
+      bid_accept_deadline: QUOTE_ACCEPT_DEADLINE.toISOString(),
+      committed_delivery_at: COMMITTED_DELIVERY.toISOString(),
+      status: 'active',
+      version: 1,
+    });
+    expect(
+      Object.keys(pageResult.rows[1].quote_snapshot as object).sort(),
+    ).toEqual([
+      'bid_accept_deadline',
+      'committed_delivery_at',
+      'max_quantity',
+      'status',
+      'unit_price',
+      'version',
+    ]);
+
+    // Existing tx path does not start a nested transaction
+    const getClientSpy = vi.spyOn(txRunner, 'getClient');
+    const runSpy = vi.spyOn(txRunner, 'run');
+    const fakeTx = { __txClient: mockClient } as unknown as TransactionContext;
+    getClientSpy.mockReturnValueOnce(
+      mockClient as unknown as ReturnType<typeof txRunner.getClient>,
+    );
+
+    await repo.findEventsWithPagination({ recipientId: '300' }, fakeTx);
+    expect(runSpy).not.toHaveBeenCalled();
+    expect(mockClient.recipientResponseHistory.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip: 0,
+        take: 20,
+      }),
+    );
+  });
 });

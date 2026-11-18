@@ -2,12 +2,17 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../../generated/prisma/client';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
+import { PAGINATION } from '../../../../../common/application/types/pagination';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
 import type {
   PersistedRecipientResponseRecord,
   RecipientEventDto,
 } from '../../../application/dtos/trading-persistence.dtos';
-import type { IRecipientResponseHistoryRepository } from '../../../application/ports/repositories/trading-repositories.port';
+import type {
+  FindRecipientResponseEventsInput,
+  FindRecipientResponseEventsResult,
+  IRecipientResponseHistoryRepository,
+} from '../../../application/ports/repositories/trading-repositories.port';
 import {
   type QuoteSnapshotData,
   type RecipientResponseRecord,
@@ -82,6 +87,73 @@ export class PrismaRecipientResponseHistoryRepository
     return rows.map((row) =>
       RecipientResponseHistoryMapper.fromPrismaWithActorToDto(row),
     );
+  }
+
+  async findEventsWithPagination(
+    input: FindRecipientResponseEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindRecipientResponseEventsResult> {
+    if (tx) {
+      return this.executeFindEventsWithPagination(
+        this.txRunner.getClient(tx),
+        input,
+      );
+    }
+    return this.txRunner.run(async (innerTx) => {
+      return this.executeFindEventsWithPagination(
+        this.txRunner.getClient(innerTx),
+        input,
+      );
+    });
+  }
+
+  private async executeFindEventsWithPagination(
+    client: Prisma.TransactionClient,
+    input: FindRecipientResponseEventsInput,
+  ): Promise<FindRecipientResponseEventsResult> {
+    const recipientIdBigInt = idToBigInt(
+      input.recipientId,
+      'recipient_response_history.recipient_id',
+    );
+    const page =
+      input.page && Number.isSafeInteger(input.page) && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit && Number.isSafeInteger(input.limit) && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+    const take = limit;
+
+    const where = {
+      recipient_id: recipientIdBigInt,
+    };
+
+    const [totalRecords, rows] = await Promise.all([
+      client.recipientResponseHistory.count({ where }),
+      client.recipientResponseHistory.findMany({
+        where,
+        include: {
+          performedBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+        },
+        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+
+    return {
+      rows: rows.map((row) =>
+        RecipientResponseHistoryMapper.fromPrismaWithActorToDto(row),
+      ),
+      totalRecords,
+    };
   }
 
   async findSnapshotByQuoteVersion(
