@@ -25,11 +25,13 @@ import { GetContactHistoryUseCase } from '../../../application/use-cases/request
 import { GetStatusHistoryUseCase } from '../../../application/use-cases/requests/get-status-history.use-case';
 import { GetRecipientResponseHistoryUseCase } from '../../../application/use-cases/quotations/get-recipient-response-history.use-case';
 import { ListQuoteRequestQuotesUseCase } from '../../../application/use-cases/quotations/list-quote-request-quotes.use-case';
+import { ListQuoteRequestAllocationsUseCase } from '../../../application/use-cases/fulfillment/list-quote-request-allocations.use-case';
 import { buyerRequestDtoResponseSchema } from '../dtos/create-draft-quote-request.dto';
 import { invitedRequestDtoResponseSchema } from '../dtos/list-artisan-quote-requests.dto';
 import { recipientDtoResponseSchema } from '../dtos/decline-quote-request.dto';
 import { ListQuoteRequestRecipientsQueryDto } from '../dtos/list-quote-request-recipients.dto';
 import { ListQuoteRequestQuotesQueryDto } from '../dtos/list-quote-request-quotes.dto';
+import { ListQuoteRequestAllocationsQueryDto } from '../dtos/list-quote-request-allocations.dto';
 import {
   contactEventDtoResponseSchema,
   GetQuoteRequestContactHistoryQueryDto,
@@ -43,8 +45,10 @@ import {
   recipientEventDtoResponseSchema,
 } from '../dtos/get-recipient-response-history.dto';
 import { quoteDtoResponseSchema } from '../dtos/submit-quote.dto';
+import { allocationDtoResponseSchema } from '../dtos/accept-quote.dto';
 import type {
   AdminRequestDto,
+  AllocationDto,
   BuyerRequestDto,
   ContactEventDto,
   InvitedRequestDto,
@@ -72,6 +76,9 @@ export class QuoteRequestController {
     @Optional()
     @Inject(GetRecipientResponseHistoryUseCase)
     private readonly getRecipientResponseHistoryUseCase?: GetRecipientResponseHistoryUseCase,
+    @Optional()
+    @Inject(ListQuoteRequestAllocationsUseCase)
+    private readonly listQuoteRequestAllocationsUseCase?: ListQuoteRequestAllocationsUseCase,
   ) {}
 
   @Get(':id')
@@ -266,6 +273,48 @@ export class QuoteRequestController {
     });
   }
 
+  @Get(':id/allocations')
+  @Roles('buyer', 'artisan', 'admin')
+  @SessionLevels('normal')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Lấy danh sách các phần việc sản xuất đã chốt của yêu cầu báo giá theo vai trò',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiZodParameters(ListQuoteRequestAllocationsQueryDto)
+  @ApiDataResponse(allocationDtoResponseSchema, { paginated: true })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'RATE_LIMIT_EXCEEDED',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async getAllocations(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Query() query: ListQuoteRequestAllocationsQueryDto,
+  ): Promise<HttpResult<readonly AllocationDto[]>> {
+    if (!this.listQuoteRequestAllocationsUseCase) {
+      throw new InternalServerErrorException(
+        'ListQuoteRequestAllocationsUseCase is not configured.',
+      );
+    }
+    return this.listQuoteRequestAllocationsUseCase.execute({
+      actor,
+      requestId: id,
+      query,
+    });
+  }
+
   @Get(':id/recipients/:recipientId/history')
   @Roles('buyer', 'artisan', 'admin')
   @SessionLevels('normal')
@@ -349,6 +398,13 @@ Reflect.defineMetadata(
   [Object, String, ListQuoteRequestQuotesQueryDto],
   QuoteRequestController.prototype,
   'getQuotes',
+);
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, ListQuoteRequestAllocationsQueryDto],
+  QuoteRequestController.prototype,
+  'getAllocations',
 );
 
 Reflect.defineMetadata(

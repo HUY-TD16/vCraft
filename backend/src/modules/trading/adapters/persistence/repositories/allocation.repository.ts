@@ -1,9 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '../../../../../generated/prisma/client';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
+import { PAGINATION } from '../../../../../common/application/types/pagination';
+import { PrismaService } from '../../../../../infrastructure/database/prisma/prisma.service';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
-import type { IAllocationRepository } from '../../../application/ports/repositories/trading-repositories.port';
+import type {
+  FindAllocationsWithDetailsInput,
+  FindAllocationsWithDetailsResult,
+  IAllocationRepository,
+} from '../../../application/ports/repositories/trading-repositories.port';
 import {
   type Allocation,
   type AllocationLogRecord,
@@ -14,13 +20,20 @@ import {
 import { AllocationBatchMapper } from '../mappers/allocation-batch.mapper';
 import { AllocationLogMapper } from '../mappers/allocation-log.mapper';
 import { AllocationMapper } from '../mappers/allocation.mapper';
-import { idToBigInt } from '../mappers/shared-persistence.mapper';
+import {
+  idToBigInt,
+  toNullableActorDto,
+  toWorkshopRefDto,
+} from '../mappers/shared-persistence.mapper';
 
 @Injectable()
 export class PrismaAllocationRepository implements IAllocationRepository {
   constructor(
     @Inject(PrismaTransactionRunner)
     private readonly txRunner: PrismaTransactionRunner,
+    @Optional()
+    @Inject(PrismaService)
+    private readonly prisma?: PrismaService,
   ) {}
 
   async create(
@@ -262,6 +275,109 @@ export class PrismaAllocationRepository implements IAllocationRepository {
       orderBy: { id: 'desc' },
     });
     return rows.map((row) => AllocationMapper.toDomain(row));
+  }
+
+  async findAllocationsWithDetails(
+    input: FindAllocationsWithDetailsInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationsWithDetailsResult> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindAllocationsWithDetails(client, input);
+    }
+    if (this.prisma) {
+      return this.executeFindAllocationsWithDetails(this.prisma, input);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindAllocationsWithDetails(client, input);
+    });
+  }
+
+  private async executeFindAllocationsWithDetails(
+    client: Prisma.TransactionClient | PrismaService,
+    input: FindAllocationsWithDetailsInput,
+  ): Promise<FindAllocationsWithDetailsResult> {
+    const requestIdBigInt = idToBigInt(input.requestId, 'allocation.request_id');
+    const where: Prisma.AllocationWhereInput = {
+      request_id: requestIdBigInt,
+      ...(input.workshopId !== undefined
+        ? { workshop_id: idToBigInt(input.workshopId, 'allocation.workshop_id') }
+        : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+    };
+
+    const page =
+      input.page !== undefined && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit !== undefined && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+
+    const [totalRecords, rows] = await Promise.all([
+      client.allocation.count({ where }),
+      client.allocation.findMany({
+        where,
+        include: {
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          startedBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          handedOverBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          allocationBatches: {
+            include: {
+              batch: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: { id: 'asc' },
+          },
+        },
+        orderBy: { id: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const dtos = rows.map((row) => {
+      const publishedBatchIds = new Set<string>();
+      for (const link of row.allocationBatches ?? []) {
+        if (link.batch?.status === 'published') {
+          publishedBatchIds.add(link.batch.id.toString());
+        }
+      }
+      const entity = AllocationMapper.toDomain(row);
+      return AllocationMapper.toDto(entity, {
+        workshop: toWorkshopRefDto(row.workshop),
+        startedByActor: toNullableActorDto(row.startedBy),
+        handedOverByActor: toNullableActorDto(row.handedOverBy),
+        publishedBatchIds,
+      });
+    });
+
+    return {
+      rows: dtos,
+      totalRecords,
+    };
   }
 
   async lockById(
