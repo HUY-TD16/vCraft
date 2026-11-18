@@ -528,6 +528,15 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
           .success,
       ).toBe(false);
       expect(
+        createDraftQuoteRequestSchema.safeParse({ category_id: 'abc' }).success,
+      ).toBe(false);
+      expect(
+        updateDraftQuoteRequestSchema.safeParse({
+          expected_request_version: 1,
+          category_id: 'abc',
+        }).success,
+      ).toBe(false);
+      expect(
         createDraftQuoteRequestSchema.safeParse({ spec: 'x'.repeat(10_001) })
           .success,
       ).toBe(false);
