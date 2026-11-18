@@ -1,9 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '../../../../../generated/prisma/client';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
+import { PAGINATION } from '../../../../../common/application/types/pagination';
+import { PrismaService } from '../../../../../infrastructure/database/prisma/prisma.service';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
-import type { IQuoteRepository } from '../../../application/ports/repositories/trading-repositories.port';
+import type {
+  FindQuotesWithDetailsInput,
+  FindQuotesWithDetailsResult,
+  IQuoteRepository,
+  QuoteDetailItem,
+} from '../../../application/ports/repositories/trading-repositories.port';
 import {
   ConcurrencyConflictError,
   EntityId,
@@ -15,13 +22,19 @@ import {
 import { QuoteMapper } from '../mappers/quote.mapper';
 import { RecipientResponseHistoryMapper } from '../mappers/recipient-response-history.mapper';
 import { RequestRecipientMapper } from '../mappers/request-recipient.mapper';
-import { idToBigInt } from '../mappers/shared-persistence.mapper';
+import {
+  idToBigInt,
+  toWorkshopRefDto,
+} from '../mappers/shared-persistence.mapper';
 
 @Injectable()
 export class PrismaQuoteRepository implements IQuoteRepository {
   constructor(
     @Inject(PrismaTransactionRunner)
     private readonly txRunner: PrismaTransactionRunner,
+    @Optional()
+    @Inject(PrismaService)
+    private readonly prisma?: PrismaService,
   ) {}
 
   async create(
@@ -29,6 +42,7 @@ export class PrismaQuoteRepository implements IQuoteRepository {
       readonly quote: Quote;
       readonly recipient?: RequestRecipient;
       readonly recipientHistory?: RecipientResponseRecord;
+      readonly useEntityId?: boolean;
     },
     tx: TransactionContext,
   ): Promise<Quote> {
@@ -37,7 +51,10 @@ export class PrismaQuoteRepository implements IQuoteRepository {
     let createdRow;
     try {
       createdRow = await client.quote.create({
-        data: QuoteMapper.toPrismaCreateInput(input.quote),
+        data: QuoteMapper.toPrismaCreateInput(
+          input.quote,
+          input.useEntityId ?? false,
+        ),
       });
     } catch (error: unknown) {
       if (
@@ -214,6 +231,78 @@ export class PrismaQuoteRepository implements IQuoteRepository {
       orderBy: { id: 'asc' },
     });
     return rows.map((row) => QuoteMapper.toDomain(row));
+  }
+
+  async findQuotesWithDetails(
+    input: FindQuotesWithDetailsInput,
+    tx?: TransactionContext,
+  ): Promise<FindQuotesWithDetailsResult> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindQuotesWithDetails(client, input);
+    }
+    if (this.prisma) {
+      return this.executeFindQuotesWithDetails(this.prisma, input);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindQuotesWithDetails(client, input);
+    });
+  }
+
+  private async executeFindQuotesWithDetails(
+    client: Prisma.TransactionClient | PrismaService,
+    input: FindQuotesWithDetailsInput,
+  ): Promise<FindQuotesWithDetailsResult> {
+    const requestIdBigInt = idToBigInt(input.requestId, 'quote.request_id');
+    const where: Prisma.QuoteWhereInput = {
+      request_id: requestIdBigInt,
+      ...(input.workshopId !== undefined
+        ? { workshop_id: idToBigInt(input.workshopId, 'quote.workshop_id') }
+        : {}),
+    };
+
+    const page =
+      input.page !== undefined && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit !== undefined && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+
+    const [totalRecords, rows] = await Promise.all([
+      client.quote.count({ where }),
+      client.quote.findMany({
+        where,
+        include: {
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { id: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const items: QuoteDetailItem[] = rows.map((row) => ({
+      entity: QuoteMapper.toDomain(row),
+      workshop: {
+        ...toWorkshopRefDto(row.workshop),
+        status: row.workshop.status,
+      },
+    }));
+
+    return {
+      rows: items,
+      totalRecords,
+    };
   }
 
   async lockById(quoteId: Id, tx: TransactionContext): Promise<Quote | null> {

@@ -9,6 +9,7 @@ import type {
 } from '../../../application/dtos/trading-persistence.dtos';
 import type { IIdempotencyRecordRepository } from '../../../application/ports/repositories/trading-repositories.port';
 import {
+  IdempotencyConflictError,
   TradingIdempotencyPolicy,
 } from '../../../domain';
 import { IdempotencyRecordMapper } from '../mappers/idempotency-record.mapper';
@@ -96,24 +97,34 @@ export class PrismaIdempotencyRecordRepository
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        const existing = await this.findByScope(
-          {
-            account_id: input.account_id,
-            action: input.action,
-            object_type: input.object_type,
-            object_id: input.object_id,
-            idempotency_key: input.idempotency_key,
-          },
-          tx,
-          snapshotParser,
-        );
-
-        if (existing) {
-          TradingIdempotencyPolicy.assertFingerprintMatches(
-            existing.request_fingerprint,
-            input.request_fingerprint,
+        try {
+          const existing = await this.findByScope(
+            {
+              account_id: input.account_id,
+              action: input.action,
+              object_type: input.object_type,
+              object_id: input.object_id,
+              idempotency_key: input.idempotency_key,
+            },
+            tx,
+            snapshotParser,
           );
-          return existing;
+
+          if (existing) {
+            TradingIdempotencyPolicy.assertFingerprintMatches(
+              existing.request_fingerprint,
+              input.request_fingerprint,
+            );
+            return existing;
+          }
+        } catch (lookupError: unknown) {
+          if (lookupError instanceof IdempotencyConflictError) {
+            throw lookupError;
+          }
+          // On real PostgreSQL, a P2002 puts the transaction into aborted state (25P02);
+          // rethrow the original P2002 so the transaction rolls back cleanly and the
+          // outer caller can recover via a fresh replay transaction.
+          throw error;
         }
       }
       throw error;

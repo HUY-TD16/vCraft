@@ -2,7 +2,7 @@ import type {
   TransactionContext,
   TransactionRunner,
 } from '../../../../../common/application/ports/transaction-runner';
-import type { AuthenticatedActor } from '../../../../../common/security/guards/authenticated-request';
+import type { AuthenticatedActor } from '../../../../../common/application/types/contract-types';
 import { HttpResult } from '../../../../../common/http/interceptors/response-envelope.interceptor';
 import {
   EntityId,

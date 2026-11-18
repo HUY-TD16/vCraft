@@ -66,6 +66,8 @@ export interface RecipientResponseRecord {
   readonly created_at: Date;
 }
 
+export const MAX_DECLINE_REASON_LENGTH = 10_000;
+
 export interface RequestRecipientProps {
   readonly id: string;
   readonly request_id: string;
@@ -152,6 +154,15 @@ export class RequestRecipient {
 
     const trimmedReason = input.reason?.trim() ?? null;
     const normalizedReason = trimmedReason && trimmedReason.length > 0 ? trimmedReason : null;
+    if (normalizedReason !== null && normalizedReason.length > MAX_DECLINE_REASON_LENGTH) {
+      throw new InvalidTradingInputError(
+        `decline_reason cannot exceed ${MAX_DECLINE_REASON_LENGTH} characters.`,
+        {
+          field: 'decline_reason',
+          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
+        },
+      );
+    }
     const nextVersion = Version.of(this.version).next().value;
 
     const updated = new RequestRecipient({
@@ -1120,11 +1131,7 @@ export class QuoteRequest {
           },
         );
       }
-      if (
-        this.status === 'in_production' &&
-        input.goodsHandlingNote !== undefined &&
-        normalizedHandling === null
-      ) {
+      if (this.status === 'in_production' && normalizedHandling === null) {
         throw new InvalidTradingInputError(
           'Admin cancellation during in_production requires a non-empty goods_handling_note.',
           {

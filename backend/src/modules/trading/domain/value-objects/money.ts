@@ -2,6 +2,8 @@ import { InvalidTradingInputError } from '../errors/trading-domain.errors';
 import { Quantity } from './quantity';
 
 const MAX_VND_UNIT_PRICE = 999_999_999_999_999;
+const MAX_VND_UNIT_PRICE_BIGINT = 999_999_999_999_999n;
+const POSITIVE_INTEGER_STRING_REGEX = /^[1-9][0-9]*$/;
 const NON_NEGATIVE_INTEGER_STRING_REGEX = /^(0|[1-9][0-9]*)$/;
 
 export class UnitPrice {
@@ -13,12 +15,34 @@ export class UnitPrice {
   }
 
   static of(value: number | bigint | string, fieldName: string = 'unit_price'): UnitPrice {
-    const numeric =
-      typeof value === 'number'
-        ? value
-        : typeof value === 'bigint'
-          ? Number(value)
-          : Number(value);
+    if (typeof value === 'string') {
+      if (!POSITIVE_INTEGER_STRING_REGEX.test(value)) {
+        throw new InvalidTradingInputError(
+          `${fieldName} must be an integer VND amount between 1 and ${MAX_VND_UNIT_PRICE}.`,
+          { field: fieldName },
+        );
+      }
+      const parsedBigInt = BigInt(value);
+      if (parsedBigInt < 1n || parsedBigInt > MAX_VND_UNIT_PRICE_BIGINT) {
+        throw new InvalidTradingInputError(
+          `${fieldName} must be an integer VND amount between 1 and ${MAX_VND_UNIT_PRICE}.`,
+          { field: fieldName },
+        );
+      }
+      return new UnitPrice(Number(parsedBigInt));
+    }
+
+    if (typeof value === 'bigint') {
+      if (value < 1n || value > MAX_VND_UNIT_PRICE_BIGINT) {
+        throw new InvalidTradingInputError(
+          `${fieldName} must be an integer VND amount between 1 and ${MAX_VND_UNIT_PRICE}.`,
+          { field: fieldName },
+        );
+      }
+      return new UnitPrice(Number(value));
+    }
+
+    const numeric = value;
 
     if (
       !Number.isSafeInteger(numeric) ||

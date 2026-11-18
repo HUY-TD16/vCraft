@@ -3,6 +3,10 @@ import type { TransactionContext } from '../../../../../common/application/ports
 import type { Id } from '../../../../../common/application/types/contract-types';
 import type { TradingCurrentStateDto } from '../../../application/dtos/trading-persistence.dtos';
 import type {
+  RecipientResponseStatus,
+  RequestRecipient,
+} from '../../../domain';
+import type {
   IQuoteRequestRepository,
   IAllocationRepository,
   IQuoteRepository,
@@ -15,11 +19,18 @@ import {
   REQUEST_RECIPIENT_REPOSITORY,
 } from '../../../application/ports/repositories/trading-repositories.port';
 
+export interface TradingCurrentStateContext {
+  readonly workshopId?: Id | null;
+  readonly quoteId?: Id | null;
+  readonly action?: string;
+}
+
 export interface ITradingCurrentStateResolver {
   resolveCurrentState(
     objectType: string,
     objectId: Id,
     tx: TransactionContext,
+    context?: TradingCurrentStateContext,
   ): Promise<TradingCurrentStateDto>;
 }
 
@@ -42,6 +53,7 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
     objectType: string,
     objectId: Id,
     tx: TransactionContext,
+    context?: TradingCurrentStateContext,
   ): Promise<TradingCurrentStateDto> {
     const normalizedType = objectType.trim().toLowerCase().replace(/[-_]/g, '');
 
@@ -57,7 +69,7 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
           },
         };
       }
-      return {
+      const baseState: TradingCurrentStateDto = {
         request: {
           id: request.id,
           status: request.status,
@@ -69,6 +81,82 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
             : null,
         },
       };
+
+      if (context?.workshopId) {
+        const isQuoteAction =
+          context.action === 'submit_quote' ||
+          context.action === 'withdraw_quote';
+
+        const recipient =
+          typeof this.recipientRepo?.findByRequestAndWorkshop === 'function'
+            ? await this.recipientRepo.findByRequestAndWorkshop(
+                request.id,
+                context.workshopId,
+                tx,
+              )
+            : undefined;
+
+        const quote =
+          isQuoteAction &&
+          typeof this.quoteRepo?.findByRequestAndWorkshop === 'function'
+            ? await this.quoteRepo.findByRequestAndWorkshop(
+                request.id,
+                context.workshopId,
+                tx,
+              )
+            : undefined;
+
+        const resolvedRecipient = recipient
+          ? {
+              id: recipient.id,
+              status: recipient.response_status,
+              version: recipient.version,
+            }
+          : context.action === 'decline' || isQuoteAction
+            ? null
+            : undefined;
+
+        const resolvedQuote = isQuoteAction
+          ? quote
+            ? {
+                id: quote.id,
+                status: quote.status,
+                version: quote.version,
+              }
+            : null
+          : undefined;
+
+        if (resolvedRecipient !== undefined || resolvedQuote !== undefined) {
+          return {
+            ...baseState,
+            ...(resolvedRecipient !== undefined
+              ? { recipient: resolvedRecipient }
+              : {}),
+            ...(resolvedQuote !== undefined ? { quote: resolvedQuote } : {}),
+          };
+        }
+      }
+
+      if (
+        context?.action === 'accept_quote' &&
+        context.quoteId &&
+        typeof this.quoteRepo?.findById === 'function'
+      ) {
+        const quote = await this.quoteRepo.findById(context.quoteId, tx);
+        return {
+          ...baseState,
+          quote:
+            quote && quote.request_id === request.id
+              ? {
+                  id: quote.id,
+                  status: quote.status,
+                  version: quote.version,
+                }
+              : null,
+        };
+      }
+
+      return baseState;
     }
 
     if (normalizedType === 'allocation') {
@@ -145,15 +233,17 @@ export class TradingCurrentStateResolver implements ITradingCurrentStateResolver
           },
         };
       }
+      const recipientRecord = recipient as RequestRecipient & {
+        readonly requestId?: Id;
+        readonly responseStatus?: RecipientResponseStatus;
+      };
       const parentRequestId =
-        (recipient as { requestId?: Id; request_id?: Id }).requestId ??
-        (recipient as { request_id?: Id }).request_id;
+        recipientRecord.requestId ?? recipientRecord.request_id;
       const parentRequest = parentRequestId
         ? await this.quoteRequestRepo.findById(parentRequestId, tx)
         : null;
       const recipientStatus =
-        (recipient as { responseStatus?: any; response_status?: any }).responseStatus ??
-        (recipient as { response_status?: any }).response_status;
+        recipientRecord.responseStatus ?? recipientRecord.response_status;
 
       return {
         request: {

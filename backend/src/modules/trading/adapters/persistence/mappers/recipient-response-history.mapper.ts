@@ -1,6 +1,6 @@
-import type {
+import {
   Prisma,
-  RecipientResponseHistory as PrismaRecipientResponseHistory,
+  type RecipientResponseHistory as PrismaRecipientResponseHistory,
 } from '../../../../../generated/prisma/client';
 import type { Id } from '../../../../../common/application/types/contract-types';
 import type {
@@ -108,10 +108,7 @@ export class RecipientResponseHistoryMapper {
     snapshot: QuoteSnapshotData | null | undefined,
   ): Prisma.InputJsonValue | typeof Prisma.DbNull {
     if (snapshot === null || snapshot === undefined) {
-      return (
-        // Return null-compatible JSON value for Prisma
-        null as unknown as typeof Prisma.DbNull
-      );
+      return Prisma.DbNull;
     }
 
     const validatedPrice = UnitPrice.of(

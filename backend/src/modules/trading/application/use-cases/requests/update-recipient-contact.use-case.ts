@@ -9,6 +9,7 @@ import type {
 import {
   QuoteRequest,
   QuoteRequestNotFoundError,
+  TradingDomainError,
   TradingPermissionDeniedError,
   InvalidTradingInputError,
 } from '../../../domain';
@@ -34,6 +35,16 @@ export class UpdateRecipientContactUseCase {
   ) {}
 
   async execute(input: UpdateRecipientContactInput): Promise<QuoteRequest> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot update recipient contact information.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError(
         'Only buyers can update recipient contact information.',

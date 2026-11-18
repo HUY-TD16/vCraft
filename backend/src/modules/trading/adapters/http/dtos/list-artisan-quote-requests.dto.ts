@@ -3,6 +3,13 @@ import {
   createZodDto,
   paginationQuery,
 } from '../../../../../common/http/pipes/global-validation.pipe';
+import {
+  DELIVERY_MODES,
+  REQUEST_STATUSES,
+  REQUEST_UNITS,
+} from '../../../domain/value-objects/trading-enums';
+import { recipientDtoResponseSchema } from './decline-quote-request.dto';
+import { quoteDtoResponseSchema } from './submit-quote.dto';
 
 export const ARTISAN_QUOTE_REQUEST_STATUS_FILTER = [
   'bidding',
@@ -51,3 +58,34 @@ export const listArtisanQuoteRequestsSchema = paginationQuery.extend({
 export class ListArtisanQuoteRequestsQueryDto extends createZodDto(
   listArtisanQuoteRequestsSchema,
 ) {}
+
+export const invitedRequestDtoResponseSchema = z.strictObject({
+  id: z.string().regex(/^[1-9][0-9]*$/),
+  status: z.enum(REQUEST_STATUSES),
+  version: z.int().min(1).max(2_147_483_647),
+  category: z
+    .strictObject({
+      id: z.string().regex(/^[1-9][0-9]*$/),
+      name: z.string(),
+    })
+    .nullable(),
+  spec: z.string().nullable(),
+  quantity: z.int().min(1).max(2_147_483_647).nullable(),
+  unit: z.enum(REQUEST_UNITS).nullable(),
+  unit_set_description: z.string().nullable(),
+  delivery_mode: z.enum(DELIVERY_MODES).nullable(),
+  delivery_region: z.string().nullable(),
+  bidding_deadline: z.string().nullable(),
+  delivery_deadline: z.string().nullable(),
+  bidding_closed_at: z.string().nullable(),
+  is_bidding_open: z.boolean(),
+  cancelled_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  own_recipient: recipientDtoResponseSchema,
+  own_quote: quoteDtoResponseSchema.nullable(),
+  own_allocation_id: z.string().regex(/^[1-9][0-9]*$/).optional(),
+  recipient_name: z.string().nullable().optional(),
+  recipient_phone: z.string().nullable().optional(),
+  delivery_address: z.string().nullable().optional(),
+});

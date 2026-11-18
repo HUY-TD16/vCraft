@@ -7,6 +7,7 @@ import {
   QuoteRequest,
   type RequestUnit,
   type DeliveryMode,
+  TradingDomainError,
   TradingPermissionDeniedError,
 } from '../../../domain';
 import type { IQuoteRequestRepository } from '../../ports/repositories/trading-repositories.port';
@@ -38,6 +39,16 @@ export class CreateDraftQuoteRequestUseCase {
   ) {}
 
   async execute(input: CreateDraftQuoteRequestInput): Promise<QuoteRequest> {
+    if (
+      'sessionLevel' in input.actor &&
+      input.actor.sessionLevel === 'temp_password'
+    ) {
+      throw new TradingDomainError(
+        'TEMP_PASSWORD_RESTRICTED',
+        'Temporary password session cannot create draft quote requests.',
+      );
+    }
+
     if (input.actor.role !== 'buyer') {
       throw new TradingPermissionDeniedError(
         'Only buyers can create draft quote requests.',

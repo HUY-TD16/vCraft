@@ -122,7 +122,12 @@ export function canonicalizeJson(
         seen,
       );
       if (canonicalVal !== undefined) {
-        result[key] = canonicalVal;
+        Object.defineProperty(result, key, {
+          value: canonicalVal,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
       }
     }
     return result;

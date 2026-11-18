@@ -3,7 +3,7 @@ import { createZodDto } from '../../../../../common/http/pipes/global-validation
 
 export const updateRecipientContactSchema = z
   .strictObject({
-    expected_request_version: z.int().positive(),
+    expected_request_version: z.int().positive().max(2_147_483_647),
     recipient_name: z.string().trim().min(1).max(200).optional(),
     recipient_phone: z.string().trim().min(1).max(20).optional(),
   })
