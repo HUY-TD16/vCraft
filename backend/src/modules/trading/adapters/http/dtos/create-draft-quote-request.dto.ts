@@ -13,7 +13,7 @@ const MAX_INT32 = 2_147_483_647;
 const positiveBigIntIdSchema = z
   .string()
   .regex(/^[1-9][0-9]*$/)
-  .refine((val) => BigInt(val) <= MAX_BIGINT_ID, {
+  .refine((val) => !/^[1-9][0-9]*$/.test(val) || BigInt(val) <= MAX_BIGINT_ID, {
     message: 'ID exceeds the 64-bit signed integer range.',
   });
 
