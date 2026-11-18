@@ -567,3 +567,12 @@ export class TradingModule {
     };
   }
 }
+
+export { TradingAcceptanceService } from './application/services/trading-acceptance.service';
+export {
+  TRADING_CONTRACT,
+  type ITradingContract,
+  type AcceptanceInput,
+  type AcceptanceExecutionOptions,
+} from './public/contracts/trading.contract';
+
