@@ -1090,4 +1090,15 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
       expect(moduleSrc.split(/\r?\n/).length).toBeLessThan(200);
     });
   });
+
+  describe('14. Group 3 Test Performance Optimization (Vitest Worker Pool & Non-Isolated Module Reuse)', () => {
+    it('configures pool: threads and isolate: false in vitest.config.mts to reuse loaded module graphs across test files', () => {
+      const vitestCfg = readFileSync(
+        join(__dirname, '../../../../vitest.config.mts'),
+        'utf-8',
+      );
+      expect(vitestCfg).toMatch(/pool:\s*'threads'/);
+      expect(vitestCfg).toContain('isolate: false');
+    });
+  });
 });
