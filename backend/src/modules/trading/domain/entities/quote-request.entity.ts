@@ -68,6 +68,7 @@ export interface RecipientResponseRecord {
 
 export const MAX_DECLINE_REASON_LENGTH = 10_000;
 export const MAX_CANCEL_REASON_LENGTH = 10_000;
+export const MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH = 10_000;
 
 export interface RequestRecipientProps {
   readonly id: string;
@@ -1037,13 +1038,40 @@ export class QuoteRequest {
       this.assertOwner(actor);
     } else {
       const trimmedReason = input.reason?.trim() ?? '';
-      const trimmedEvidence = input.evidence?.trim() ?? '';
-      if (trimmedReason.length === 0 || trimmedEvidence.length === 0) {
+      if (trimmedReason.length === 0) {
         throw new InvalidTradingInputError(
-          'Admin delivery confirmation requires both non-empty reason and evidence.',
+          'Admin delivery confirmation requires a non-empty reason.',
           {
             invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
             field: 'reason',
+          },
+        );
+      }
+      if (trimmedReason.length > MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH) {
+        throw new InvalidTradingInputError(
+          `reason cannot exceed ${MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH} characters.`,
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'reason',
+          },
+        );
+      }
+      const trimmedEvidence = input.evidence?.trim() ?? '';
+      if (trimmedEvidence.length === 0) {
+        throw new InvalidTradingInputError(
+          'Admin delivery confirmation requires non-empty evidence.',
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'evidence',
+          },
+        );
+      }
+      if (trimmedEvidence.length > MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH) {
+        throw new InvalidTradingInputError(
+          `evidence cannot exceed ${MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH} characters.`,
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'evidence',
           },
         );
       }

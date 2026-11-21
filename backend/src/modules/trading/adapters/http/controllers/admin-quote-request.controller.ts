@@ -37,8 +37,13 @@ import {
   CancelQuoteRequestByAdminDto,
   cancelQuoteRequestByAdminOperationResponseSchema,
 } from '../dtos/cancel-quote-request-by-admin.dto';
+import {
+  ConfirmDeliveryByAdminDto,
+  confirmDeliveryByAdminOperationResponseSchema,
+} from '../dtos/confirm-delivery-by-admin.dto';
 import { ListAdminQuoteRequestsUseCase } from '../../../application/use-cases/requests/list-admin-quote-requests.use-case';
 import { CancelQuoteRequestByAdminUseCase } from '../../../application/use-cases/requests/cancel-quote-request-by-admin.use-case';
+import { ConfirmDeliveryByAdminUseCase } from '../../../application/use-cases/fulfillment/confirm-delivery-by-admin.use-case';
 import {
   TradingMutation,
   TRADING_TX_REQUEST_KEY,
@@ -65,6 +70,9 @@ export class AdminQuoteRequestController {
     @Optional()
     @Inject(CancelQuoteRequestByAdminUseCase)
     private readonly cancelQuoteRequestByAdminUseCase?: CancelQuoteRequestByAdminUseCase,
+    @Optional()
+    @Inject(ConfirmDeliveryByAdminUseCase)
+    private readonly confirmDeliveryByAdminUseCase?: ConfirmDeliveryByAdminUseCase,
   ) {}
 
   @Get()
@@ -168,6 +176,78 @@ export class AdminQuoteRequestController {
 
     return result.request;
   }
+
+  @Post(':id/confirm-delivery-by-admin')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'confirm_delivery_by_admin',
+    objectType: 'QuoteRequest',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_request_version',
+  })
+  @ApiOperation({
+    summary:
+      'Admin xác nhận nhận đủ hàng thay cho Buyer trong trường hợp ngoại lệ có căn cứ (UC-26, BR-25, BR-26, BR-27)',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiIdempotencyKey()
+  @ApiZodBody(ConfirmDeliveryByAdminDto)
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryByAdminOperationResponseSchema,
+  })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
+    'INVALID_STATE',
+    'CSRF_INVALID',
+    'RATE_LIMIT_EXCEEDED',
+    'SECURITY_SERVICE_UNAVAILABLE',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async confirmDeliveryByAdmin(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Body() dto: ConfirmDeliveryByAdminDto,
+    @Req() req?: RequestWithTradingTx,
+  ): Promise<AdminRequestDto | HandlerMutationResult<AdminRequestDto>> {
+    if (!this.confirmDeliveryByAdminUseCase) {
+      throw new InternalServerErrorException(
+        'ConfirmDeliveryByAdminUseCase is not configured.',
+      );
+    }
+
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
+    const result = await this.confirmDeliveryByAdminUseCase.execute({
+      actor,
+      requestId: id,
+      expectedRequestVersion: dto.expected_request_version,
+      reason: dto.reason,
+      evidence: dto.evidence,
+      tx,
+    });
+
+    if (tx) {
+      return {
+        data: result.request,
+        currentState: result.currentState,
+      };
+    }
+
+    return result.request;
+  }
 }
 
 Reflect.defineMetadata(
@@ -182,4 +262,11 @@ Reflect.defineMetadata(
   [Object, String, CancelQuoteRequestByAdminDto, Object],
   AdminQuoteRequestController.prototype,
   'cancelQuoteRequestByAdmin',
+);
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, ConfirmDeliveryByAdminDto, Object],
+  AdminQuoteRequestController.prototype,
+  'confirmDeliveryByAdmin',
 );

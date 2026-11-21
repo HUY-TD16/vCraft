@@ -45,6 +45,7 @@ import { LinkAllocationBatchesUseCase } from './application/use-cases/fulfillmen
 import { HandoverAllocationUseCase } from './application/use-cases/fulfillment/handover-allocation.use-case';
 import { HandoverAllocationByAdminUseCase } from './application/use-cases/fulfillment/handover-allocation-by-admin.use-case';
 import { ConfirmDeliveryUseCase } from './application/use-cases/fulfillment/confirm-delivery.use-case';
+import { ConfirmDeliveryByAdminUseCase } from './application/use-cases/fulfillment/confirm-delivery-by-admin.use-case';
 import { CancelQuoteRequestByBuyerUseCase } from './application/use-cases/requests/cancel-quote-request-by-buyer.use-case';
 import { CancelQuoteRequestByAdminUseCase } from './application/use-cases/requests/cancel-quote-request-by-admin.use-case';
 import {
@@ -592,6 +593,25 @@ const defaultProviders = [
     ],
   },
   {
+    provide: ConfirmDeliveryByAdminUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      quoteRequestRepo: IQuoteRequestRepository,
+      allocationRepo: IAllocationRepository,
+    ) => {
+      return new ConfirmDeliveryByAdminUseCase(
+        txRunner,
+        quoteRequestRepo,
+        allocationRepo,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      QUOTE_REQUEST_REPOSITORY,
+      ALLOCATION_REPOSITORY,
+    ],
+  },
+  {
     provide: CancelQuoteRequestByBuyerUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -728,6 +748,7 @@ const defaultExports = [
   HandoverAllocationUseCase,
   HandoverAllocationByAdminUseCase,
   ConfirmDeliveryUseCase,
+  ConfirmDeliveryByAdminUseCase,
   CancelQuoteRequestByBuyerUseCase,
   CancelQuoteRequestByAdminUseCase,
   SubmitQuoteUseCase,
