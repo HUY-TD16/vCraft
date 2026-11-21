@@ -1,23 +1,49 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
+  Inject,
   InternalServerErrorException,
+  Optional,
+  Param,
+  Post,
   Query,
+  Req,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import { Roles, SessionLevels } from '../../../../../common/security/decorators/access-policy';
 import { CurrentActor } from '../../../../../common/security/decorators/current-actor.decorator';
 import type { AuthenticatedActor } from '../../../../../common/security/guards/authenticated-request';
 import { HttpResult } from '../../../../../common/http/interceptors/response-envelope.interceptor';
 import {
   ApiDataResponse,
+  ApiIdempotencyKey,
   ApiProblemResponses,
+  ApiZodBody,
   ApiZodParameters,
 } from '../../../../../common/http/swagger/api-contract.decorators';
 import { allocationDtoResponseSchema } from '../dtos/accept-quote.dto';
 import { ListArtisanAllocationsQueryDto } from '../dtos/list-artisan-allocations.dto';
+import {
+  StartAllocationDto,
+  startAllocationOperationResponseSchema,
+} from '../dtos/start-allocation.dto';
+import {
+  TradingMutation,
+  TRADING_TX_REQUEST_KEY,
+} from '../decorators/trading-mutation.decorator';
+import {
+  TradingMutationInterceptor,
+  type HandlerMutationResult,
+} from '../interceptors/trading-mutation.interceptor';
 import { ListArtisanAllocationsUseCase } from '../../../application/use-cases/fulfillment/list-artisan-allocations.use-case';
+import { StartAllocationProductionUseCase } from '../../../application/use-cases/fulfillment/start-allocation-production.use-case';
 import type { AllocationDto } from '../../../application/dtos/trading-persistence.dtos';
 
 @ApiTags('trading')
@@ -26,7 +52,11 @@ import type { AllocationDto } from '../../../application/dtos/trading-persistenc
 @SessionLevels('normal')
 export class ArtisanAllocationController {
   constructor(
+    @Inject(ListArtisanAllocationsUseCase)
     private readonly listArtisanAllocationsUseCase: ListArtisanAllocationsUseCase,
+    @Optional()
+    @Inject(StartAllocationProductionUseCase)
+    private readonly startAllocationProductionUseCase?: StartAllocationProductionUseCase,
   ) {}
 
   @Get()
@@ -60,6 +90,76 @@ export class ArtisanAllocationController {
       query,
     });
   }
+
+  @Post(':id/start')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'start_production',
+    objectType: 'Allocation',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_allocation_version',
+  })
+  @ApiOperation({
+    summary:
+      'Nghệ nhân xác nhận bắt đầu sản xuất phần việc (UC-23, BR-24)',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiIdempotencyKey()
+  @ApiZodBody(StartAllocationDto)
+  @ApiDataResponse(allocationDtoResponseSchema, {
+    status: 200,
+    operation: startAllocationOperationResponseSchema,
+  })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
+    'INVALID_STATE',
+    'CSRF_INVALID',
+    'RATE_LIMIT_EXCEEDED',
+    'SECURITY_SERVICE_UNAVAILABLE',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async startAllocation(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Body() dto: StartAllocationDto,
+    @Req() req?: Request & { [TRADING_TX_REQUEST_KEY]?: TransactionContext },
+  ): Promise<AllocationDto | HandlerMutationResult<AllocationDto>> {
+    if (!this.startAllocationProductionUseCase) {
+      throw new InternalServerErrorException(
+        'StartAllocationProductionUseCase is not configured.',
+      );
+    }
+
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
+    const result = await this.startAllocationProductionUseCase.execute({
+      actor,
+      allocationId: id,
+      expectedAllocationVersion: dto.expected_allocation_version,
+      tx,
+    });
+
+    if (tx) {
+      return {
+        data: result.allocation,
+        currentState: result.currentState,
+      };
+    }
+
+    return result.allocation;
+  }
 }
 
 Reflect.defineMetadata(
@@ -67,5 +167,12 @@ Reflect.defineMetadata(
   [Object, ListArtisanAllocationsQueryDto],
   ArtisanAllocationController.prototype,
   'listAllocations',
+);
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, StartAllocationDto, Object],
+  ArtisanAllocationController.prototype,
+  'startAllocation',
 );
 

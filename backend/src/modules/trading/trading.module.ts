@@ -39,6 +39,7 @@ import { ListArtisanAllocationsUseCase } from './application/use-cases/fulfillme
 import { GetAllocationByIdUseCase } from './application/use-cases/fulfillment/get-allocation-by-id.use-case';
 import { GetAllocationHistoryUseCase } from './application/use-cases/fulfillment/get-allocation-history.use-case';
 import { GetAllocationBatchesUseCase } from './application/use-cases/fulfillment/get-allocation-batches.use-case';
+import { StartAllocationProductionUseCase } from './application/use-cases/fulfillment/start-allocation-production.use-case';
 
 import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-quote.use-case';
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
@@ -466,6 +467,28 @@ const defaultProviders = [
     ],
   },
   {
+    provide: StartAllocationProductionUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      allocationRepo: IAllocationRepository,
+      quoteRequestRepo: IQuoteRequestRepository,
+      workshopContract?: IWorkshopContract,
+    ) => {
+      return new StartAllocationProductionUseCase(
+        txRunner,
+        allocationRepo,
+        quoteRequestRepo,
+        workshopContract,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      ALLOCATION_REPOSITORY,
+      QUOTE_REQUEST_REPOSITORY,
+      { token: WORKSHOP_CONTRACT, optional: true },
+    ],
+  },
+  {
     provide: GetAllocationHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -577,6 +600,7 @@ const defaultExports = [
   GetAllocationByIdUseCase,
   GetAllocationHistoryUseCase,
   GetAllocationBatchesUseCase,
+  StartAllocationProductionUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

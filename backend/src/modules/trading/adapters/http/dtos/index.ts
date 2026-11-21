@@ -22,6 +22,7 @@ export * from './list-artisan-allocations.dto';
 export * from './get-allocation-detail.dto';
 export * from './get-allocation-history.dto';
 export * from './get-allocation-batches.dto';
+export * from './start-allocation.dto';
 
 
 
