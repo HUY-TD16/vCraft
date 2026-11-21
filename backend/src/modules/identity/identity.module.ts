@@ -1,14 +1,18 @@
 import { Module, type DynamicModule, type ModuleMetadata, type Type } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { AppConfigModule } from '../../common/config/app-config';
 import { IDENTITY_CONTRACT, type IIdentityContract } from './public/contracts/identity.contract';
 import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { Argon2PasswordHasher } from './adapters/crypto/argon2-password-hasher';
 import { SESSION_MANAGER } from './application/ports/session-manager.port';
 import { SessionManagerService } from './application/services/session-manager.service';
 import { IdentityService } from './application/services/identity.service';
+import { AuthController } from './adapters/http/controllers/auth.controller';
+import { AdminAccountsController } from './adapters/http/controllers/admin-accounts.controller';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AppConfigModule],
+  controllers: [AuthController, AdminAccountsController],
   providers: [
     Argon2PasswordHasher,
     { provide: PASSWORD_HASHER, useExisting: Argon2PasswordHasher },
@@ -33,8 +37,12 @@ export class IdentityModule {
   ): DynamicModule {
     return {
       module: IdentityModule,
-      imports: [DatabaseModule, ...(dependencies.imports ?? [])],
-      controllers: dependencies.controllers ?? [],
+      imports: [DatabaseModule, AppConfigModule, ...(dependencies.imports ?? [])],
+      controllers: [
+        AuthController,
+        AdminAccountsController,
+        ...(dependencies.controllers ?? []),
+      ],
       providers: [
         Argon2PasswordHasher,
         { provide: PASSWORD_HASHER, useExisting: Argon2PasswordHasher },
