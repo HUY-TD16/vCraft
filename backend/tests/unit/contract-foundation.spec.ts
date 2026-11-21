@@ -25,8 +25,8 @@ describe('contract foundations', () => {
 
   it('uses one implementation instance for both the class and contract token', async () => {
     const definition = WorkshopsModule.register(MockWorkshopContract);
-    @Module({ providers: definition.providers, exports: definition.exports })
     class IsolatedWorkshopModule {}
+    Module({ providers: definition.providers, exports: definition.exports })(IsolatedWorkshopModule);
     const app = await NestFactory.createApplicationContext(IsolatedWorkshopModule, { logger: false });
     try {
       expect(app.get(WORKSHOP_CONTRACT)).toBe(app.get(MockWorkshopContract));

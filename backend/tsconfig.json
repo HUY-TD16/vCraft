@@ -6,10 +6,11 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "rootDir": "./src",
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,12 +20,12 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@common/*": ["src/common/*"],
-      "@infrastructure/*": ["src/infrastructure/*"],
-      "@modules/*": ["src/modules/*"],
-      "@workflows/*": ["src/workflows/*"]
+      "@common/*": ["./src/common/*"],
+      "@infrastructure/*": ["./src/infrastructure/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@workflows/*": ["./src/workflows/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
