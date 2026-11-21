@@ -7,8 +7,13 @@ import { PrismaClient } from '../../../generated/prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(APP_CONFIG) config: Pick<AppConfig, 'DATABASE_URL'>) {
     const connectionString = config.DATABASE_URL;
-    const schema = new URL(connectionString).searchParams.get('schema') ?? undefined;
-    super({ adapter: new PrismaPg({ connectionString }, { schema }) });
+    const url = new URL(connectionString);
+    const schema = url.searchParams.get('schema') ?? undefined;
+    const poolConfig =
+      schema && !url.searchParams.has('options') && /^[A-Za-z_][A-Za-z0-9_$]*$/.test(schema)
+        ? { connectionString, options: `-c search_path="${schema}"` }
+        : { connectionString };
+    super({ adapter: new PrismaPg(poolConfig, { schema }) });
   }
 
   async onModuleInit(): Promise<void> {
