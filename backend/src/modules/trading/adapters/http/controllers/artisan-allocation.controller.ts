@@ -40,6 +40,10 @@ import {
   linkAllocationBatchesOperationResponseSchema,
 } from '../dtos/link-allocation-batches.dto';
 import {
+  HandoverAllocationDto,
+  handoverAllocationOperationResponseSchema,
+} from '../dtos/handover-allocation.dto';
+import {
   TradingMutation,
   TRADING_TX_REQUEST_KEY,
 } from '../decorators/trading-mutation.decorator';
@@ -50,6 +54,7 @@ import {
 import { ListArtisanAllocationsUseCase } from '../../../application/use-cases/fulfillment/list-artisan-allocations.use-case';
 import { StartAllocationProductionUseCase } from '../../../application/use-cases/fulfillment/start-allocation-production.use-case';
 import { LinkAllocationBatchesUseCase } from '../../../application/use-cases/fulfillment/link-allocation-batches.use-case';
+import { HandoverAllocationUseCase } from '../../../application/use-cases/fulfillment/handover-allocation.use-case';
 import type { AllocationDto } from '../../../application/dtos/trading-persistence.dtos';
 
 @ApiTags('trading')
@@ -66,6 +71,9 @@ export class ArtisanAllocationController {
     @Optional()
     @Inject(LinkAllocationBatchesUseCase)
     private readonly linkAllocationBatchesUseCase?: LinkAllocationBatchesUseCase,
+    @Optional()
+    @Inject(HandoverAllocationUseCase)
+    private readonly handoverAllocationUseCase?: HandoverAllocationUseCase,
   ) {}
 
   @Get()
@@ -240,6 +248,77 @@ export class ArtisanAllocationController {
 
     return result.allocation;
   }
+
+  @Post(':id/handover')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'handover_allocation',
+    objectType: 'Allocation',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_allocation_version',
+  })
+  @ApiOperation({
+    summary:
+      'Nghệ nhân ghi nhận bàn giao phần việc sản xuất hoàn thành (UC-24, BR-24)',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiIdempotencyKey()
+  @ApiZodBody(HandoverAllocationDto)
+  @ApiDataResponse(allocationDtoResponseSchema, {
+    status: 200,
+    operation: handoverAllocationOperationResponseSchema,
+  })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
+    'INVALID_STATE',
+    'CSRF_INVALID',
+    'RATE_LIMIT_EXCEEDED',
+    'SECURITY_SERVICE_UNAVAILABLE',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async handoverAllocation(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Body() dto: HandoverAllocationDto,
+    @Req() req?: Request & { [TRADING_TX_REQUEST_KEY]?: TransactionContext },
+  ): Promise<AllocationDto | HandlerMutationResult<AllocationDto>> {
+    if (!this.handoverAllocationUseCase) {
+      throw new InternalServerErrorException(
+        'HandoverAllocationUseCase is not configured.',
+      );
+    }
+
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
+    const result = await this.handoverAllocationUseCase.execute({
+      actor,
+      allocationId: id,
+      expectedAllocationVersion: dto.expected_allocation_version,
+      deliveryNote: dto.delivery_note,
+      tx,
+    });
+
+    if (tx) {
+      return {
+        data: result.allocation,
+        currentState: result.currentState,
+      };
+    }
+
+    return result.allocation;
+  }
 }
 
 Reflect.defineMetadata(
@@ -261,5 +340,12 @@ Reflect.defineMetadata(
   [Object, String, LinkAllocationBatchesDto, Object],
   ArtisanAllocationController.prototype,
   'linkBatches',
+);
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, HandoverAllocationDto, Object],
+  ArtisanAllocationController.prototype,
+  'handoverAllocation',
 );
 
