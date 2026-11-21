@@ -46,6 +46,7 @@ storage/
 !backend/src/infrastructure/storage/
 media/
 !backend/src/modules/media/
+!backend/tests/unit/modules/media/
 data/
 
 # Temporary / Cache
