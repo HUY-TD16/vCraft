@@ -92,12 +92,7 @@ export class SendRequestWorkflow {
         );
       }
 
-      if (draft.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
-        );
-      }
+      draft.assertOwner(input.actor.accountId);
 
       if (!draft.category_id) {
         throw new InvalidTradingInputError(
@@ -143,12 +138,7 @@ export class SendRequestWorkflow {
         );
       }
 
-      if (lockedRequest.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
-        );
-      }
+      lockedRequest.assertOwner(input.actor.accountId);
 
       if (!lockedRequest.category_id) {
         throw new InvalidTradingInputError(

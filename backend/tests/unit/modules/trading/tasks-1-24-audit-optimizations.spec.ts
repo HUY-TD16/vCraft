@@ -735,24 +735,57 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
           ['/api/v1/buyer/quote-requests/{id}/close-bidding', 'post'],
           ['/api/v1/buyer/quote-requests/{id}/send', 'post'],
           ['/api/v1/buyer/quote-requests/{id}/accept-quote', 'post'],
+          ['/api/v1/buyer/quote-requests/{id}/confirm-delivery', 'post'],
+          ['/api/v1/buyer/quote-requests/{id}/cancel', 'post'],
           ['/api/v1/artisan/quote-requests', 'get'],
           ['/api/v1/artisan/quote-requests/{id}/decline', 'post'],
           ['/api/v1/artisan/quote-requests/{id}/quote', 'post'],
           ['/api/v1/artisan/quote-requests/{id}/quote/withdraw', 'post'],
+          ['/api/v1/artisan/allocations', 'get'],
+          ['/api/v1/artisan/allocations/{id}/start', 'post'],
+          ['/api/v1/artisan/allocations/{id}/batches', 'put'],
+          ['/api/v1/artisan/allocations/{id}/handover', 'post'],
           ['/api/v1/admin/quote-requests', 'get'],
+          ['/api/v1/admin/quote-requests/{id}/cancel-by-admin', 'post'],
+          ['/api/v1/admin/quote-requests/{id}/confirm-delivery-by-admin', 'post'],
+          ['/api/v1/admin/allocations/{id}/handover-by-admin', 'post'],
           ['/api/v1/quote-requests/{id}', 'get'],
           ['/api/v1/quote-requests/{id}/recipients', 'get'],
           ['/api/v1/quote-requests/{id}/contact-history', 'get'],
           ['/api/v1/quote-requests/{id}/history', 'get'],
           ['/api/v1/quote-requests/{id}/quotes', 'get'],
+          ['/api/v1/quote-requests/{id}/allocations', 'get'],
           ['/api/v1/quote-requests/{id}/recipients/{recipientId}/history', 'get'],
+          ['/api/v1/allocations/{id}', 'get'],
+          ['/api/v1/allocations/{id}/history', 'get'],
+          ['/api/v1/allocations/{id}/batches', 'get'],
         ];
 
         for (const [path, method] of expectedEndpoints) {
+          const op = doc.paths[path]?.[method as keyof (typeof doc.paths)[string]] as any;
           expect(
-            doc.paths[path]?.[method as keyof (typeof doc.paths)[string]],
+            op,
             `Missing OpenAPI operation ${method.toUpperCase()} ${path}`,
           ).toBeDefined();
+
+          const isMutationOnExisting =
+            ['post', 'put', 'patch', 'delete'].includes(method) &&
+            path !== '/api/v1/buyer/quote-requests' &&
+            path !== '/api/v1/buyer/quote-requests/{id}/copy';
+
+          if (isMutationOnExisting) {
+            const hasIdempotencyHeader = (op.parameters ?? []).some(
+              (p: any) =>
+                p &&
+                p.in === 'header' &&
+                typeof p.name === 'string' &&
+                p.name.toLowerCase() === 'x-idempotency-key',
+            );
+            expect(
+              hasIdempotencyHeader,
+              `Missing X-Idempotency-Key header parameter on ${method.toUpperCase()} ${path}`,
+            ).toBe(true);
+          }
         }
       } finally {
         await app?.close();

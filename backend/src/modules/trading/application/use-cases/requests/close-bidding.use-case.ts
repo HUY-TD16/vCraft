@@ -78,13 +78,6 @@ export class CloseBiddingUseCase {
         );
       }
 
-      if (existing.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
-        );
-      }
-
       const now = input.now ?? new Date();
       const { request: updated, statusLog } = existing.closeBiddingEarly({
         buyerId: input.actor.accountId,

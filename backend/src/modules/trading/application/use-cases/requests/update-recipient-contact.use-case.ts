@@ -99,13 +99,6 @@ export class UpdateRecipientContactUseCase {
         );
       }
 
-      if (existing.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
-        );
-      }
-
       const now = new Date();
       const { request: updated, contactEditHistory } =
         existing.updateRecipientContact({

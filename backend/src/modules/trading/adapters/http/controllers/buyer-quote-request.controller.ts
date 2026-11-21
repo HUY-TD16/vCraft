@@ -182,14 +182,25 @@ export class BuyerQuoteRequestController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'update_draft',
+    objectType: 'QuoteRequest',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_request_version',
+  })
   @ApiOperation({ summary: 'Buyer cập nhật nội dung yêu cầu báo giá nháp (UC-14)' })
   @ApiParam({
     name: 'id',
     required: true,
     schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
   })
+  @ApiIdempotencyKey()
   @ApiZodBody(UpdateDraftQuoteRequestDto)
-  @ApiDataResponse(buyerRequestDtoResponseSchema, { status: 200 })
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryOperationResponseSchema,
+  })
   @ApiProblemResponses(
     'INVALID_INPUT',
     'AUTHENTICATION_REQUIRED',
@@ -198,6 +209,7 @@ export class BuyerQuoteRequestController {
     'TEMP_PASSWORD_RESTRICTED',
     'RESOURCE_NOT_FOUND',
     'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
     'INVALID_STATE',
     'CSRF_INVALID',
     'RATE_LIMIT_EXCEEDED',
@@ -208,26 +220,37 @@ export class BuyerQuoteRequestController {
     @CurrentActor() actor: AuthenticatedActor,
     @Param('id') id: string,
     @Body() dto: UpdateDraftQuoteRequestDto,
+    @Req() req?: RequestWithTradingTx,
   ): Promise<BuyerRequestDto> {
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
     const { expected_request_version, ...draft } = dto;
     const entity = await this.updateDraftUseCase!.execute({
       actor,
       requestId: id,
       expectedRequestVersion: expected_request_version,
       draft,
+      tx,
     });
-    return this.toBuyerResponse(entity, actor);
+    return this.toBuyerResponse(entity, actor, tx);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'delete_draft',
+    objectType: 'QuoteRequest',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_request_version',
+  })
   @ApiOperation({ summary: 'Buyer xóa yêu cầu báo giá nháp chưa gửi (UC-14)' })
   @ApiParam({
     name: 'id',
     required: true,
     schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
   })
+  @ApiIdempotencyKey()
   @ApiOptionalZodBody(DeleteDraftQuoteRequestDto)
   @ApiEmptyResponse()
   @ApiProblemResponses(
@@ -238,6 +261,7 @@ export class BuyerQuoteRequestController {
     'TEMP_PASSWORD_RESTRICTED',
     'RESOURCE_NOT_FOUND',
     'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
     'INVALID_STATE',
     'CSRF_INVALID',
     'RATE_LIMIT_EXCEEDED',
@@ -248,11 +272,14 @@ export class BuyerQuoteRequestController {
     @CurrentActor() actor: AuthenticatedActor,
     @Param('id') id: string,
     @Body() dto?: DeleteDraftQuoteRequestDto,
+    @Req() req?: RequestWithTradingTx,
   ): Promise<void> {
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
     await this.deleteDraftUseCase!.execute({
       actor,
       requestId: id,
       expectedRequestVersion: dto?.expected_request_version,
+      tx,
     });
   }
 
@@ -296,6 +323,7 @@ export class BuyerQuoteRequestController {
   @Patch(':id/contact')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
   @TradingMutation({
     action: 'edit_contact',
     objectType: 'QuoteRequest',
@@ -310,8 +338,12 @@ export class BuyerQuoteRequestController {
     required: true,
     schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
   })
+  @ApiIdempotencyKey()
   @ApiZodBody(UpdateRecipientContactDto)
-  @ApiDataResponse(buyerRequestDtoResponseSchema, { status: 200 })
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryOperationResponseSchema,
+  })
   @ApiProblemResponses(
     'INVALID_INPUT',
     'AUTHENTICATION_REQUIRED',
@@ -320,6 +352,7 @@ export class BuyerQuoteRequestController {
     'TEMP_PASSWORD_RESTRICTED',
     'RESOURCE_NOT_FOUND',
     'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
     'INVALID_STATE',
     'CSRF_INVALID',
     'RATE_LIMIT_EXCEEDED',
@@ -347,6 +380,7 @@ export class BuyerQuoteRequestController {
   @Post(':id/close-bidding')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
   @TradingMutation({
     action: 'close_bidding',
     objectType: 'QuoteRequest',
@@ -361,8 +395,12 @@ export class BuyerQuoteRequestController {
     required: true,
     schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
   })
+  @ApiIdempotencyKey()
   @ApiZodBody(CloseBiddingDto)
-  @ApiDataResponse(buyerRequestDtoResponseSchema, { status: 200 })
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryOperationResponseSchema,
+  })
   @ApiProblemResponses(
     'INVALID_INPUT',
     'AUTHENTICATION_REQUIRED',
@@ -371,6 +409,7 @@ export class BuyerQuoteRequestController {
     'TEMP_PASSWORD_RESTRICTED',
     'RESOURCE_NOT_FOUND',
     'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
     'INVALID_STATE',
     'BIDDING_CLOSED',
     'CSRF_INVALID',
@@ -397,6 +436,7 @@ export class BuyerQuoteRequestController {
   @Post(':id/send')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
   @TradingMutation({
     action: 'send_request',
     objectType: 'QuoteRequest',
@@ -412,8 +452,12 @@ export class BuyerQuoteRequestController {
     required: true,
     schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
   })
+  @ApiIdempotencyKey()
   @ApiZodBody(SendQuoteRequestDto)
-  @ApiDataResponse(buyerRequestDtoResponseSchema, { status: 200 })
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryOperationResponseSchema,
+  })
   @ApiProblemResponses(
     'INVALID_INPUT',
     'AUTHENTICATION_REQUIRED',
@@ -422,6 +466,7 @@ export class BuyerQuoteRequestController {
     'TEMP_PASSWORD_RESTRICTED',
     'RESOURCE_NOT_FOUND',
     'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
     'DEADLINE_VIOLATION',
     'INVALID_STATE',
     'NO_ELIGIBLE_WORKSHOP',
@@ -712,14 +757,14 @@ Reflect.defineMetadata(
 
 Reflect.defineMetadata(
   'design:paramtypes',
-  [Object, String, UpdateDraftQuoteRequestDto],
+  [Object, String, UpdateDraftQuoteRequestDto, Object],
   BuyerQuoteRequestController.prototype,
   'updateDraft',
 );
 
 Reflect.defineMetadata(
   'design:paramtypes',
-  [Object, String, DeleteDraftQuoteRequestDto],
+  [Object, String, DeleteDraftQuoteRequestDto, Object],
   BuyerQuoteRequestController.prototype,
   'deleteDraft',
 );

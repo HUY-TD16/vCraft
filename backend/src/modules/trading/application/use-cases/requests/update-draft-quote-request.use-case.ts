@@ -1,4 +1,7 @@
-import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
+import type {
+  TransactionContext,
+  TransactionRunner,
+} from '../../../../../common/application/ports/transaction-runner';
 import type {
   Id,
   TrustedActor,
@@ -67,6 +70,7 @@ export interface UpdateDraftQuoteRequestInput {
   readonly biddingDeadline?: Date | string | null;
   readonly delivery_deadline?: Date | string | null;
   readonly deliveryDeadline?: Date | string | null;
+  readonly tx?: TransactionContext;
 }
 
 export class UpdateDraftQuoteRequestUseCase {
@@ -228,19 +232,12 @@ export class UpdateDraftQuoteRequestUseCase {
       }),
     };
 
-    return this.txRunner.run(async (tx) => {
+    const runWithTx = async (tx: TransactionContext): Promise<QuoteRequest> => {
       const existing = await this.quoteRequestRepo.lockById(requestId, tx);
       if (!existing) {
         throw new QuoteRequestNotFoundError(
           `QuoteRequest ${requestId} was not found.`,
           { entity: 'QuoteRequest', id: requestId },
-        );
-      }
-
-      if (existing.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
         );
       }
 
@@ -259,6 +256,12 @@ export class UpdateDraftQuoteRequestUseCase {
         },
         tx,
       );
-    });
+    };
+
+    if (input.tx) {
+      return runWithTx(input.tx);
+    }
+
+    return this.txRunner.run((tx) => runWithTx(tx));
   }
 }

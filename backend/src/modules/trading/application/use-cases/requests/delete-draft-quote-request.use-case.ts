@@ -1,4 +1,7 @@
-import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
+import type {
+  TransactionContext,
+  TransactionRunner,
+} from '../../../../../common/application/ports/transaction-runner';
 import type {
   Id,
   TrustedActor,
@@ -17,6 +20,7 @@ export interface DeleteDraftQuoteRequestInput {
   readonly id?: Id;
   readonly expectedRequestVersion?: number;
   readonly expected_request_version?: number;
+  readonly tx?: TransactionContext;
 }
 
 export class DeleteDraftQuoteRequestUseCase {
@@ -52,7 +56,7 @@ export class DeleteDraftQuoteRequestUseCase {
     const expectedVersion =
       input.expectedRequestVersion ?? input.expected_request_version;
 
-    await this.txRunner.run(async (tx) => {
+    const runWithTx = async (tx: TransactionContext): Promise<void> => {
       const quoteRequest = await this.quoteRequestRepo.lockById(requestId, tx);
       if (!quoteRequest) {
         throw new QuoteRequestNotFoundError(
@@ -71,6 +75,13 @@ export class DeleteDraftQuoteRequestUseCase {
         },
         tx,
       );
-    });
+    };
+
+    if (input.tx) {
+      await runWithTx(input.tx);
+      return;
+    }
+
+    await this.txRunner.run((tx) => runWithTx(tx));
   }
 }

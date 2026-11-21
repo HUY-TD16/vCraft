@@ -123,6 +123,11 @@ export class TradingMutationInterceptor implements NestInterceptor {
     const rawHeader =
       req.headers?.['x-idempotency-key'] ??
       (typeof req.get === 'function' ? req.get('x-idempotency-key') : undefined);
+
+    if (!this.idempotencyService && rawHeader === undefined) {
+      return next.handle();
+    }
+
     const headerVal = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
 
     if (typeof headerVal !== 'string' || !validateUuidV4(headerVal, { trim: true })) {
