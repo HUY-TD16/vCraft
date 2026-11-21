@@ -26,9 +26,15 @@ import {
   allocationEventDtoResponseSchema,
   GetAllocationHistoryQueryDto,
 } from '../dtos/get-allocation-history.dto';
+import {
+  allocationBatchDtoResponseSchema,
+  GetAllocationBatchesQueryDto,
+} from '../dtos/get-allocation-batches.dto';
 import { GetAllocationByIdUseCase } from '../../../application/use-cases/fulfillment/get-allocation-by-id.use-case';
 import { GetAllocationHistoryUseCase } from '../../../application/use-cases/fulfillment/get-allocation-history.use-case';
+import { GetAllocationBatchesUseCase } from '../../../application/use-cases/fulfillment/get-allocation-batches.use-case';
 import type {
+  AllocationBatchDto,
   AllocationDetailDto,
   AllocationEventDto,
 } from '../../../application/dtos/trading-persistence.dtos';
@@ -45,6 +51,9 @@ export class AllocationController {
     @Optional()
     @Inject(GetAllocationHistoryUseCase)
     private readonly getAllocationHistoryUseCase?: GetAllocationHistoryUseCase,
+    @Optional()
+    @Inject(GetAllocationBatchesUseCase)
+    private readonly getAllocationBatchesUseCase?: GetAllocationBatchesUseCase,
   ) {}
 
   @Get(':id')
@@ -125,6 +134,48 @@ export class AllocationController {
       query,
     });
   }
+
+  @Get(':id/batches')
+  @Roles('buyer', 'artisan', 'admin')
+  @SessionLevels('normal')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Lấy danh sách lô sản xuất (Batch) và số lượng đã liên kết vào phần việc phục vụ truy xuất nguồn gốc (UC-23, BR-24)',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiZodParameters(GetAllocationBatchesQueryDto)
+  @ApiDataResponse(allocationBatchDtoResponseSchema, { paginated: true })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'RATE_LIMIT_EXCEEDED',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async getAllocationBatches(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Query() query: GetAllocationBatchesQueryDto,
+  ): Promise<HttpResult<readonly AllocationBatchDto[]>> {
+    if (!this.getAllocationBatchesUseCase) {
+      throw new InternalServerErrorException(
+        'GetAllocationBatchesUseCase is not configured.',
+      );
+    }
+    return this.getAllocationBatchesUseCase.execute({
+      actor,
+      id,
+      query,
+    });
+  }
 }
 
 Reflect.defineMetadata(
@@ -139,4 +190,11 @@ Reflect.defineMetadata(
   [Object, String, GetAllocationHistoryQueryDto],
   AllocationController.prototype,
   'getAllocationHistory',
+);
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, GetAllocationBatchesQueryDto],
+  AllocationController.prototype,
+  'getAllocationBatches',
 );

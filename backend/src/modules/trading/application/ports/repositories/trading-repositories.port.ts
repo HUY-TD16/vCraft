@@ -16,6 +16,7 @@ import type {
 } from '../../../domain';
 import type {
   ActorDto,
+  AllocationBatchDto,
   AllocationDto,
   AllocationEventDto,
   AllocationStatus,
@@ -469,6 +470,17 @@ export interface IAllocationRepository {
   ): Promise<readonly Allocation[]>;
 }
 
+export interface FindAllocationBatchesInput {
+  readonly allocationId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindAllocationBatchesResult {
+  readonly rows: readonly AllocationBatchDto[];
+  readonly totalRecords: number;
+}
+
 export interface IAllocationBatchRepository {
   replaceForAllocation(
     input: {
@@ -482,6 +494,10 @@ export interface IAllocationBatchRepository {
     allocationId: Id,
     tx: TransactionContext,
   ): Promise<readonly AllocationBatchLink[]>;
+  findBatchesWithPagination(
+    input: FindAllocationBatchesInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationBatchesResult>;
 }
 
 export interface FindAllocationLogEventsInput {
