@@ -33,6 +33,7 @@ export interface GetQuoteRequestByIdCommand {
   readonly actor: AuthenticatedActor;
   readonly id: string;
   readonly tx?: TransactionContext;
+  readonly draftOnly?: boolean;
 }
 
 export type GetQuoteRequestByIdResult =
@@ -61,10 +62,20 @@ export class GetQuoteRequestByIdUseCase {
     const entityId = EntityId.of(command.id, 'id');
 
     // 3. Truy vấn nạp chi tiết thực thể và các quan hệ
+    const loadDetail = (id: Id, tx?: TransactionContext) => {
+      if (
+        command.draftOnly &&
+        typeof this.quoteRequestRepo.findDraftDetailById === 'function'
+      ) {
+        return this.quoteRequestRepo.findDraftDetailById(id, tx);
+      }
+      return this.quoteRequestRepo.findDetailById(id, tx);
+    };
+
     const detail = command.tx
-      ? await this.quoteRequestRepo.findDetailById(entityId.value, command.tx)
+      ? await loadDetail(entityId.value, command.tx)
       : await this.txRunner.run(async (tx: TransactionContext) => {
-          return this.quoteRequestRepo.findDetailById(entityId.value, tx);
+          return loadDetail(entityId.value, tx);
         });
 
     if (!detail) {

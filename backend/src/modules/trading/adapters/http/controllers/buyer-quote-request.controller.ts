@@ -134,11 +134,25 @@ export class BuyerQuoteRequestController {
     actor: AuthenticatedActor,
     tx?: TransactionContext,
   ): Promise<BuyerRequestDto> {
+    const isDraft = entity.status === 'draft_request';
+
+    if (isDraft && entity.category_id === null) {
+      return QuoteRequestMapper.toBuyerRequestDto(entity, {
+        category: null,
+        now: new Date(),
+        coordinationState: null,
+        noValidQuotes: false,
+        nearestAcceptDeadline: null,
+        deliveryConfirmation: null,
+      });
+    }
+
     if (this.getQuoteRequestByIdUseCase) {
       return (await this.getQuoteRequestByIdUseCase.execute({
         actor,
         id: entity.id,
         tx,
+        draftOnly: isDraft,
       })) as BuyerRequestDto;
     }
 

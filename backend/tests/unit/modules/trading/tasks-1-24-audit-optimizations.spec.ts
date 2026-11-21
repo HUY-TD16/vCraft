@@ -30,9 +30,11 @@ import {
   UnitPrice,
 } from '../../../../src/modules/trading/domain';
 import {
+  PrismaAllocationRepository,
   PrismaQuoteRequestRepository,
   RecipientResponseHistoryMapper,
 } from '../../../../src/modules/trading/adapters/persistence';
+import { AllocationBatchLink } from '../../../../src/modules/trading/domain';
 import { QUOTE_REQUEST_REPOSITORY } from '../../../../src/modules/trading/application/ports/repositories/trading-repositories.port';
 import { CreateDraftQuoteRequestUseCase } from '../../../../src/modules/trading/application/use-cases/requests/create-draft-quote-request.use-case';
 import { UpdateDraftQuoteRequestUseCase } from '../../../../src/modules/trading/application/use-cases/requests/update-draft-quote-request.use-case';
@@ -793,6 +795,253 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
         disconnectSpy.mockRestore();
         vi.unstubAllEnvs();
       }
+    });
+  });
+
+  describe('12. Group 1 Persistence Optimizations (Schema Indexes, createMany Batching & Draft Query Optimization)', () => {
+    it('declares @@index([request_id, edited_at]) on ContactEditHistory and @@index([expires_at]) on IdempotencyRecord in schema.prisma', () => {
+      const schemaSource = readFileSync(
+        join(__dirname, '../../../../prisma/schema.prisma'),
+        'utf-8',
+      );
+      expect(schemaSource).toMatch(
+        /model ContactEditHistory\s*\{[\s\S]*?@@index\(\[request_id,\s*edited_at\]\)[\s\S]*?\}/,
+      );
+      expect(schemaSource).toMatch(
+        /model IdempotencyRecord\s*\{[\s\S]*?@@index\(\[expires_at\]\)[\s\S]*?\}/,
+      );
+    });
+
+    it('batches statusLogs via statusLog.createMany in PrismaQuoteRequestRepository.update and allocationBatch/allocationLog via createMany in PrismaAllocationRepository.update', async () => {
+      const now = new Date('2026-11-10T08:00:00.000Z');
+      const deliveryAt = new Date('2026-11-25T08:00:00.000Z');
+
+      const { request, statusLog } = QuoteRequest.createDraft({
+        id: '100',
+        buyer_id: '10',
+        draft: {
+          category_id: '1',
+          spec: '100 lo gom',
+          quantity: 100,
+          unit: 'piece',
+          delivery_mode: 'at_buyer_address',
+          recipient_name: 'Nguyen Van A',
+          recipient_phone: '0901234567',
+          delivery_address: '123 Bat Trang',
+        },
+        now,
+      });
+
+      const qrClient = {
+        quoteRequest: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUnique: vi.fn().mockResolvedValue({
+            id: 100n,
+            buyer_id: 10n,
+            category_id: 1n,
+            spec: '100 lo gom',
+            quantity: 100,
+            unit: 'piece',
+            unit_set_description: null,
+            delivery_mode: 'at_buyer_address',
+            delivery_region: null,
+            bidding_deadline: null,
+            delivery_deadline: null,
+            bidding_closed_at: null,
+            recipient_name: 'Nguyen Van A',
+            recipient_phone: '0901234567',
+            delivery_address: '123 Bat Trang',
+            status: 'draft_request',
+            cancel_reason: null,
+            cancelled_by: null,
+            cancelled_at: null,
+            version: 1,
+            created_at: now,
+            updated_at: now,
+          }),
+        },
+        statusLog: {
+          createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          create: vi.fn(),
+        },
+      };
+
+      const qrTxRunner = {
+        getClient: () => qrClient,
+        run: async <T>(fn: (tx: TransactionContext) => Promise<T>) =>
+          fn({} as TransactionContext),
+      } as unknown as PrismaTransactionRunner;
+
+      const qrRepo = new PrismaQuoteRequestRepository(qrTxRunner);
+      await qrRepo.update(
+        {
+          request,
+          expectedVersion: 1,
+          statusLogs: [statusLog, statusLog],
+        },
+        {} as TransactionContext,
+      );
+
+      expect(qrClient.statusLog.createMany).toHaveBeenCalledTimes(1);
+      expect(qrClient.statusLog.createMany.mock.calls[0][0].data).toHaveLength(
+        2,
+      );
+      expect(qrClient.statusLog.create).not.toHaveBeenCalled();
+
+      const { allocation, log } = Allocation.createFromAcceptedQuote({
+        id: '700',
+        request_id: '100',
+        workshop_id: '20',
+        quote_id: '500',
+        quantity: 50,
+        unit_price: 120000,
+        committed_delivery_at: deliveryAt,
+        actorId: '10',
+        now,
+      });
+
+      const link1 = AllocationBatchLink.reconstitute({
+        workshop_id: '20',
+        allocation_id: '700',
+        batch_id: '902',
+        linked_quantity: 20,
+        linked_at: now,
+        linked_by: '21',
+      });
+      const link2 = AllocationBatchLink.reconstitute({
+        workshop_id: '20',
+        allocation_id: '700',
+        batch_id: '901',
+        linked_quantity: 30,
+        linked_at: now,
+        linked_by: '21',
+      });
+      const allocationWithBatches = Allocation.reconstitute({
+        ...allocation,
+        batch_links: [link1, link2],
+      });
+
+      const allocClient = {
+        allocation: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUnique: vi.fn().mockResolvedValue({
+            id: 700n,
+            request_id: 100n,
+            workshop_id: 20n,
+            quote_id: 500n,
+            quantity: 50,
+            unit_price: new Prisma.Decimal('120000'),
+            committed_delivery_at: deliveryAt,
+            status: 'not_started',
+            version: 1,
+            started_at: null,
+            started_by: null,
+            handed_over_at: null,
+            handed_over_by: null,
+            delivery_note: null,
+            admin_handed_over: false,
+            admin_delivery_evidence: null,
+            admin_handover_reason: null,
+            admin_handover_actual_at: null,
+            created_at: now,
+            updated_at: now,
+            allocationBatches: [],
+          }),
+        },
+        allocationBatch: {
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+          createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          create: vi.fn(),
+        },
+        allocationLog: {
+          createMany: vi.fn().mockResolvedValue({ count: 2 }),
+          create: vi.fn(),
+        },
+      };
+
+      const allocTxRunner = {
+        getClient: () => allocClient,
+        run: async <T>(fn: (tx: TransactionContext) => Promise<T>) =>
+          fn({} as TransactionContext),
+      } as unknown as PrismaTransactionRunner;
+
+      const allocRepo = new PrismaAllocationRepository(allocTxRunner);
+      await allocRepo.update(
+        {
+          allocation: allocationWithBatches,
+          expectedVersion: 1,
+          syncBatchLinks: true,
+          logs: [log, log],
+        },
+        {} as TransactionContext,
+      );
+
+      expect(allocClient.allocationBatch.createMany).toHaveBeenCalledTimes(1);
+      expect(
+        allocClient.allocationBatch.createMany.mock.calls[0][0].data,
+      ).toHaveLength(2);
+      expect(allocClient.allocationBatch.create).not.toHaveBeenCalled();
+
+      expect(allocClient.allocationLog.createMany).toHaveBeenCalledTimes(1);
+      expect(
+        allocClient.allocationLog.createMany.mock.calls[0][0].data,
+      ).toHaveLength(2);
+      expect(allocClient.allocationLog.create).not.toHaveBeenCalled();
+    });
+
+    it('queries only category in PrismaQuoteRequestRepository.findDraftDetailById without joining 4 child tables', async () => {
+      const now = new Date('2026-11-10T08:00:00.000Z');
+      const qrClient = {
+        quoteRequest: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 100n,
+            buyer_id: 10n,
+            category_id: 1n,
+            spec: '100 lo gom',
+            quantity: 100,
+            unit: 'piece',
+            unit_set_description: null,
+            delivery_mode: 'at_buyer_address',
+            delivery_region: null,
+            bidding_deadline: null,
+            delivery_deadline: null,
+            bidding_closed_at: null,
+            recipient_name: null,
+            recipient_phone: null,
+            delivery_address: null,
+            status: 'draft_request',
+            cancel_reason: null,
+            cancelled_by: null,
+            cancelled_at: null,
+            version: 1,
+            created_at: now,
+            updated_at: now,
+            category: { id: 1n, name: 'Gom men lam' },
+          }),
+        },
+      };
+
+      const qrTxRunner = {
+        getClient: () => qrClient,
+        run: async <T>(fn: (tx: TransactionContext) => Promise<T>) =>
+          fn({} as TransactionContext),
+      } as unknown as PrismaTransactionRunner;
+
+      const qrRepo = new PrismaQuoteRequestRepository(qrTxRunner);
+      const detail = await qrRepo.findDraftDetailById(
+        '100',
+        {} as TransactionContext,
+      );
+
+      expect(qrClient.quoteRequest.findUnique).toHaveBeenCalledWith({
+        where: { id: 100n },
+        include: { category: true },
+      });
+      expect(detail?.category).toEqual({ id: '1', name: 'Gom men lam' });
+      expect(detail?.recipients).toEqual([]);
+      expect(detail?.quotes).toEqual([]);
+      expect(detail?.allocations).toEqual([]);
+      expect(detail?.statusLogs).toEqual([]);
     });
   });
 });

@@ -171,18 +171,30 @@ export class PrismaAllocationRepository implements IAllocationRepository {
       const sortedLinks = [...input.allocation.batch_links].sort((a, b) =>
         EntityId.compare(a.batch_id, b.batch_id),
       );
-      for (const link of sortedLinks) {
-        await client.allocationBatch.create({
-          data: AllocationBatchMapper.toPrismaCreateInput(link, false),
-        });
+      if (sortedLinks.length > 0) {
+        const batchData = sortedLinks.map((link) =>
+          AllocationBatchMapper.toPrismaCreateInput(link, false),
+        );
+        if (typeof client.allocationBatch.createMany === 'function') {
+          await client.allocationBatch.createMany({ data: batchData });
+        } else {
+          for (const data of batchData) {
+            await client.allocationBatch.create({ data });
+          }
+        }
       }
     }
 
     if (input.logs && input.logs.length > 0) {
-      for (const log of input.logs) {
-        await client.allocationLog.create({
-          data: AllocationLogMapper.toPrismaCreateInput(log),
-        });
+      const logData = input.logs.map((log) =>
+        AllocationLogMapper.toPrismaCreateInput(log),
+      );
+      if (typeof client.allocationLog.createMany === 'function') {
+        await client.allocationLog.createMany({ data: logData });
+      } else {
+        for (const data of logData) {
+          await client.allocationLog.create({ data });
+        }
       }
     }
 

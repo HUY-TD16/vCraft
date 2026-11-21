@@ -82,6 +82,10 @@ export interface IQuoteRequestRepository {
     tx: TransactionContext,
   ): Promise<void>;
   findById(requestId: Id, tx: TransactionContext): Promise<QuoteRequest | null>;
+  findDraftDetailById?(
+    requestId: Id,
+    tx?: TransactionContext,
+  ): Promise<QuoteRequestDetailRecord | null>;
   findDetailById(
     requestId: Id,
     tx?: TransactionContext,
