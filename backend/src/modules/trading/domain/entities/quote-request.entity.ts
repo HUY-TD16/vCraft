@@ -67,6 +67,7 @@ export interface RecipientResponseRecord {
 }
 
 export const MAX_DECLINE_REASON_LENGTH = 10_000;
+export const MAX_CANCEL_REASON_LENGTH = 10_000;
 
 export interface RequestRecipientProps {
   readonly id: string;
@@ -1098,8 +1099,32 @@ export class QuoteRequest {
     const actor = EntityId.of(input.actorId, 'actorId').value;
     const trimmedReason = input.cancelReason?.trim() ?? '';
     const normalizedReason = trimmedReason.length > 0 ? trimmedReason : null;
+    if (
+      normalizedReason !== null &&
+      normalizedReason.length > MAX_CANCEL_REASON_LENGTH
+    ) {
+      throw new InvalidTradingInputError(
+        `cancel_reason cannot exceed ${MAX_CANCEL_REASON_LENGTH} characters.`,
+        {
+          field: 'cancel_reason',
+          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
+        },
+      );
+    }
     const trimmedHandling = input.goodsHandlingNote?.trim() ?? '';
     const normalizedHandling = trimmedHandling.length > 0 ? trimmedHandling : null;
+    if (
+      normalizedHandling !== null &&
+      normalizedHandling.length > MAX_CANCEL_REASON_LENGTH
+    ) {
+      throw new InvalidTradingInputError(
+        `goods_handling_note cannot exceed ${MAX_CANCEL_REASON_LENGTH} characters.`,
+        {
+          field: 'goods_handling_note',
+          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
+        },
+      );
+    }
 
     if (input.actorRole === 'buyer') {
       this.assertOwner(actor);
