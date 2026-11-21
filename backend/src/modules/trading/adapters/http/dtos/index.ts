@@ -20,6 +20,7 @@ export * from './withdraw-quote.dto';
 export * from './list-quote-request-allocations.dto';
 export * from './list-artisan-allocations.dto';
 export * from './get-allocation-detail.dto';
+export * from './get-allocation-history.dto';
 
 
 

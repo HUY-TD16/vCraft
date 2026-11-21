@@ -1216,4 +1216,94 @@ describe('Trading Prisma Repositories & PrismaTransactionRunner Integration (12 
       }),
     );
   });
+
+  it('paginates AllocationLog chronologically with actor projection and preserves admin handover evidence in PrismaAllocationLogRepository.findEventsWithPagination', async () => {
+    const t1 = new Date('2026-11-15T10:00:00.000Z');
+    const t2 = new Date('2026-11-20T11:30:00.000Z');
+    const mockRows = [
+      {
+        id: 16001n,
+        allocation_id: 700n,
+        event_type: 'created',
+        evidence: null,
+        prev_status: null,
+        new_status: 'not_started',
+        performed_by: 10n,
+        note: null,
+        is_admin_action: false,
+        created_at: t1,
+        performedBy: {
+          id: 10n,
+          display_name: 'Buyer One',
+        },
+      },
+      {
+        id: 16002n,
+        allocation_id: 700n,
+        event_type: 'handover_by_admin',
+        evidence: 'Biên bản ký nhận BB-012/2026',
+        prev_status: 'in_production',
+        new_status: 'handed_over',
+        performed_by: 1n,
+        note: 'Hộ đã bàn giao đủ nhưng mất điện không truy cập được',
+        is_admin_action: true,
+        created_at: t2,
+        performedBy: {
+          id: 1n,
+          display_name: 'Admin One',
+        },
+      },
+    ];
+
+    const mockClient = {
+      allocationLog: {
+        count: vi.fn().mockResolvedValue(2),
+        findMany: vi.fn().mockResolvedValue(mockRows),
+      },
+    };
+
+    const { txRunner } = createMockTxRunner(mockClient);
+    const repo = new PrismaAllocationLogRepository(txRunner);
+
+    const pageResult = await repo.findEventsWithPagination({
+      allocationId: '700',
+      page: 1,
+      limit: 20,
+    });
+
+    expect(mockClient.allocationLog.count).toHaveBeenCalledWith({
+      where: { allocation_id: 700n },
+    });
+    expect(mockClient.allocationLog.findMany).toHaveBeenCalledWith({
+      where: { allocation_id: 700n },
+      include: {
+        performedBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+      },
+      orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+      skip: 0,
+      take: 20,
+    });
+
+    expect(pageResult.totalRecords).toBe(2);
+    expect(pageResult.rows).toHaveLength(2);
+    expect(pageResult.rows[0].event_type).toBe('created');
+    expect(pageResult.rows[0].prev_status).toBeNull();
+    expect(pageResult.rows[0].new_status).toBe('not_started');
+    expect(pageResult.rows[1]).toEqual({
+      id: '16002',
+      event_type: 'handover_by_admin',
+      prev_status: 'in_production',
+      new_status: 'handed_over',
+      performed_by: { id: '1', display_name: 'Admin One' },
+      created_at: t2.toISOString(),
+      is_admin_action: true,
+      note: 'Hộ đã bàn giao đủ nhưng mất điện không truy cập được',
+      evidence: 'Biên bản ký nhận BB-012/2026',
+    });
+  });
 });

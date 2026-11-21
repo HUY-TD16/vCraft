@@ -37,6 +37,7 @@ import { ListQuoteRequestQuotesUseCase } from './application/use-cases/quotation
 import { ListQuoteRequestAllocationsUseCase } from './application/use-cases/fulfillment/list-quote-request-allocations.use-case';
 import { ListArtisanAllocationsUseCase } from './application/use-cases/fulfillment/list-artisan-allocations.use-case';
 import { GetAllocationByIdUseCase } from './application/use-cases/fulfillment/get-allocation-by-id.use-case';
+import { GetAllocationHistoryUseCase } from './application/use-cases/fulfillment/get-allocation-history.use-case';
 
 import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-quote.use-case';
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
@@ -82,6 +83,7 @@ import {
   RECIPIENT_RESPONSE_HISTORY_REPOSITORY,
   REQUEST_RECIPIENT_REPOSITORY,
   STATUS_LOG_REPOSITORY,
+  type IAllocationLogRepository,
   type IAllocationRepository,
   type IContactEditHistoryRepository,
   type IIdempotencyRecordRepository,
@@ -440,6 +442,28 @@ const defaultProviders = [
     inject: [TRANSACTION_RUNNER, ALLOCATION_REPOSITORY],
   },
   {
+    provide: GetAllocationHistoryUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      allocationRepo: IAllocationRepository,
+      allocationLogRepo: IAllocationLogRepository,
+      quoteRequestRepo?: IQuoteRequestRepository,
+    ) => {
+      return new GetAllocationHistoryUseCase(
+        txRunner,
+        allocationRepo,
+        allocationLogRepo,
+        quoteRequestRepo,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      ALLOCATION_REPOSITORY,
+      ALLOCATION_LOG_REPOSITORY,
+      { token: QUOTE_REQUEST_REPOSITORY, optional: true },
+    ],
+  },
+  {
     provide: GetRecipientResponseHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -527,6 +551,7 @@ const defaultExports = [
   ListQuoteRequestAllocationsUseCase,
   ListArtisanAllocationsUseCase,
   GetAllocationByIdUseCase,
+  GetAllocationHistoryUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

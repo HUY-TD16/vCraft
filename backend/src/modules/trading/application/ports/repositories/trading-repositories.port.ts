@@ -484,6 +484,17 @@ export interface IAllocationBatchRepository {
   ): Promise<readonly AllocationBatchLink[]>;
 }
 
+export interface FindAllocationLogEventsInput {
+  readonly allocationId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindAllocationLogEventsResult {
+  readonly rows: readonly AllocationEventDto[];
+  readonly totalRecords: number;
+}
+
 export interface IAllocationLogRepository {
   create(
     record: AllocationLogRecord & { readonly id?: Id },
@@ -501,6 +512,10 @@ export interface IAllocationLogRepository {
     allocationId: Id,
     tx: TransactionContext,
   ): Promise<readonly AllocationEventDto[]>;
+  findEventsWithPagination(
+    input: FindAllocationLogEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationLogEventsResult>;
 }
 
 export interface FindStatusLogEventsInput {
