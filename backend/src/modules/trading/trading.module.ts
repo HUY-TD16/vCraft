@@ -5,6 +5,7 @@ import {
   type Type,
 } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { AppConfigModule } from '../../common/config/app-config';
 import {
   TRANSACTION_RUNNER,
   type TransactionRunner,
@@ -57,6 +58,8 @@ import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-qu
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
 import { AcceptQuoteUseCase } from './application/use-cases/quotations/accept-quote.use-case';
 import { TradingIdempotencyService } from './application/services/trading-idempotency.service';
+import { IdempotencyCleanupService } from './application/services/idempotency-cleanup.service';
+import { IdempotencyCleanupScheduler } from './adapters/jobs/idempotency-cleanup.scheduler';
 import { TradingAcceptanceService } from './application/services/trading-acceptance.service';
 import {
   CATALOG_CONTRACT,
@@ -136,6 +139,17 @@ const defaultProviders = [
     useExisting: TradingCurrentStateResolver,
   },
   TradingMutationInterceptor,
+  {
+    provide: IdempotencyCleanupService,
+    useFactory: (
+      idempotencyRepo: IIdempotencyRecordRepository,
+      txRunner: TransactionRunner,
+    ) => {
+      return new IdempotencyCleanupService(idempotencyRepo, txRunner);
+    },
+    inject: [IDEMPOTENCY_RECORD_REPOSITORY, TRANSACTION_RUNNER],
+  },
+  IdempotencyCleanupScheduler,
   {
     provide: CreateDraftQuoteRequestUseCase,
     useFactory: (
@@ -767,6 +781,8 @@ const defaultExports = [
   TradingCurrentStateResolver,
   TRADING_CURRENT_STATE_RESOLVER,
   TradingMutationInterceptor,
+  IdempotencyCleanupService,
+  IdempotencyCleanupScheduler,
   QUOTE_REQUEST_REPOSITORY,
   REQUEST_RECIPIENT_REPOSITORY,
   RECIPIENT_RESPONSE_HISTORY_REPOSITORY,
@@ -790,7 +806,7 @@ const defaultExports = [
 ];
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [AppConfigModule, DatabaseModule],
   controllers: defaultControllers,
   providers: defaultProviders,
   exports: defaultExports,
@@ -824,7 +840,7 @@ export class TradingModule {
 
     return {
       module: TradingModule,
-      imports: [DatabaseModule, ...(dependencies.imports ?? [])],
+      imports: [AppConfigModule, DatabaseModule, ...(dependencies.imports ?? [])],
       controllers: [
         ...defaultControllers,
         ...(dependencies.controllers ?? []),
