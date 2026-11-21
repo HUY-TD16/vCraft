@@ -27,6 +27,7 @@ export * from './link-allocation-batches.dto';
 export * from './handover-allocation.dto';
 export * from './confirm-delivery.dto';
 export * from './cancel-quote-request.dto';
+export * from './cancel-quote-request-by-admin.dto';
 
 
 
