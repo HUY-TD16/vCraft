@@ -42,6 +42,7 @@ import { GetAllocationBatchesUseCase } from './application/use-cases/fulfillment
 import { StartAllocationProductionUseCase } from './application/use-cases/fulfillment/start-allocation-production.use-case';
 import { LinkAllocationBatchesUseCase } from './application/use-cases/fulfillment/link-allocation-batches.use-case';
 import { HandoverAllocationUseCase } from './application/use-cases/fulfillment/handover-allocation.use-case';
+import { ConfirmDeliveryUseCase } from './application/use-cases/fulfillment/confirm-delivery.use-case';
 import {
   TRACEABILITY_CONTRACT,
   type ITraceabilityContract,
@@ -545,6 +546,25 @@ const defaultProviders = [
     ],
   },
   {
+    provide: ConfirmDeliveryUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      quoteRequestRepo: IQuoteRequestRepository,
+      allocationRepo: IAllocationRepository,
+    ) => {
+      return new ConfirmDeliveryUseCase(
+        txRunner,
+        quoteRequestRepo,
+        allocationRepo,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      QUOTE_REQUEST_REPOSITORY,
+      ALLOCATION_REPOSITORY,
+    ],
+  },
+  {
     provide: GetAllocationHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -659,6 +679,7 @@ const defaultExports = [
   StartAllocationProductionUseCase,
   LinkAllocationBatchesUseCase,
   HandoverAllocationUseCase,
+  ConfirmDeliveryUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

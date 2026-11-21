@@ -51,6 +51,10 @@ import {
   acceptanceDtoResponseSchema,
   acceptQuoteOperationResponseSchema,
 } from '../dtos/accept-quote.dto';
+import {
+  ConfirmDeliveryDto,
+  confirmDeliveryOperationResponseSchema,
+} from '../dtos/confirm-delivery.dto';
 import { CreateDraftQuoteRequestUseCase } from '../../../application/use-cases/requests/create-draft-quote-request.use-case';
 import { UpdateDraftQuoteRequestUseCase } from '../../../application/use-cases/requests/update-draft-quote-request.use-case';
 import { DeleteDraftQuoteRequestUseCase } from '../../../application/use-cases/requests/delete-draft-quote-request.use-case';
@@ -61,6 +65,7 @@ import { SendQuoteRequestUseCase } from '../../../application/use-cases/requests
 import { ListBuyerQuoteRequestsUseCase } from '../../../application/use-cases/requests/list-buyer-quote-requests.use-case';
 import { GetQuoteRequestByIdUseCase } from '../../../application/use-cases/requests/get-quote-request-by-id.use-case';
 import { AcceptQuoteUseCase } from '../../../application/use-cases/quotations/accept-quote.use-case';
+import { ConfirmDeliveryUseCase } from '../../../application/use-cases/fulfillment/confirm-delivery.use-case';
 import {
   TradingMutation,
   TRADING_TX_REQUEST_KEY,
@@ -111,6 +116,9 @@ export class BuyerQuoteRequestController {
     @Optional()
     @Inject(GetQuoteRequestByIdUseCase)
     private readonly getQuoteRequestByIdUseCase?: GetQuoteRequestByIdUseCase,
+    @Optional()
+    @Inject(ConfirmDeliveryUseCase)
+    private readonly confirmDeliveryUseCase?: ConfirmDeliveryUseCase,
   ) {}
 
   private async toBuyerResponse(
@@ -459,6 +467,76 @@ export class BuyerQuoteRequestController {
     });
   }
 
+  @Post(':id/confirm-delivery')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @UseInterceptors(TradingMutationInterceptor)
+  @TradingMutation({
+    action: 'confirm_delivery',
+    objectType: 'QuoteRequest',
+    objectIdParam: 'id',
+    expectedVersionField: 'expected_request_version',
+  })
+  @ApiOperation({
+    summary:
+      'Buyer xác nhận đã nhận đủ toàn bộ hàng của yêu cầu (UC-25, BR-25, BR-26, BR-27)',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    schema: { type: 'string', pattern: '^[1-9][0-9]*$' },
+  })
+  @ApiIdempotencyKey()
+  @ApiZodBody(ConfirmDeliveryDto)
+  @ApiDataResponse(buyerRequestDtoResponseSchema, {
+    status: 200,
+    operation: confirmDeliveryOperationResponseSchema,
+  })
+  @ApiProblemResponses(
+    'INVALID_INPUT',
+    'AUTHENTICATION_REQUIRED',
+    'SESSION_EXPIRED',
+    'PERMISSION_DENIED',
+    'TEMP_PASSWORD_RESTRICTED',
+    'RESOURCE_NOT_FOUND',
+    'CONCURRENCY_CONFLICT',
+    'IDEMPOTENCY_CONFLICT',
+    'INVALID_STATE',
+    'CSRF_INVALID',
+    'RATE_LIMIT_EXCEEDED',
+    'SECURITY_SERVICE_UNAVAILABLE',
+    'INTERNAL_SERVER_ERROR',
+  )
+  async confirmDelivery(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id') id: string,
+    @Body() dto: ConfirmDeliveryDto,
+    @Req() req?: RequestWithTradingTx,
+  ): Promise<BuyerRequestDto | HandlerMutationResult<BuyerRequestDto>> {
+    if (!this.confirmDeliveryUseCase) {
+      throw new InternalServerErrorException(
+        'ConfirmDeliveryUseCase is not configured.',
+      );
+    }
+
+    const tx = req?.[TRADING_TX_REQUEST_KEY];
+    const result = await this.confirmDeliveryUseCase.execute({
+      actor,
+      requestId: id,
+      expectedRequestVersion: dto.expected_request_version,
+      tx,
+    });
+
+    if (tx) {
+      return {
+        data: result.request,
+        currentState: result.currentState,
+      };
+    }
+
+    return result.request;
+  }
+
   @Post(':id/accept-quote')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
@@ -602,3 +680,10 @@ Reflect.defineMetadata(
   'acceptQuote',
 );
 
+
+Reflect.defineMetadata(
+  'design:paramtypes',
+  [Object, String, ConfirmDeliveryDto, Object],
+  BuyerQuoteRequestController.prototype,
+  'confirmDelivery',
+);

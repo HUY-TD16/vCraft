@@ -25,6 +25,7 @@ export * from './get-allocation-batches.dto';
 export * from './start-allocation.dto';
 export * from './link-allocation-batches.dto';
 export * from './handover-allocation.dto';
+export * from './confirm-delivery.dto';
 
 
 
