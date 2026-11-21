@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -89,19 +90,12 @@ export class ListAdminQuoteRequestsUseCase {
     command: ListAdminQuoteRequestsCommand,
   ): Promise<ListAdminQuoteRequestsResult> {
     // 1. Kiểm tra phân quyền vai trò (Admin only) (SEC-04, UC-18, BR-02)
-    if (command.actor.role !== 'admin') {
-      throw new TradingPermissionDeniedError(
-        'Only administrators can access all quote requests.',
-      );
-    }
-
-    // 2. Kiểm tra cấp độ phiên bảo mật (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote requests.',
-      );
-    }
+    assertTradingActor(command.actor, {
+      expectedRole: 'admin',
+      tempPasswordMessage: 'Temporary password session cannot access quote requests.',
+      roleDeniedMessage: 'Only administrators can access all quote requests.',
+      checkRoleFirst: true,
+    });
 
     const { query } = command;
 

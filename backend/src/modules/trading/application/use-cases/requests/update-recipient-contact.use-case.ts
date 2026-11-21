@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -35,21 +36,11 @@ export class UpdateRecipientContactUseCase {
   ) {}
 
   async execute(input: UpdateRecipientContactInput): Promise<QuoteRequest> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot update recipient contact information.',
-      );
-    }
-
-    if (input.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can update recipient contact information.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot update recipient contact information.',
+      roleDeniedMessage: 'Only buyers can update recipient contact information.',
+    });
 
     const requestId = input.requestId ?? input.id;
     if (!requestId) {

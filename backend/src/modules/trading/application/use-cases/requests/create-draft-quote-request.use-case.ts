@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
 import type {
   Id,
@@ -39,21 +40,11 @@ export class CreateDraftQuoteRequestUseCase {
   ) {}
 
   async execute(input: CreateDraftQuoteRequestInput): Promise<QuoteRequest> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot create draft quote requests.',
-      );
-    }
-
-    if (input.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can create draft quote requests.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot create draft quote requests.',
+      roleDeniedMessage: 'Only buyers can create draft quote requests.',
+    });
 
     const now = new Date();
     const biddingDeadline = input.draft.bidding_deadline

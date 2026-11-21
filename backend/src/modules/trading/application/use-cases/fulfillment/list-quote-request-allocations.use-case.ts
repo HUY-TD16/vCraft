@@ -1,3 +1,4 @@
+import { assertTradingNormalSession } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -54,12 +55,10 @@ export class ListQuoteRequestAllocationsUseCase {
     command: ListQuoteRequestAllocationsCommand,
   ): Promise<HttpResult<readonly AllocationDto[]>> {
     // 1. Enforce normal session level (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote request allocations.',
-      );
-    }
+    assertTradingNormalSession(
+      command.actor,
+      'Temporary password session cannot access quote request allocations.',
+    );
 
     // 2. Validate path :id and pagination bounds
     const requestId = EntityId.of(command.requestId, 'id').value;

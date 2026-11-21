@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -55,25 +56,13 @@ export class ListArtisanAllocationsUseCase {
     command: ListArtisanAllocationsCommand,
   ): Promise<HttpResult<readonly AllocationDto[]>> {
     // 1. Enforce normal session level (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access artisan allocations.',
-      );
-    }
-
-    // 2. Validate role and workshop ownership (Zero-IDOR SEC-06)
-    if (command.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can view workshop allocations.',
-      );
-    }
-
-    if (!command.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor must belong to an active workshop.',
-      );
-    }
+    assertTradingActor(command.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot access artisan allocations.',
+      roleDeniedMessage: 'Only artisans can view workshop allocations.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor must belong to an active workshop.',
+    });
 
     const workshopId = EntityId.of(
       command.actor.workshopId,

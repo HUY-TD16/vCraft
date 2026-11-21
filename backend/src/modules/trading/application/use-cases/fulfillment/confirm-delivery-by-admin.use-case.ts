@@ -7,23 +7,21 @@ import type {
   Id,
   TrustedActor,
 } from '../../../../../common/application/types/contract-types';
+import { QuoteRequestMapper } from '../../mappers/quote-request.mapper';
 import {
   EntityId,
   InvalidTradingInputError,
   MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH,
-  type QuoteRequest,
   QuoteRequestNotFoundError,
   TRADING_INVARIANTS,
-  TradingDomainError,
-  TradingPermissionDeniedError,
   Version,
 } from '../../../domain';
 import type {
   AdminRequestDto,
-  CategoryRefDto,
   DeliveryConfirmationDto,
   TradingCurrentStateDto,
 } from '../../dtos/trading-persistence.dtos';
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   IAllocationRepository,
   IQuoteRequestRepository,
@@ -74,21 +72,13 @@ export class ConfirmDeliveryByAdminUseCase {
   async execute(
     input: ConfirmDeliveryByAdminInput,
   ): Promise<ConfirmDeliveryByAdminResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
+    assertTradingActor(input.actor, {
+      expectedRole: 'admin',
+      tempPasswordMessage:
         'Temporary password session cannot confirm delivery on behalf of a buyer.',
-      );
-    }
-
-    if (input.actor.role !== 'admin') {
-      throw new TradingPermissionDeniedError(
+      roleDeniedMessage:
         'Only admins can confirm full delivery on behalf of a buyer.',
-      );
-    }
+    });
 
     const adminId = EntityId.of(input.actor.accountId, 'accountId').value;
 
@@ -226,43 +216,14 @@ export class ConfirmDeliveryByAdminUseCase {
           ? await this.quoteRequestRepo.findDetailById(savedRequest.id, tx)
           : null;
 
-      let adminRequestDto: AdminRequestDto;
-      if (detail) {
-        const deliveryLog = detail.statusLogs.find(
-          (log) =>
-            log.entity.event_type === 'received_by_admin' ||
-            log.entity.event_type === 'received_by_buyer',
-        );
-        const deliveryConfirmation: DeliveryConfirmationDto = deliveryLog
-          ? Object.freeze({
-              performed_by: deliveryLog.performedBy ?? {
-                id: deliveryLog.entity.performed_by ?? adminId,
-                display_name: null,
-              },
-              performed_at: (deliveryLog.entity.created_at instanceof Date
-                ? deliveryLog.entity.created_at
-                : new Date(deliveryLog.entity.created_at)
-              ).toISOString(),
-              is_admin_action: deliveryLog.entity.is_admin_action,
-              reason: deliveryLog.entity.note,
-              evidence: deliveryLog.entity.evidence,
-            })
-          : fallbackConfirmation;
-
-        adminRequestDto = this.toAdminRequestDto(detail.entity, {
-          category: detail.category,
+      const adminRequestDto =
+        QuoteRequestMapper.fromDetailOrEntityToBuyerOrAdminDto({
+          detail,
+          fallbackEntity: savedRequest,
           now,
-          deliveryConfirmation,
+          fallbackActorId: adminId,
+          fallbackDeliveryConfirmation: fallbackConfirmation,
         });
-      } else {
-        adminRequestDto = this.toAdminRequestDto(savedRequest, {
-          category: savedRequest.category_id
-            ? { id: savedRequest.category_id, name: '' }
-            : null,
-          now,
-          deliveryConfirmation: fallbackConfirmation,
-        });
-      }
 
       const currentState: TradingCurrentStateDto = Object.freeze({
         request: Object.freeze({
@@ -287,52 +248,5 @@ export class ConfirmDeliveryByAdminUseCase {
     }
 
     return this.txRunner.run((tx) => runWithTx(tx));
-  }
-
-  private toAdminRequestDto(
-    entity: QuoteRequest,
-    context: {
-      readonly category: CategoryRefDto | null;
-      readonly now: Date;
-      readonly deliveryConfirmation: DeliveryConfirmationDto | null;
-    },
-  ): AdminRequestDto {
-    return Object.freeze({
-      id: entity.id,
-      status: entity.status,
-      version: entity.version,
-      category: context.category,
-      spec: entity.spec,
-      quantity: entity.quantity,
-      unit: entity.unit,
-      unit_set_description: entity.unit_set_description,
-      delivery_mode: entity.delivery_mode,
-      delivery_region: entity.delivery_region,
-      bidding_deadline: entity.bidding_deadline
-        ? entity.bidding_deadline.toISOString()
-        : null,
-      delivery_deadline: entity.delivery_deadline
-        ? entity.delivery_deadline.toISOString()
-        : null,
-      bidding_closed_at: entity.bidding_closed_at
-        ? entity.bidding_closed_at.toISOString()
-        : null,
-      is_bidding_open: entity.isBiddingOpenAt(context.now),
-      cancelled_at: entity.cancelled_at
-        ? entity.cancelled_at.toISOString()
-        : null,
-      created_at: entity.created_at.toISOString(),
-      updated_at: entity.updated_at.toISOString(),
-      buyer_id: entity.buyer_id,
-      recipient_name: entity.recipient_name,
-      recipient_phone: entity.recipient_phone,
-      delivery_address: entity.delivery_address,
-      cancel_reason: entity.cancel_reason,
-      split_requested_at: null,
-      coordination_state: null,
-      no_valid_quotes: false,
-      nearest_accept_deadline: null,
-      delivery_confirmation: context.deliveryConfirmation,
-    });
   }
 }

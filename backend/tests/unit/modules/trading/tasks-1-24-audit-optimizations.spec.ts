@@ -1044,4 +1044,50 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
       expect(detail?.statusLogs).toEqual([]);
     });
   });
+
+  describe('13. Group 2 Maintainability & DRY Optimizations (QuoteRequestMapper, TradingActorHelper & Provider Clusters)', () => {
+    it('centralizes BuyerRequestDto/AdminRequestDto mapping in QuoteRequestMapper.fromDetailOrEntityToBuyerOrAdminDto across all 5 use cases', () => {
+      const useCasePaths = [
+        '../../../../src/modules/trading/application/use-cases/requests/get-quote-request-by-id.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/fulfillment/confirm-delivery.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/fulfillment/confirm-delivery-by-admin.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/requests/cancel-quote-request-by-buyer.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/requests/cancel-quote-request-by-admin.use-case.ts',
+      ];
+      for (const relPath of useCasePaths) {
+        const src = readFileSync(join(__dirname, relPath), 'utf-8');
+        expect(src).toContain(
+          'QuoteRequestMapper.fromDetailOrEntityToBuyerOrAdminDto',
+        );
+        expect(src).not.toContain('private toBuyerRequestDto(');
+        expect(src).not.toContain('private toAdminRequestDto(');
+      }
+    });
+
+    it('centralizes TEMP_PASSWORD_RESTRICTED and role checks in trading-actor.helper across all 34 use cases, services, and workflows', () => {
+      const appDir = join(__dirname, '../../../../src/modules/trading/application');
+      const wfDir = join(__dirname, '../../../../src/workflows');
+      const allFiles = [
+        ...collectTsFiles(appDir),
+        ...collectTsFiles(wfDir),
+      ].filter((f) => !f.endsWith('trading-actor.helper.ts'));
+
+      for (const f of allFiles) {
+        const src = readFileSync(f, 'utf-8');
+        expect(src).not.toMatch(/\x27TEMP_PASSWORD_RESTRICTED\x27/);
+      }
+    });
+
+    it('splits TradingModule providers into core, requests, quotations, and fulfillment provider clusters', () => {
+      const moduleSrc = readFileSync(
+        join(__dirname, '../../../../src/modules/trading/trading.module.ts'),
+        'utf-8',
+      );
+      expect(moduleSrc).toContain('...TRADING_CORE_PROVIDERS');
+      expect(moduleSrc).toContain('...TRADING_REQUEST_PROVIDERS');
+      expect(moduleSrc).toContain('...TRADING_QUOTATION_PROVIDERS');
+      expect(moduleSrc).toContain('...TRADING_FULFILLMENT_PROVIDERS');
+      expect(moduleSrc.split(/\r?\n/).length).toBeLessThan(200);
+    });
+  });
 });

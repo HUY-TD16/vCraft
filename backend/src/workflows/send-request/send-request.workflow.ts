@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../modules/trading/application/helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -44,19 +45,11 @@ export class SendRequestWorkflow {
   ) {}
 
   async execute(input: SendQuoteRequestInput): Promise<QuoteRequest> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot send quote requests.',
-      );
-    }
-
-    if (input.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError('Only buyers can send quote requests.');
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot send quote requests.',
+      roleDeniedMessage: 'Only buyers can send quote requests.',
+    });
 
     const requestId = input.requestId ?? input.id;
     if (!requestId) {

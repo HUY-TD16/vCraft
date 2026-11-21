@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -75,27 +76,13 @@ export class HandoverAllocationUseCase {
   async execute(
     input: HandoverAllocationInput,
   ): Promise<HandoverAllocationResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot record allocation handover.',
-      );
-    }
-
-    if (input.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can record handover on allocations.',
-      );
-    }
-
-    if (!input.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot record allocation handover.',
+      roleDeniedMessage: 'Only artisans can record handover on allocations.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+    });
 
     const actorId = EntityId.of(input.actor.accountId, 'accountId').value;
     const workshopId = EntityId.of(input.actor.workshopId, 'workshopId').value;

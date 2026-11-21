@@ -1,3 +1,4 @@
+import { assertTradingNormalSession } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -63,12 +64,10 @@ export class GetAllocationBatchesUseCase {
     command: GetAllocationBatchesCommand,
   ): Promise<HttpResult<readonly AllocationBatchDto[]>> {
     // 1. Enforce normal session level (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access allocation batches.',
-      );
-    }
+    assertTradingNormalSession(
+      command.actor,
+      'Temporary password session cannot access allocation batches.',
+    );
 
     // 2. Validate path :id (positive 64-bit decimal integer)
     const rawId = command.id ?? command.allocationId ?? '';

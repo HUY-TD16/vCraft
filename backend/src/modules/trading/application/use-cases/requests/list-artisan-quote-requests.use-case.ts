@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -81,26 +82,14 @@ export class ListArtisanQuoteRequestsUseCase {
     command: ListArtisanQuoteRequestsCommand,
   ): Promise<ListArtisanQuoteRequestsResult> {
     // 1. Phân quyền vai trò (SEC-04, UC-18)
-    if (command.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can access their invited quote requests.',
-      );
-    }
-
-    // 2. Cô lập xưởng (SEC-06 IDOR: Nghệ nhân phải gắn liền với workshopId hợp lệ)
-    if (!command.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
-
-    // 3. Giới hạn phiên mật khẩu tạm (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote requests.',
-      );
-    }
+    assertTradingActor(command.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot access quote requests.',
+      roleDeniedMessage: 'Only artisans can access their invited quote requests.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+      checkRoleFirst: true,
+    });
 
     const { query } = command;
 

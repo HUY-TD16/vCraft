@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -89,21 +90,11 @@ export class HandoverAllocationByAdminUseCase {
   async execute(
     input: HandoverAllocationByAdminInput,
   ): Promise<HandoverAllocationByAdminResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot record admin allocation handover.',
-      );
-    }
-
-    if (input.actor.role !== 'admin') {
-      throw new TradingPermissionDeniedError(
-        'Only admins can record handover on behalf of a workshop.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'admin',
+      tempPasswordMessage: 'Temporary password session cannot record admin allocation handover.',
+      roleDeniedMessage: 'Only admins can record handover on behalf of a workshop.',
+    });
 
     const adminId = EntityId.of(input.actor.accountId, 'accountId').value;
 

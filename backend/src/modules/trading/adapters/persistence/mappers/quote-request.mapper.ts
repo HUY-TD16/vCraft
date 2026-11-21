@@ -9,17 +9,18 @@ import type {
   BuyerRequestSummaryDto,
   CategoryRefDto,
   DeliveryConfirmationDto,
-  InvitedRequestBaseDto,
   InvitedRequestDto,
-  InvitedRequestWithAllocationDto,
-  QuoteDto,
-  RecipientDto,
   RequestBaseDto,
 } from '../../../application/dtos/trading-persistence.dtos';
 import {
+  type BuyerRequestDtoMapperContext,
+  type InvitedRequestDtoMapperContext,
+  QuoteRequestMapper as QuoteRequestApplicationMapper,
+} from '../../../application/mappers/quote-request.mapper';
+import type { QuoteRequestDetailRecord } from '../../../application/ports/repositories/trading-repositories.port';
+import {
   type CoordinationState,
   DELIVERY_MODES,
-  EntityId,
   QuoteRequest,
   REQUEST_STATUSES,
   REQUEST_UNITS,
@@ -36,14 +37,10 @@ import {
   optionalIdToBigInt,
 } from './shared-persistence.mapper';
 
-export interface BuyerRequestDtoMapperContext {
-  readonly category: CategoryRefDto | null;
-  readonly now: Date;
-  readonly coordinationState?: CoordinationState | null;
-  readonly noValidQuotes?: boolean;
-  readonly nearestAcceptDeadline?: Date | Instant | null;
-  readonly deliveryConfirmation?: DeliveryConfirmationDto | null;
-}
+export type {
+  BuyerRequestDtoMapperContext,
+  InvitedRequestDtoMapperContext,
+};
 
 export interface QuoteSummaryEvaluationItem {
   readonly status: string;
@@ -61,19 +58,6 @@ export interface BuyerRequestSummaryDtoMapperContext {
   readonly noValidQuotes?: boolean;
   readonly nearestAcceptDeadline?: Date | Instant | null;
   readonly quotes?: readonly QuoteSummaryEvaluationItem[] | null;
-}
-
-export interface InvitedRequestDtoMapperContext {
-  readonly category: CategoryRefDto | null;
-  readonly now: Date;
-  readonly ownRecipient: RecipientDto;
-  readonly ownQuote: QuoteDto | null;
-  /**
-   * When present, indicates the invited workshop holds a confirmed Allocation
-   * on this QuoteRequest (`BR-04`, `SEC-04`). When null or undefined, contact
-   * and detailed address fields MUST be omitted from the returned DTO.
-   */
-  readonly ownAllocationId?: Id | null;
 }
 
 function normalizeNearestDeadline(
@@ -135,7 +119,9 @@ export class QuoteRequestMapper {
     includeId: boolean = true,
   ): Prisma.QuoteRequestUncheckedCreateInput {
     return {
-      ...(includeId ? { id: optionalIdToBigInt(entity.id, 'quote_request.id') } : {}),
+      ...(includeId
+        ? { id: optionalIdToBigInt(entity.id, 'quote_request.id') }
+        : {}),
       buyer_id: idToBigInt(entity.buyer_id, 'quote_request.buyer_id'),
       category_id: nullableIdToBigInt(
         entity.category_id,
@@ -202,63 +188,33 @@ export class QuoteRequestMapper {
     entity: QuoteRequest,
     context: { readonly category: CategoryRefDto | null; readonly now: Date },
   ): RequestBaseDto {
-    return Object.freeze({
-      id: entity.id,
-      status: entity.status,
-      version: entity.version,
-      category: context.category,
-      spec: entity.spec,
-      quantity: entity.quantity,
-      unit: entity.unit,
-      unit_set_description: entity.unit_set_description,
-      delivery_mode: entity.delivery_mode,
-      delivery_region: entity.delivery_region,
-      bidding_deadline: nullableDateToInstant(
-        entity.bidding_deadline,
-        'bidding_deadline',
-      ),
-      delivery_deadline: nullableDateToInstant(
-        entity.delivery_deadline,
-        'delivery_deadline',
-      ),
-      bidding_closed_at: nullableDateToInstant(
-        entity.bidding_closed_at,
-        'bidding_closed_at',
-      ),
-      is_bidding_open: entity.isBiddingOpenAt(context.now),
-      cancelled_at: nullableDateToInstant(entity.cancelled_at, 'cancelled_at'),
-      created_at: dateToInstant(entity.created_at, 'created_at'),
-      updated_at: dateToInstant(entity.updated_at, 'updated_at'),
-    });
+    return QuoteRequestApplicationMapper.toBaseDto(entity, context);
   }
 
   static toBuyerRequestDto(
     entity: QuoteRequest,
     context: BuyerRequestDtoMapperContext,
   ): BuyerRequestDto {
-    const base = QuoteRequestMapper.toBaseDto(entity, context);
-    return Object.freeze({
-      ...base,
-      buyer_id: entity.buyer_id,
-      recipient_name: entity.recipient_name,
-      recipient_phone: entity.recipient_phone,
-      delivery_address: entity.delivery_address,
-      cancel_reason: entity.cancel_reason,
-      split_requested_at: null,
-      coordination_state: context.coordinationState ?? null,
-      no_valid_quotes: context.noValidQuotes ?? false,
-      nearest_accept_deadline: normalizeNearestDeadline(
-        context.nearestAcceptDeadline,
-      ),
-      delivery_confirmation: context.deliveryConfirmation ?? null,
-    });
+    return QuoteRequestApplicationMapper.toBuyerRequestDto(entity, context);
   }
 
   static toAdminRequestDto(
     entity: QuoteRequest,
     context: BuyerRequestDtoMapperContext,
   ): AdminRequestDto {
-    return QuoteRequestMapper.toBuyerRequestDto(entity, context);
+    return QuoteRequestApplicationMapper.toAdminRequestDto(entity, context);
+  }
+
+  static fromDetailOrEntityToBuyerOrAdminDto(input: {
+    readonly detail?: QuoteRequestDetailRecord | null;
+    readonly fallbackEntity?: QuoteRequest;
+    readonly now: Date;
+    readonly fallbackActorId?: Id;
+    readonly fallbackDeliveryConfirmation?: DeliveryConfirmationDto | null;
+  }): BuyerRequestDto {
+    return QuoteRequestApplicationMapper.fromDetailOrEntityToBuyerOrAdminDto(
+      input,
+    );
   }
 
   static toSummaryDto(
@@ -343,33 +299,6 @@ export class QuoteRequestMapper {
     entity: QuoteRequest,
     context: InvitedRequestDtoMapperContext,
   ): InvitedRequestDto {
-    const base = QuoteRequestMapper.toBaseDto(entity, context);
-
-    if (
-      context.ownAllocationId === null ||
-      context.ownAllocationId === undefined
-    ) {
-      const unallocated: InvitedRequestBaseDto = {
-        ...base,
-        own_recipient: context.ownRecipient,
-        own_quote: context.ownQuote,
-      };
-      return Object.freeze(unallocated);
-    }
-
-    const validatedAllocationId = EntityId.of(
-      context.ownAllocationId,
-      'own_allocation_id',
-    ).value;
-    const allocated: InvitedRequestWithAllocationDto = {
-      ...base,
-      own_recipient: context.ownRecipient,
-      own_quote: context.ownQuote,
-      own_allocation_id: validatedAllocationId,
-      recipient_name: entity.recipient_name,
-      recipient_phone: entity.recipient_phone,
-      delivery_address: entity.delivery_address,
-    };
-    return Object.freeze(allocated);
+    return QuoteRequestApplicationMapper.toInvitedRequestDto(entity, context);
   }
 }

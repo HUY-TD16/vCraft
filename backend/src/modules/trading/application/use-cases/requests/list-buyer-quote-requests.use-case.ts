@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -84,19 +85,12 @@ export class ListBuyerQuoteRequestsUseCase {
     command: ListBuyerQuoteRequestsCommand,
   ): Promise<ListBuyerQuoteRequestsResult> {
     // 1. Kiểm tra phân quyền vai trò (SEC-04, UC-14, UC-18)
-    if (command.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can access their quote requests.',
-      );
-    }
-
-    // 2. Kiểm tra cấp độ phiên bảo mật (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote requests.',
-      );
-    }
+    assertTradingActor(command.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot access quote requests.',
+      roleDeniedMessage: 'Only buyers can access their quote requests.',
+      checkRoleFirst: true,
+    });
 
     const { query } = command;
 

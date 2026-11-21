@@ -1,3 +1,4 @@
+import { assertTradingNormalSession } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -42,12 +43,10 @@ export class GetAllocationByIdUseCase {
     command: GetAllocationByIdCommand,
   ): Promise<AllocationDetailDto> {
     // 1. Enforce normal session level (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access allocation details.',
-      );
-    }
+    assertTradingNormalSession(
+      command.actor,
+      'Temporary password session cannot access allocation details.',
+    );
 
     // 2. Validate path :id (positive 64-bit decimal integer)
     const allocationId = EntityId.of(command.id, 'id').value;

@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../modules/trading/application/helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -90,27 +91,13 @@ export class LinkBatchesWorkflow {
   async execute(
     input: LinkBatchesWorkflowInput,
   ): Promise<LinkBatchesWorkflowResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot link batches to allocations.',
-      );
-    }
-
-    if (input.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can link production batches to allocations.',
-      );
-    }
-
-    if (!input.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot link batches to allocations.',
+      roleDeniedMessage: 'Only artisans can link production batches to allocations.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+    });
 
     const actorId = EntityId.of(input.actor.accountId, 'accountId').value;
     const workshopId = EntityId.of(input.actor.workshopId, 'workshopId').value;
