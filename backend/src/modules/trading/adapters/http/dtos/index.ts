@@ -18,6 +18,7 @@ export * from './decline-quote-request.dto';
 export * from './submit-quote.dto';
 export * from './withdraw-quote.dto';
 export * from './list-quote-request-allocations.dto';
+export * from './list-artisan-allocations.dto';
 
 
 

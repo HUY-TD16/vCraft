@@ -17,6 +17,7 @@ import { BuyerQuoteRequestController } from './adapters/http/controllers/buyer-q
 import { ArtisanQuoteRequestController } from './adapters/http/controllers/artisan-quote-request.controller';
 import { AdminQuoteRequestController } from './adapters/http/controllers/admin-quote-request.controller';
 import { QuoteRequestController } from './adapters/http/controllers/quote-request.controller';
+import { ArtisanAllocationController } from './adapters/http/controllers/artisan-allocation.controller';
 import { TradingMutationInterceptor } from './adapters/http/interceptors/trading-mutation.interceptor';
 import {
   TRADING_CURRENT_STATE_RESOLVER,
@@ -33,6 +34,7 @@ import { DeclineQuoteRequestUseCase } from './application/use-cases/quotations/d
 import { GetRecipientResponseHistoryUseCase } from './application/use-cases/quotations/get-recipient-response-history.use-case';
 import { ListQuoteRequestQuotesUseCase } from './application/use-cases/quotations/list-quote-request-quotes.use-case';
 import { ListQuoteRequestAllocationsUseCase } from './application/use-cases/fulfillment/list-quote-request-allocations.use-case';
+import { ListArtisanAllocationsUseCase } from './application/use-cases/fulfillment/list-artisan-allocations.use-case';
 
 import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-quote.use-case';
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
@@ -93,6 +95,7 @@ const defaultControllers = [
   ArtisanQuoteRequestController,
   AdminQuoteRequestController,
   QuoteRequestController,
+  ArtisanAllocationController,
 ];
 const defaultProviders = [
   ...TRADING_PERSISTENCE_PROVIDERS,
@@ -414,6 +417,16 @@ const defaultProviders = [
     ],
   },
   {
+    provide: ListArtisanAllocationsUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      allocationRepo: IAllocationRepository,
+    ) => {
+      return new ListArtisanAllocationsUseCase(txRunner, allocationRepo);
+    },
+    inject: [TRANSACTION_RUNNER, ALLOCATION_REPOSITORY],
+  },
+  {
     provide: GetRecipientResponseHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -499,6 +512,7 @@ const defaultExports = [
   GetRecipientResponseHistoryUseCase,
   ListQuoteRequestQuotesUseCase,
   ListQuoteRequestAllocationsUseCase,
+  ListArtisanAllocationsUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

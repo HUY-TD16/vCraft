@@ -8,6 +8,8 @@ import { PrismaTransactionRunner } from '../../../../../infrastructure/database/
 import type {
   FindAllocationsWithDetailsInput,
   FindAllocationsWithDetailsResult,
+  FindArtisanAllocationsInput,
+  FindArtisanAllocationsResult,
   IAllocationRepository,
 } from '../../../application/ports/repositories/trading-repositories.port';
 import {
@@ -353,6 +355,115 @@ export class PrismaAllocationRepository implements IAllocationRepository {
           },
         },
         orderBy: { id: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const dtos = rows.map((row) => {
+      const publishedBatchIds = new Set<string>();
+      for (const link of row.allocationBatches ?? []) {
+        if (link.batch?.status === 'published') {
+          publishedBatchIds.add(link.batch.id.toString());
+        }
+      }
+      const entity = AllocationMapper.toDomain(row);
+      return AllocationMapper.toDto(entity, {
+        workshop: toWorkshopRefDto(row.workshop),
+        startedByActor: toNullableActorDto(row.startedBy),
+        handedOverByActor: toNullableActorDto(row.handedOverBy),
+        publishedBatchIds,
+      });
+    });
+
+    return {
+      rows: dtos,
+      totalRecords,
+    };
+  }
+
+  async findArtisanAllocations(
+    input: FindArtisanAllocationsInput,
+    tx?: TransactionContext,
+  ): Promise<FindArtisanAllocationsResult> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindArtisanAllocations(client, input);
+    }
+    if (this.prisma) {
+      return this.executeFindArtisanAllocations(this.prisma, input);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindArtisanAllocations(client, input);
+    });
+  }
+
+  private async executeFindArtisanAllocations(
+    client: Prisma.TransactionClient | PrismaService,
+    input: FindArtisanAllocationsInput,
+  ): Promise<FindArtisanAllocationsResult> {
+    const workshopIdBigInt = idToBigInt(
+      input.workshopId,
+      'allocation.workshop_id',
+    );
+    const where: Prisma.AllocationWhereInput = {
+      workshop_id: workshopIdBigInt,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.deliveryDeadline !== undefined
+        ? { committed_delivery_at: { lte: input.deliveryDeadline } }
+        : {}),
+      ...(input.requestId !== undefined
+        ? { request_id: idToBigInt(input.requestId, 'allocation.request_id') }
+        : {}),
+    };
+
+    const page =
+      input.page !== undefined && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit !== undefined && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+
+    const [totalRecords, rows] = await Promise.all([
+      client.allocation.count({ where }),
+      client.allocation.findMany({
+        where,
+        include: {
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          startedBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          handedOverBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          allocationBatches: {
+            include: {
+              batch: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: { id: 'asc' },
+          },
+        },
+        orderBy: { id: 'desc' },
         skip,
         take: limit,
       }),

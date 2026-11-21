@@ -385,6 +385,20 @@ export interface FindAllocationsWithDetailsResult {
   readonly totalRecords: number;
 }
 
+export interface FindArtisanAllocationsInput {
+  readonly workshopId: Id;
+  readonly status?: AllocationStatus | string;
+  readonly deliveryDeadline?: Date;
+  readonly requestId?: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindArtisanAllocationsResult {
+  readonly rows: readonly AllocationDto[];
+  readonly totalRecords: number;
+}
+
 export interface IAllocationRepository {
   create(
     input: {
@@ -428,6 +442,10 @@ export interface IAllocationRepository {
     input: FindAllocationsWithDetailsInput,
     tx?: TransactionContext,
   ): Promise<FindAllocationsWithDetailsResult>;
+  findArtisanAllocations(
+    input: FindArtisanAllocationsInput,
+    tx?: TransactionContext,
+  ): Promise<FindArtisanAllocationsResult>;
   lockById(allocationId: Id, tx: TransactionContext): Promise<Allocation | null>;
   lockByRequestId(
     requestId: Id,
