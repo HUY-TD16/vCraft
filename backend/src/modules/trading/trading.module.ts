@@ -18,6 +18,7 @@ import { ArtisanQuoteRequestController } from './adapters/http/controllers/artis
 import { AdminQuoteRequestController } from './adapters/http/controllers/admin-quote-request.controller';
 import { QuoteRequestController } from './adapters/http/controllers/quote-request.controller';
 import { ArtisanAllocationController } from './adapters/http/controllers/artisan-allocation.controller';
+import { AdminAllocationController } from './adapters/http/controllers/admin-allocation.controller';
 import { AllocationController } from './adapters/http/controllers/allocation.controller';
 import { TradingMutationInterceptor } from './adapters/http/interceptors/trading-mutation.interceptor';
 import {
@@ -42,6 +43,7 @@ import { GetAllocationBatchesUseCase } from './application/use-cases/fulfillment
 import { StartAllocationProductionUseCase } from './application/use-cases/fulfillment/start-allocation-production.use-case';
 import { LinkAllocationBatchesUseCase } from './application/use-cases/fulfillment/link-allocation-batches.use-case';
 import { HandoverAllocationUseCase } from './application/use-cases/fulfillment/handover-allocation.use-case';
+import { HandoverAllocationByAdminUseCase } from './application/use-cases/fulfillment/handover-allocation-by-admin.use-case';
 import { ConfirmDeliveryUseCase } from './application/use-cases/fulfillment/confirm-delivery.use-case';
 import { CancelQuoteRequestByBuyerUseCase } from './application/use-cases/requests/cancel-quote-request-by-buyer.use-case';
 import { CancelQuoteRequestByAdminUseCase } from './application/use-cases/requests/cancel-quote-request-by-admin.use-case';
@@ -112,6 +114,7 @@ const defaultControllers = [
   AdminQuoteRequestController,
   QuoteRequestController,
   ArtisanAllocationController,
+  AdminAllocationController,
   AllocationController,
 ];
 const defaultProviders = [
@@ -548,6 +551,28 @@ const defaultProviders = [
     ],
   },
   {
+    provide: HandoverAllocationByAdminUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      allocationRepo: IAllocationRepository,
+      quoteRequestRepo: IQuoteRequestRepository,
+      workshopContract?: IWorkshopContract,
+    ) => {
+      return new HandoverAllocationByAdminUseCase(
+        txRunner,
+        allocationRepo,
+        quoteRequestRepo,
+        workshopContract,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      ALLOCATION_REPOSITORY,
+      QUOTE_REQUEST_REPOSITORY,
+      { token: WORKSHOP_CONTRACT, optional: true },
+    ],
+  },
+  {
     provide: ConfirmDeliveryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -701,6 +726,7 @@ const defaultExports = [
   StartAllocationProductionUseCase,
   LinkAllocationBatchesUseCase,
   HandoverAllocationUseCase,
+  HandoverAllocationByAdminUseCase,
   ConfirmDeliveryUseCase,
   CancelQuoteRequestByBuyerUseCase,
   CancelQuoteRequestByAdminUseCase,

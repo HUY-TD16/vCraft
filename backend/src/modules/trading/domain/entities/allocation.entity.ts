@@ -104,6 +104,7 @@ export interface AllocationProps {
 }
 
 export const MAX_DELIVERY_NOTE_LENGTH = 10_000;
+export const MAX_ADMIN_HANDOVER_TEXT_LENGTH = 10_000;
 
 const ORDERED_ALLOCATION_STEPS: readonly AllocationStatus[] = [
   'not_started',
@@ -633,6 +634,24 @@ export class Allocation {
 
     const trimmedReason = input.reason.trim();
     const trimmedEvidence = input.evidence.trim();
+    if (trimmedReason.length > MAX_ADMIN_HANDOVER_TEXT_LENGTH) {
+      throw new InvalidTradingInputError(
+        `reason cannot exceed ${MAX_ADMIN_HANDOVER_TEXT_LENGTH} characters.`,
+        {
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+          field: 'reason',
+        },
+      );
+    }
+    if (trimmedEvidence.length > MAX_ADMIN_HANDOVER_TEXT_LENGTH) {
+      throw new InvalidTradingInputError(
+        `evidence cannot exceed ${MAX_ADMIN_HANDOVER_TEXT_LENGTH} characters.`,
+        {
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+          field: 'evidence',
+        },
+      );
+    }
     if (trimmedReason.length === 0 || trimmedEvidence.length === 0) {
       throw new InvalidTradingInputError(
         'Admin handover requires both non-empty reason and evidence.',
