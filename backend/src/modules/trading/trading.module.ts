@@ -40,6 +40,11 @@ import { GetAllocationByIdUseCase } from './application/use-cases/fulfillment/ge
 import { GetAllocationHistoryUseCase } from './application/use-cases/fulfillment/get-allocation-history.use-case';
 import { GetAllocationBatchesUseCase } from './application/use-cases/fulfillment/get-allocation-batches.use-case';
 import { StartAllocationProductionUseCase } from './application/use-cases/fulfillment/start-allocation-production.use-case';
+import { LinkAllocationBatchesUseCase } from './application/use-cases/fulfillment/link-allocation-batches.use-case';
+import {
+  TRACEABILITY_CONTRACT,
+  type ITraceabilityContract,
+} from '../traceability/public/contracts/traceability.contract';
 
 import { SubmitQuoteUseCase } from './application/use-cases/quotations/submit-quote.use-case';
 import { WithdrawQuoteUseCase } from './application/use-cases/quotations/withdraw-quote.use-case';
@@ -489,6 +494,34 @@ const defaultProviders = [
     ],
   },
   {
+    provide: LinkAllocationBatchesUseCase,
+    useFactory: (
+      txRunner: TransactionRunner,
+      allocationRepo: IAllocationRepository,
+      quoteRequestRepo: IQuoteRequestRepository,
+      traceabilityContract?: ITraceabilityContract,
+      allocationBatchRepo?: IAllocationBatchRepository,
+      workshopContract?: IWorkshopContract,
+    ) => {
+      return new LinkAllocationBatchesUseCase(
+        txRunner,
+        allocationRepo,
+        quoteRequestRepo,
+        traceabilityContract,
+        allocationBatchRepo,
+        workshopContract,
+      );
+    },
+    inject: [
+      TRANSACTION_RUNNER,
+      ALLOCATION_REPOSITORY,
+      QUOTE_REQUEST_REPOSITORY,
+      { token: TRACEABILITY_CONTRACT, optional: true },
+      { token: ALLOCATION_BATCH_REPOSITORY, optional: true },
+      { token: WORKSHOP_CONTRACT, optional: true },
+    ],
+  },
+  {
     provide: GetAllocationHistoryUseCase,
     useFactory: (
       txRunner: TransactionRunner,
@@ -601,6 +634,7 @@ const defaultExports = [
   GetAllocationHistoryUseCase,
   GetAllocationBatchesUseCase,
   StartAllocationProductionUseCase,
+  LinkAllocationBatchesUseCase,
   SubmitQuoteUseCase,
   WithdrawQuoteUseCase,
   AcceptQuoteUseCase,

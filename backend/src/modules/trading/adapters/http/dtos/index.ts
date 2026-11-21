@@ -23,6 +23,7 @@ export * from './get-allocation-detail.dto';
 export * from './get-allocation-history.dto';
 export * from './get-allocation-batches.dto';
 export * from './start-allocation.dto';
+export * from './link-allocation-batches.dto';
 
 
 
