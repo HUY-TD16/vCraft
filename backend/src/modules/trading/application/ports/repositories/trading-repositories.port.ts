@@ -399,6 +399,14 @@ export interface FindArtisanAllocationsResult {
   readonly totalRecords: number;
 }
 
+export interface AllocationDetailRecord {
+  readonly allocation: AllocationDto;
+  readonly requestBuyerId: Id;
+  readonly recipientName: string | null;
+  readonly recipientPhone: string | null;
+  readonly deliveryAddress: string | null;
+}
+
 export interface IAllocationRepository {
   create(
     input: {
@@ -446,6 +454,10 @@ export interface IAllocationRepository {
     input: FindArtisanAllocationsInput,
     tx?: TransactionContext,
   ): Promise<FindArtisanAllocationsResult>;
+  findDetailById(
+    allocationId: Id,
+    tx?: TransactionContext,
+  ): Promise<AllocationDetailRecord | null>;
   lockById(allocationId: Id, tx: TransactionContext): Promise<Allocation | null>;
   lockByRequestId(
     requestId: Id,

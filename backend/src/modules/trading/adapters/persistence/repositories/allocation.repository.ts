@@ -6,6 +6,7 @@ import { PAGINATION } from '../../../../../common/application/types/pagination';
 import { PrismaService } from '../../../../../infrastructure/database/prisma/prisma.service';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
 import type {
+  AllocationDetailRecord,
   FindAllocationsWithDetailsInput,
   FindAllocationsWithDetailsResult,
   FindArtisanAllocationsInput,
@@ -488,6 +489,99 @@ export class PrismaAllocationRepository implements IAllocationRepository {
     return {
       rows: dtos,
       totalRecords,
+    };
+  }
+
+  async findDetailById(
+    allocationId: Id,
+    tx?: TransactionContext,
+  ): Promise<AllocationDetailRecord | null> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindDetailById(client, allocationId);
+    }
+    if (this.prisma) {
+      return this.executeFindDetailById(this.prisma, allocationId);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindDetailById(client, allocationId);
+    });
+  }
+
+  private async executeFindDetailById(
+    client: Prisma.TransactionClient | PrismaService,
+    allocationId: Id,
+  ): Promise<AllocationDetailRecord | null> {
+    const row = await client.allocation.findUnique({
+      where: { id: idToBigInt(allocationId, 'allocation.id') },
+      include: {
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        startedBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+        handedOverBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+        allocationBatches: {
+          include: {
+            batch: {
+              select: {
+                id: true,
+                status: true,
+              },
+            },
+          },
+          orderBy: { id: 'asc' },
+        },
+        request: {
+          select: {
+            id: true,
+            buyer_id: true,
+            recipient_name: true,
+            recipient_phone: true,
+            delivery_address: true,
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    const publishedBatchIds = new Set<string>();
+    for (const link of row.allocationBatches ?? []) {
+      if (link.batch?.status === 'published') {
+        publishedBatchIds.add(link.batch.id.toString());
+      }
+    }
+
+    const entity = AllocationMapper.toDomain(row);
+    const allocation = AllocationMapper.toDto(entity, {
+      workshop: toWorkshopRefDto(row.workshop),
+      startedByActor: toNullableActorDto(row.startedBy),
+      handedOverByActor: toNullableActorDto(row.handedOverBy),
+      publishedBatchIds,
+    });
+
+    return {
+      allocation,
+      requestBuyerId: row.request.buyer_id.toString(),
+      recipientName: row.request.recipient_name,
+      recipientPhone: row.request.recipient_phone,
+      deliveryAddress: row.request.delivery_address,
     };
   }
 

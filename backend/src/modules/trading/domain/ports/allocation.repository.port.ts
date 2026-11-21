@@ -1,5 +1,6 @@
 export {
   ALLOCATION_REPOSITORY,
+  type AllocationDetailRecord,
   type FindAllocationsWithDetailsInput,
   type FindAllocationsWithDetailsResult,
   type FindArtisanAllocationsInput,
