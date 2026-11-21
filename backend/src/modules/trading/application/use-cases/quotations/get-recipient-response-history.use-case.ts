@@ -1,3 +1,4 @@
+import { resolveTradingPagination } from '../../helpers/trading-pagination.helper';
 import { assertTradingNormalSession } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
@@ -64,26 +65,7 @@ export class GetRecipientResponseHistoryUseCase {
     const requestId = EntityId.of(command.requestId, 'id').value;
     const recipientId = EntityId.of(command.recipientId, 'recipientId').value;
 
-    const page = command.query?.page ?? command.page ?? PAGINATION.defaultPage;
-    const limit =
-      command.query?.limit ?? command.limit ?? PAGINATION.defaultLimit;
-
-    if (!Number.isSafeInteger(page) || page < 1) {
-      throw new InvalidTradingInputError(
-        'page must be a positive integer greater than or equal to 1.',
-        { field: 'page' },
-      );
-    }
-    if (
-      !Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      limit > PAGINATION.maxLimit
-    ) {
-      throw new InvalidTradingInputError(
-        `limit must be an integer between 1 and ${PAGINATION.maxLimit}.`,
-        { field: 'limit' },
-      );
-    }
+    const { page, limit } = resolveTradingPagination(command);
 
     // 3. Execute chain verification, ownership checks, and paginated query in transaction
     const result = await this.txRunner.run(async (tx: TransactionContext) => {

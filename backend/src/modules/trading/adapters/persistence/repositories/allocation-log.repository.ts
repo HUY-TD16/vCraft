@@ -45,11 +45,20 @@ export class PrismaAllocationLogRepository implements IAllocationLogRepository {
       return [];
     }
 
-    const created: PersistedAllocationLogRecord[] = [];
-    for (const record of records) {
-      const row = await client.allocationLog.create({
-        data: AllocationLogMapper.toPrismaCreateInput(record),
+    const createInputs = records.map((record) =>
+      AllocationLogMapper.toPrismaCreateInput(record),
+    );
+
+    if (typeof client.allocationLog.createManyAndReturn === 'function') {
+      const rows = await client.allocationLog.createManyAndReturn({
+        data: createInputs,
       });
+      return rows.map((row) => AllocationLogMapper.toDomain(row));
+    }
+
+    const created: PersistedAllocationLogRecord[] = [];
+    for (const data of createInputs) {
+      const row = await client.allocationLog.create({ data });
       created.push(AllocationLogMapper.toDomain(row));
     }
 

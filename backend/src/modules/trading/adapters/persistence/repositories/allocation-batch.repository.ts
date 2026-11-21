@@ -90,11 +90,20 @@ export class PrismaAllocationBatchRepository
       EntityId.compare(a.batch_id, b.batch_id),
     );
 
-    const created: AllocationBatchLink[] = [];
-    for (const link of sortedLinks) {
-      const row = await client.allocationBatch.create({
-        data: AllocationBatchMapper.toPrismaCreateInput(link),
+    const createInputs = sortedLinks.map((link) =>
+      AllocationBatchMapper.toPrismaCreateInput(link),
+    );
+
+    if (typeof client.allocationBatch.createManyAndReturn === 'function') {
+      const rows = await client.allocationBatch.createManyAndReturn({
+        data: createInputs,
       });
+      return rows.map((row) => AllocationBatchMapper.toDomain(row));
+    }
+
+    const created: AllocationBatchLink[] = [];
+    for (const data of createInputs) {
+      const row = await client.allocationBatch.create({ data });
       created.push(AllocationBatchMapper.toDomain(row));
     }
 

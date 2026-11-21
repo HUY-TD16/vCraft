@@ -30,8 +30,12 @@ import {
   UnitPrice,
 } from '../../../../src/modules/trading/domain';
 import {
+  PrismaAllocationBatchRepository,
+  PrismaAllocationLogRepository,
   PrismaAllocationRepository,
   PrismaQuoteRequestRepository,
+  PrismaRequestRecipientRepository,
+  PrismaStatusLogRepository,
   RecipientResponseHistoryMapper,
 } from '../../../../src/modules/trading/adapters/persistence';
 import { AllocationBatchLink } from '../../../../src/modules/trading/domain';
@@ -1099,6 +1103,190 @@ describe('Tasks 1–24 Audit, Compliance Fixes & Code Optimizations', () => {
       );
       expect(vitestCfg).toMatch(/pool:\s*'threads'/);
       expect(vitestCfg).toContain('isolate: false');
+    });
+  });
+
+  describe('15. Final 3 Polish Optimizations (createManyAndReturn, Pagination Helper & Shared OpenAPI Schemas)', () => {
+    it('uses createManyAndReturn in RequestRecipient, AllocationBatch, AllocationLog, and StatusLog repositories when supported by client', async () => {
+      const now = new Date('2026-11-10T08:00:00.000Z');
+      const mockClient = {
+        requestRecipient: {
+          createManyAndReturn: vi.fn().mockResolvedValue([
+            {
+              id: 301n,
+              request_id: 100n,
+              workshop_id: 20n,
+              response_status: 'pending',
+              decline_reason: null,
+              responded_by: null,
+              responded_at: null,
+              sent_at: now,
+              version: 1,
+            },
+          ]),
+          create: vi.fn(),
+        },
+        allocationBatch: {
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+          createManyAndReturn: vi.fn().mockResolvedValue([
+            {
+              id: 801n,
+              workshop_id: 20n,
+              allocation_id: 700n,
+              batch_id: 901n,
+              linked_quantity: 25,
+              linked_at: now,
+              linked_by: 21n,
+            },
+          ]),
+          create: vi.fn(),
+        },
+        allocationLog: {
+          createManyAndReturn: vi.fn().mockResolvedValue([
+            {
+              id: 1001n,
+              allocation_id: 700n,
+              event_type: 'created',
+              prev_status: null,
+              new_status: 'not_started',
+              performed_by: 10n,
+              is_admin_action: false,
+              note: null,
+              evidence: null,
+              created_at: now,
+            },
+          ]),
+          create: vi.fn(),
+        },
+        statusLog: {
+          createManyAndReturn: vi.fn().mockResolvedValue([
+            {
+              id: 1002n,
+              request_id: 100n,
+              event_type: 'created',
+              prev_status: null,
+              new_status: 'draft_request',
+              performed_by: 10n,
+              is_admin_action: false,
+              note: null,
+              evidence: null,
+              created_at: now,
+            },
+          ]),
+          create: vi.fn(),
+        },
+      };
+
+      const txRunner = {
+        getClient: () => mockClient,
+        run: async <T>(fn: (tx: TransactionContext) => Promise<T>) =>
+          fn({} as TransactionContext),
+      } as unknown as PrismaTransactionRunner;
+
+      const recipientRepo = new PrismaRequestRecipientRepository(txRunner);
+      const recipients = await recipientRepo.createMany(
+        [{ request_id: '100', workshop_id: '20', sent_at: now }],
+        {} as TransactionContext,
+      );
+      expect(recipients).toHaveLength(1);
+      expect(mockClient.requestRecipient.createManyAndReturn).toHaveBeenCalledTimes(1);
+      expect(mockClient.requestRecipient.create).not.toHaveBeenCalled();
+
+      const batchRepo = new PrismaAllocationBatchRepository(txRunner);
+      const link = AllocationBatchLink.reconstitute({
+        workshop_id: '20',
+        allocation_id: '700',
+        batch_id: '901',
+        linked_quantity: 25,
+        linked_at: now,
+        linked_by: '21',
+      });
+      const batches = await batchRepo.replaceForAllocation(
+        { allocationId: '700', workshopId: '20', links: [link] },
+        {} as TransactionContext,
+      );
+      expect(batches).toHaveLength(1);
+      expect(mockClient.allocationBatch.createManyAndReturn).toHaveBeenCalledTimes(1);
+      expect(mockClient.allocationBatch.create).not.toHaveBeenCalled();
+
+      const allocLogRepo = new PrismaAllocationLogRepository(txRunner);
+      const allocLogs = await allocLogRepo.createMany(
+        [
+          {
+            allocation_id: '700',
+            event_type: 'created',
+            prev_status: null,
+            new_status: 'not_started',
+            performed_by: '10',
+            is_admin_action: false,
+            note: null,
+            evidence: null,
+            created_at: now,
+          },
+        ],
+        {} as TransactionContext,
+      );
+      expect(allocLogs).toHaveLength(1);
+      expect(mockClient.allocationLog.createManyAndReturn).toHaveBeenCalledTimes(1);
+      expect(mockClient.allocationLog.create).not.toHaveBeenCalled();
+
+      const statusLogRepo = new PrismaStatusLogRepository(txRunner);
+      const statusLogs = await statusLogRepo.createMany(
+        [
+          {
+            request_id: '100',
+            event_type: 'created',
+            prev_status: null,
+            new_status: 'draft_request',
+            performed_by: '10',
+            is_admin_action: false,
+            note: null,
+            evidence: null,
+            created_at: now,
+          },
+        ],
+        {} as TransactionContext,
+      );
+      expect(statusLogs).toHaveLength(1);
+      expect(mockClient.statusLog.createManyAndReturn).toHaveBeenCalledTimes(1);
+      expect(mockClient.statusLog.create).not.toHaveBeenCalled();
+    });
+
+    it('centralizes pagination validation in resolveTradingPagination and OpenAPI operation schemas in trading-openapi-response.schemas', () => {
+      const readUseCases = [
+        '../../../../src/modules/trading/application/use-cases/fulfillment/get-allocation-batches.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/fulfillment/get-allocation-history.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/fulfillment/list-artisan-allocations.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/fulfillment/list-quote-request-allocations.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/quotations/get-recipient-response-history.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/quotations/list-quote-request-quotes.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/requests/list-admin-quote-requests.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/requests/list-artisan-quote-requests.use-case.ts',
+        '../../../../src/modules/trading/application/use-cases/requests/list-buyer-quote-requests.use-case.ts',
+      ];
+      for (const relPath of readUseCases) {
+        const src = readFileSync(join(__dirname, relPath), 'utf-8');
+        expect(src).toContain('resolveTradingPagination(command)');
+      }
+
+      const mutationDtos = [
+        '../../../../src/modules/trading/adapters/http/dtos/confirm-delivery.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/confirm-delivery-by-admin.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/cancel-quote-request.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/cancel-quote-request-by-admin.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/handover-allocation.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/handover-allocation-by-admin.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/start-allocation.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/link-allocation-batches.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/decline-quote-request.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/submit-quote.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/withdraw-quote.dto.ts',
+        '../../../../src/modules/trading/adapters/http/dtos/accept-quote.dto.ts',
+      ];
+      for (const relPath of mutationDtos) {
+        const src = readFileSync(join(__dirname, relPath), 'utf-8');
+        expect(src).toContain('./trading-openapi-response.schemas');
+      }
     });
   });
 });

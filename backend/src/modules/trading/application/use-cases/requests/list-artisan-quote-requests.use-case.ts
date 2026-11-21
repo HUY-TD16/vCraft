@@ -1,3 +1,4 @@
+import { resolveTradingPagination } from '../../helpers/trading-pagination.helper';
 import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
@@ -94,25 +95,7 @@ export class ListArtisanQuoteRequestsUseCase {
     const { query } = command;
 
     // 4. Chuẩn hóa và xác thực phân trang (SEC-14, api-design §1.4)
-    const page = query.page ?? PAGINATION.defaultPage;
-    const limit = query.limit ?? PAGINATION.defaultLimit;
-
-    if (!Number.isSafeInteger(page) || page < 1) {
-      throw new InvalidTradingInputError('page must be an integer >= 1.', {
-        field: 'page',
-      });
-    }
-
-    if (
-      !Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      limit > PAGINATION.maxLimit
-    ) {
-      throw new InvalidTradingInputError(
-        `limit must be an integer between 1 and ${PAGINATION.maxLimit}.`,
-        { field: 'limit' },
-      );
-    }
+    const { page, limit } = resolveTradingPagination(command);
 
     // 5. Chuẩn hóa tiêu chí sắp xếp
     const sortBy = query.sortBy ?? query.sort_by ?? 'created_at';
