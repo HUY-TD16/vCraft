@@ -10,10 +10,10 @@ import {
 } from '../../../../src/modules/media/domain/policies/image-attachment.policy';
 import {
   releaseReservation, releaseUsedBytes, reserveBytes, settleReservation, type StorageQuotaState,
-} from '../../../../src/modules/media/domain/entities/storage-quota';
+} from '../../../../src/modules/media/domain/entities/storage-quota.entity';
 import {
   commitReservation, confirmReleased, markCleanupPending, needsCleanup, type UploadReservationState,
-} from '../../../../src/modules/media/domain/entities/upload-reservation';
+} from '../../../../src/modules/media/domain/entities/upload-reservation.entity';
 
 const code = (fn: () => unknown) => {
   try { fn(); } catch (e) { return e instanceof BusinessRuleException ? e.code : `OTHER:${(e as Error).name}`; }
