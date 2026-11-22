@@ -91,22 +91,31 @@ const ApiOptionalZodBody = (dto: { schema: Parameters<typeof schemaFor>[0] }) =>
 @Roles('buyer')
 export class BuyerQuoteRequestController {
   constructor(
+    @Inject(CreateDraftQuoteRequestUseCase)
     private readonly createDraftUseCase: CreateDraftQuoteRequestUseCase,
     @Optional()
+    @Inject(UpdateDraftQuoteRequestUseCase)
     private readonly updateDraftUseCase?: UpdateDraftQuoteRequestUseCase,
     @Optional()
+    @Inject(DeleteDraftQuoteRequestUseCase)
     private readonly deleteDraftUseCase?: DeleteDraftQuoteRequestUseCase,
     @Optional()
+    @Inject(CopyQuoteRequestUseCase)
     private readonly copyQuoteRequestUseCase?: CopyQuoteRequestUseCase,
     @Optional()
+    @Inject(UpdateRecipientContactUseCase)
     private readonly updateRecipientContactUseCase?: UpdateRecipientContactUseCase,
     @Optional()
+    @Inject(CloseBiddingUseCase)
     private readonly closeBiddingUseCase?: CloseBiddingUseCase,
     @Optional()
+    @Inject(SendQuoteRequestUseCase)
     private readonly sendQuoteRequestUseCase?: SendQuoteRequestUseCase,
     @Optional()
+    @Inject(ListBuyerQuoteRequestsUseCase)
     private readonly listBuyerQuoteRequestsUseCase?: ListBuyerQuoteRequestsUseCase,
     @Optional()
+    @Inject(AcceptQuoteUseCase)
     private readonly acceptQuoteUseCase?: AcceptQuoteUseCase,
     @Optional()
     @Inject(GetQuoteRequestByIdUseCase)

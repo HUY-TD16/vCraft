@@ -1,4 +1,4 @@
-import type { SchemaObject } from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { statusByCode } from '../filters/api-problem';
 import { PAGINATION } from '../../application/types/pagination';
 

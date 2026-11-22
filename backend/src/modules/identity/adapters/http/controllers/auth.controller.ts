@@ -14,8 +14,15 @@ import type { Request, Response } from 'express';
 import { randomBytes } from 'node:crypto';
 import { Public, Roles, SessionLevels } from '../../../../../common/security/decorators/access-policy';
 import { CurrentActor } from '../../../../../common/security/decorators/current-actor.decorator';
-import type { AuthenticatedActor, SessionLevel } from '../../../../../common/application/types/contract-types';
+import type { AuthenticatedActor } from '../../../../../common/application/types/contract-types';
 import { APP_CONFIG, type AppConfig } from '../../../../../common/config/app-config';
+import {
+  clearSessionCookie,
+  getPreauthCookieName,
+  getSessionCookieName,
+  isDevelopmentEnv,
+  setSessionCookie,
+} from '../../../../../common/http/helpers/cookie.helper';
 import { IdentityService } from '../../../application/services/identity.service';
 import { RegisterBuyerDto } from '../dtos/register-buyer.dto';
 import { LoginDto } from '../dtos/login.dto';
@@ -29,43 +36,10 @@ export class AuthController {
     @Optional() @Inject(APP_CONFIG) private readonly config?: Pick<AppConfig, 'NODE_ENV'>,
   ) {}
 
-  private isDevelopment(): boolean {
-    return (this.config?.NODE_ENV ?? process.env.NODE_ENV) === 'development';
-  }
-
-  private get sessionCookieName(): string {
-    return this.isDevelopment() ? 'vcraft-session' : '__Host-vcraft-session';
-  }
-
-  private get preauthCookieName(): string {
-    return this.isDevelopment() ? 'vcraft-preauth' : '__Host-vcraft-preauth';
-  }
-
-  private setSessionCookie(res: Response, token: string, level: SessionLevel): void {
-    const isDev = this.isDevelopment();
-    const maxAge = level === 'temp_password' ? 15 * 60 * 1000 : 12 * 60 * 60 * 1000;
-    res.cookie(this.sessionCookieName, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: !isDev,
-      maxAge,
-    });
-  }
-
-  private clearSessionCookie(res: Response): void {
-    res.clearCookie(this.sessionCookieName, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: !this.isDevelopment(),
-    });
-  }
-
   @Get('csrf')
   @Public()
   async getCsrf(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const sessionToken = req.cookies?.[this.sessionCookieName];
+    const sessionToken = req.cookies?.[getSessionCookieName(this.config?.NODE_ENV)];
     if (typeof sessionToken === 'string' && sessionToken) {
       const actor = await this.identityService.resolveSession(sessionToken);
       if (actor) {
@@ -76,7 +50,7 @@ export class AuthController {
       }
     }
 
-    const preauthName = this.preauthCookieName;
+    const preauthName = getPreauthCookieName(this.config?.NODE_ENV);
     let preauthToken = req.cookies?.[preauthName];
     if (typeof preauthToken !== 'string' || !preauthToken) {
       preauthToken = randomBytes(32).toString('hex');
@@ -84,7 +58,7 @@ export class AuthController {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: !this.isDevelopment(),
+        secure: !isDevelopmentEnv(this.config?.NODE_ENV),
         maxAge: 15 * 60 * 1000,
       });
     }
@@ -107,12 +81,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.identityService.login(dto);
-    this.setSessionCookie(res, result.sessionToken, result.user.session_level);
-    res.clearCookie(this.preauthCookieName, {
+    setSessionCookie(res, result.sessionToken, result.user.session_level, this.config?.NODE_ENV);
+    res.clearCookie(getPreauthCookieName(this.config?.NODE_ENV), {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
-      secure: !this.isDevelopment(),
+      secure: !isDevelopmentEnv(this.config?.NODE_ENV),
     });
     return {
       user: result.user,
@@ -132,9 +106,9 @@ export class AuthController {
   @SessionLevels('normal', 'temp_password')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const sessionToken = req.cookies?.[this.sessionCookieName];
+    const sessionToken = req.cookies?.[getSessionCookieName(this.config?.NODE_ENV)];
     await this.identityService.logout(sessionToken);
-    this.clearSessionCookie(res);
+    clearSessionCookie(res, this.config?.NODE_ENV);
     return { logged_out: true };
   }
 
@@ -148,7 +122,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.identityService.changePassword(actor, dto);
-    this.clearSessionCookie(res);
+    clearSessionCookie(res, this.config?.NODE_ENV);
     return { reauthentication_required: true };
   }
 
@@ -162,7 +136,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.identityService.changeTempPassword(actor, dto);
-    this.clearSessionCookie(res);
+    clearSessionCookie(res, this.config?.NODE_ENV);
     return { reauthentication_required: true };
   }
 }
