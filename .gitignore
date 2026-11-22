@@ -42,6 +42,7 @@ playwright/.cache/
 
 # Uploaded media & volumes (SEC-10)
 uploads/
+!backend/src/modules/media/application/use-cases/uploads/
 storage/
 !backend/src/infrastructure/storage/
 !backend/src/modules/media/adapters/storage/
