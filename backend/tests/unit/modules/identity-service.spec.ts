@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { IdentityService } from '../../../src/modules/identity/application/services/identity.service';
+import { PrismaIdentityRepository } from '../../../src/modules/identity/adapters/persistence/repositories/prisma-identity.repository';
 import type { ISessionManager } from '../../../src/modules/identity/application/ports/session-manager.port';
 import type { IPasswordHasher } from '../../../src/modules/identity/application/ports/password-hasher.port';
 import type { PrismaTransactionRunner } from '../../../src/infrastructure/database/transactions/prisma-transaction-runner';
@@ -55,10 +56,11 @@ function createMocks() {
   } as unknown as PrismaTransactionRunner;
 
   const prisma = client as unknown as PrismaService;
+  const repo = new PrismaIdentityRepository(runner, prisma);
 
-  const service = new IdentityService(sessionManager, runner, passwordHasher, prisma);
+  const service = new IdentityService(sessionManager, runner, passwordHasher, repo);
 
-  return { sessionManager, passwordHasher, runner, client, prisma, service, fakeTx, accountsDb };
+  return { sessionManager, passwordHasher, runner, client, prisma, repo, service, fakeTx, accountsDb };
 }
 
 describe('IdentityService', () => {

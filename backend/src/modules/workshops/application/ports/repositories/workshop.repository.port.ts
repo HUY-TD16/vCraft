@@ -5,7 +5,10 @@ export const WORKSHOP_REPOSITORY = Symbol('WORKSHOP_REPOSITORY');
 export interface IWorkshopRepository {
   lockAndGetWorkshops(ids: bigint[], tx: TransactionContext): Promise<Array<{ id: bigint; status: string }>>;
 
-  findSummaryById(id: bigint): Promise<{
+  findSummaryById(
+    id: bigint,
+    tx?: TransactionContext,
+  ): Promise<{
     id: bigint;
     name: string;
     status: string;
@@ -47,15 +50,6 @@ export interface IWorkshopRepository {
 
   updateStatus(workshopId: bigint, status: string, tx: TransactionContext): Promise<void>;
 
-  findForImageAccess(workshopId: bigint, tx: TransactionContext): Promise<{
-    id: bigint;
-    name: string;
-    status: string;
-    address: string | null;
-    story: string | null;
-    avatar_image_id: bigint | null;
-  } | null>;
-
   findCertificate(certId: bigint, tx: TransactionContext): Promise<{ id: bigint; workshop_id: bigint; image_id: bigint } | null>;
 
   hasProfileImage(workshopId: bigint, imageId: bigint, tx: TransactionContext): Promise<boolean>;
@@ -71,9 +65,10 @@ export interface IWorkshopRepository {
     totalRecords: number;
   }>;
 
-  findPublicDetail(id: bigint): Promise<{ workshop: any; images: Array<{ id: bigint }> } | null>;
-
-  findOwnDetail(id: bigint): Promise<{ workshop: any; images: Array<{ id: bigint }> } | null>;
+  findDetailById(
+    id: bigint,
+    includeAccount?: boolean,
+  ): Promise<{ workshop: any; images: Array<{ id: bigint }> } | null>;
 
   findForProfileUpdate(id: bigint, tx: TransactionContext): Promise<{ workshop: any; existingImagesCount: number } | null>;
 
@@ -104,8 +99,6 @@ export interface IWorkshopRepository {
     imagesByWorkshopId: Map<string, Array<{ id: bigint }>>;
     totalRecords: number;
   }>;
-
-  findAdminDetail(id: bigint): Promise<{ workshop: any; images: Array<{ id: bigint }> } | null>;
 
   findStatusLogs(
     workshopId: bigint,

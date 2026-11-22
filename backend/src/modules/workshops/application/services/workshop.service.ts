@@ -230,7 +230,7 @@ export class WorkshopService implements IWorkshopContract {
       return { canRead: false };
     }
 
-    const workshop = await this.workshopRepo.findForImageAccess(workshopId, tx);
+    const workshop = await this.workshopRepo.findSummaryById(workshopId, tx);
     if (!workshop) return { canRead: false };
 
     if (input.certificateId !== null) {
@@ -290,7 +290,7 @@ export class WorkshopService implements IWorkshopContract {
 
   async getPublicWorkshopDetail(id: string): Promise<PublicWorkshopDto> {
     const workshopId = toBigIntId(id);
-    const detail = await this.workshopRepo.findPublicDetail(workshopId);
+    const detail = await this.workshopRepo.findDetailById(workshopId);
 
     if (!detail || detail.workshop.status !== 'active') {
       throw new BusinessRuleException('RESOURCE_NOT_FOUND', 'Workshop not found.');
@@ -310,7 +310,7 @@ export class WorkshopService implements IWorkshopContract {
     }
 
     const workshopId = toBigIntId(actor.workshopId);
-    const detail = await this.workshopRepo.findOwnDetail(workshopId);
+    const detail = await this.workshopRepo.findDetailById(workshopId);
 
     if (!detail) {
       throw new BusinessRuleException('RESOURCE_NOT_FOUND', 'Workshop not found.');
@@ -414,7 +414,7 @@ export class WorkshopService implements IWorkshopContract {
 
   async getAdminWorkshop(id: string): Promise<AdminWorkshopDto> {
     const workshopId = toBigIntId(id);
-    const detail = await this.workshopRepo.findAdminDetail(workshopId);
+    const detail = await this.workshopRepo.findDetailById(workshopId, true);
 
     if (!detail) {
       throw new BusinessRuleException('RESOURCE_NOT_FOUND', 'Workshop not found.');

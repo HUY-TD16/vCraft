@@ -6,6 +6,8 @@ import { PASSWORD_HASHER } from './application/ports/password-hasher.port';
 import { Argon2PasswordHasher } from './adapters/crypto/argon2-password-hasher';
 import { SESSION_MANAGER } from './application/ports/session-manager.port';
 import { SessionManagerService } from './application/services/session-manager.service';
+import { IDENTITY_REPOSITORY } from './application/ports/repositories/identity.repository.port';
+import { PrismaIdentityRepository } from './adapters/persistence/repositories/prisma-identity.repository';
 import { IdentityService } from './application/services/identity.service';
 import { AuthController } from './adapters/http/controllers/auth.controller';
 import { AdminAccountsController } from './adapters/http/controllers/admin-accounts.controller';
@@ -18,6 +20,8 @@ import { AdminAccountsController } from './adapters/http/controllers/admin-accou
     { provide: PASSWORD_HASHER, useExisting: Argon2PasswordHasher },
     SessionManagerService,
     { provide: SESSION_MANAGER, useExisting: SessionManagerService },
+    PrismaIdentityRepository,
+    { provide: IDENTITY_REPOSITORY, useExisting: PrismaIdentityRepository },
     IdentityService,
     { provide: IDENTITY_CONTRACT, useExisting: IdentityService },
   ],
@@ -28,6 +32,8 @@ import { AdminAccountsController } from './adapters/http/controllers/admin-accou
     Argon2PasswordHasher,
     SESSION_MANAGER,
     SessionManagerService,
+    IDENTITY_REPOSITORY,
+    PrismaIdentityRepository,
   ],
 })
 export class IdentityModule {
@@ -48,6 +54,8 @@ export class IdentityModule {
         { provide: PASSWORD_HASHER, useExisting: Argon2PasswordHasher },
         SessionManagerService,
         { provide: SESSION_MANAGER, useExisting: SessionManagerService },
+        PrismaIdentityRepository,
+        { provide: IDENTITY_REPOSITORY, useExisting: PrismaIdentityRepository },
         ...(dependencies.providers ?? []),
         implementation,
         { provide: IDENTITY_CONTRACT, useExisting: implementation },
@@ -58,6 +66,8 @@ export class IdentityModule {
         Argon2PasswordHasher,
         SESSION_MANAGER,
         SessionManagerService,
+        IDENTITY_REPOSITORY,
+        PrismaIdentityRepository,
       ],
     };
   }

@@ -14,15 +14,8 @@ export interface PublicWorkshopSummaryDto {
   accepting_visitors: boolean;
 }
 
-export interface PublicWorkshopDto {
-  id: string;
-  name: string;
+export interface PublicWorkshopDto extends PublicWorkshopSummaryDto {
   story: string;
-  address: string;
-  latitude: number | null;
-  longitude: number | null;
-  accepting_visitors: boolean;
-  avatar_url: string | null;
   images: ImageDto[];
   certificates: Array<{
     id: string;
@@ -31,24 +24,12 @@ export interface PublicWorkshopDto {
   }>;
 }
 
-export interface OwnWorkshopDto {
-  id: string;
-  name: string;
+export interface OwnWorkshopDto extends Omit<PublicWorkshopDto, 'story' | 'address'> {
   story: string | null;
   address: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  accepting_visitors: boolean;
-  avatar_url: string | null;
   status: 'active' | 'suspended';
   is_profile_public: boolean;
   missing_public_fields: string[];
-  images: ImageDto[];
-  certificates: Array<{
-    id: string;
-    name: string;
-    image: ImageDto;
-  }>;
   created_at: string;
   updated_at: string;
 }
@@ -121,14 +102,8 @@ export function toPublicWorkshopSummaryDto(w: any): PublicWorkshopSummaryDto {
 
 export function toPublicWorkshopDto(w: any, images: Array<{ id: bigint | string }>): PublicWorkshopDto {
   return {
-    id: String(w.id),
-    name: w.name,
+    ...toPublicWorkshopSummaryDto(w),
     story: w.story ?? '',
-    address: w.address ?? '',
-    latitude: w.latitude ? Number(w.latitude) : null,
-    longitude: w.longitude ? Number(w.longitude) : null,
-    accepting_visitors: Boolean(w.accepting_visitors),
-    avatar_url: w.avatar_image_id ? buildWorkshopImageUrl(w.id, w.avatar_image_id, 'thumbnail') : null,
     images: images.map(img => toImageDto(w.id, img.id)),
     certificates: (w.certificates ?? []).map((c: any) => ({
       id: String(c.id),
@@ -145,23 +120,12 @@ export function toOwnWorkshopDto(
   missingPublicFields: string[],
 ): OwnWorkshopDto {
   return {
-    id: String(w.id),
-    name: w.name,
+    ...toPublicWorkshopDto(w, images),
     story: w.story ?? null,
     address: w.address ?? null,
-    latitude: w.latitude ? Number(w.latitude) : null,
-    longitude: w.longitude ? Number(w.longitude) : null,
-    accepting_visitors: Boolean(w.accepting_visitors),
-    avatar_url: w.avatar_image_id ? buildWorkshopImageUrl(w.id, w.avatar_image_id, 'thumbnail') : null,
     status: w.status,
     is_profile_public: isProfilePublic,
     missing_public_fields: missingPublicFields,
-    images: images.map(img => toImageDto(w.id, img.id)),
-    certificates: (w.certificates ?? []).map((c: any) => ({
-      id: String(c.id),
-      name: c.name,
-      image: toCertificateImageDto(c.id, c.image_id),
-    })),
     created_at: w.created_at instanceof Date ? w.created_at.toISOString() : String(w.created_at),
     updated_at: w.updated_at instanceof Date ? w.updated_at.toISOString() : String(w.updated_at),
   };
