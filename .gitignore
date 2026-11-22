@@ -44,6 +44,7 @@ playwright/.cache/
 uploads/
 storage/
 !backend/src/infrastructure/storage/
+!backend/src/modules/media/adapters/storage/
 media/
 !backend/src/modules/media/
 !backend/tests/unit/modules/media/
