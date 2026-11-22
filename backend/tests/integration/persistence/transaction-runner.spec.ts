@@ -1,53 +1,52 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { PrismaService } from '../../../src/infrastructure/database/prisma/prisma.service';
-import type { PrismaTransactionRunner } from '../../../src/infrastructure/database/transactions/prisma-transaction-runner';
 import type { TransactionContext } from '../../../src/common/application/ports/transaction-runner';
 import { BusinessRuleException } from '../../../src/common/domain/errors/business-rule.exception';
+import { createPgTestContext, type PgTestContext } from '../../support/pg-trading-harness';
 
 const testUrl = process.env.VCRAFT_TEST_DATABASE_URL;
 
 describe.skipIf(!testUrl)('PrismaTransactionRunner on PostgreSQL', () => {
-  let db: PrismaService;
-  let runner: PrismaTransactionRunner;
+  let ctx: PgTestContext;
 
   beforeAll(async () => {
-    const { PrismaService } = await import('../../../src/infrastructure/database/prisma/prisma.service');
-    const { PrismaTransactionRunner } = await import('../../../src/infrastructure/database/transactions/prisma-transaction-runner');
-    db = new PrismaService({ DATABASE_URL: testUrl! });
-    runner = new PrismaTransactionRunner(db);
+    ctx = await createPgTestContext(testUrl!);
   });
 
-  afterAll(async () => { await db?.$disconnect(); });
+  afterAll(async () => {
+    await ctx?.close();
+  });
 
   it('rolls back provider writes and invalidates the context after a business error', async () => {
     const name = randomUUID();
     let saved!: TransactionContext;
     const error = new BusinessRuleException('WORKSHOP_SUSPENDED');
-    await expect(runner.run(async tx => {
-      saved = tx;
-      await runner.getClient(tx).category.create({ data: { name } });
-      expect(await runner.getClient(tx).category.findUnique({ where: { name } })).not.toBeNull();
-      throw error;
-    })).rejects.toBe(error);
-    expect(await db.category.findUnique({ where: { name } })).toBeNull();
-    expect(() => runner.getClient(saved)).toThrow('Invalid or expired transaction context');
+    await expect(
+      ctx.txRunner.run(async (tx) => {
+        saved = tx;
+        await ctx.txRunner.getClient(tx).category.create({ data: { name } });
+        expect(await ctx.txRunner.getClient(tx).category.findUnique({ where: { name } })).not.toBeNull();
+        throw error;
+      }),
+    ).rejects.toBe(error);
+    expect(await ctx.db.category.findUnique({ where: { name } })).toBeNull();
+    expect(() => ctx.txRunner.getClient(saved)).toThrow('Invalid or expired transaction context');
   });
 
   it('commits successfully and rejects forged contexts and nested transactions', async () => {
     const name = randomUUID();
     let saved!: TransactionContext;
     try {
-      await runner.run(async tx => {
+      await ctx.txRunner.run(async (tx) => {
         saved = tx;
-        expect(() => runner.getClient({} as TransactionContext)).toThrow();
-        await expect(runner.run(async () => undefined)).rejects.toThrow('Nested transactions');
-        await runner.getClient(tx).category.create({ data: { name } });
+        expect(() => ctx.txRunner.getClient({} as TransactionContext)).toThrow();
+        await expect(ctx.txRunner.run(async () => undefined)).rejects.toThrow('Nested transactions');
+        await ctx.txRunner.getClient(tx).category.create({ data: { name } });
       });
-      expect(await db.category.findUnique({ where: { name } })).not.toBeNull();
-      expect(() => runner.getClient(saved)).toThrow();
+      expect(await ctx.db.category.findUnique({ where: { name } })).not.toBeNull();
+      expect(() => ctx.txRunner.getClient(saved)).toThrow();
     } finally {
-      await db.category.deleteMany({ where: { name } });
+      await ctx.db.category.deleteMany({ where: { name } });
     }
   });
 });
