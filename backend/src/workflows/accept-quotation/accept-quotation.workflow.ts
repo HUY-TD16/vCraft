@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../modules/trading/application/helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -91,21 +92,11 @@ export class AcceptQuotationWorkflow {
   async execute(
     input: AcceptQuotationWorkflowInput,
   ): Promise<AcceptQuotationWorkflowResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot accept quotes.',
-      );
-    }
-
-    if (input.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can accept quotes for quote requests.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot accept quotes.',
+      roleDeniedMessage: 'Only buyers can accept quotes for quote requests.',
+    });
 
     const actorId = EntityId.of(input.actor.accountId, 'accountId').value;
 

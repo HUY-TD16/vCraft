@@ -19,7 +19,22 @@ const environment = z.object({
     return !!url && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash;
   }).transform(value => new URL(value).origin),
   UPLOAD_DIR: z.string().trim().min(1).default('./storage/uploads').transform(value => resolve(backendDirectory, value)),
-});
+  // Scheduled cleanup configuration for expired IdempotencyRecord rows (BR-27, SEC-06, data-design §2.20).
+  IDEMPOTENCY_CLEANUP_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform(value => (value === undefined ? undefined : value === 'true')),
+  IDEMPOTENCY_CLEANUP_INTERVAL_MS: z
+    .string()
+    .regex(/^\d+$/)
+    .default('3600000')
+    .transform(Number)
+    .pipe(z.int().min(1000).max(86_400_000)),
+}).transform(data => ({
+  ...data,
+  IDEMPOTENCY_CLEANUP_ENABLED:
+    data.IDEMPOTENCY_CLEANUP_ENABLED ?? data.NODE_ENV !== 'test',
+}));
 
 export type AppConfig = Readonly<z.output<typeof environment>>;
 export const APP_CONFIG = Symbol('APP_CONFIG');

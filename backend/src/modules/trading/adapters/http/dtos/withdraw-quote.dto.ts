@@ -10,37 +10,5 @@ export const withdrawQuoteSchema = z.strictObject({
 
 export class WithdrawQuoteDto extends createZodDto(withdrawQuoteSchema) {}
 
-export const withdrawQuoteOperationResponseSchema = z.strictObject({
-  id: z.string().regex(/^[1-9][0-9]*$/),
-  replayed: z.boolean(),
-  committed_at: z.string(),
-  current_state: z.strictObject({
-    request: z.strictObject({
-      id: z.string().regex(/^[1-9][0-9]*$/),
-      status: z.enum([
-        'draft_request',
-        'sent_to_artisans',
-        'artisans_bidding',
-        'buyer_accepted',
-        'in_production',
-        'delivered',
-      ]),
-      version: z.int().min(1).max(2_147_483_647),
-      cancelled_at: z.string().nullable(),
-    }),
-    recipient: z
-      .strictObject({
-        id: z.string().regex(/^[1-9][0-9]*$/),
-        status: z.enum(['pending', 'declined', 'quoted', 'withdrawn']),
-        version: z.int().min(1).max(2_147_483_647),
-      })
-      .nullable(),
-    quote: z
-      .strictObject({
-        id: z.string().regex(/^[1-9][0-9]*$/),
-        status: z.enum(['active', 'withdrawn', 'accepted']),
-        version: z.int().min(1).max(2_147_483_647),
-      })
-      .nullable(),
-  }),
-});
+import { recipientAndQuoteOperationResponseSchema } from './trading-openapi-response.schemas';
+export const withdrawQuoteOperationResponseSchema = recipientAndQuoteOperationResponseSchema;

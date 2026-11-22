@@ -1,4 +1,8 @@
-import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
+import type {
+  TransactionContext,
+  TransactionRunner,
+} from '../../../../../common/application/ports/transaction-runner';
 import type {
   Id,
   TrustedActor,
@@ -67,6 +71,7 @@ export interface UpdateDraftQuoteRequestInput {
   readonly biddingDeadline?: Date | string | null;
   readonly delivery_deadline?: Date | string | null;
   readonly deliveryDeadline?: Date | string | null;
+  readonly tx?: TransactionContext;
 }
 
 export class UpdateDraftQuoteRequestUseCase {
@@ -76,21 +81,11 @@ export class UpdateDraftQuoteRequestUseCase {
   ) {}
 
   async execute(input: UpdateDraftQuoteRequestInput): Promise<QuoteRequest> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot update draft quote requests.',
-      );
-    }
-
-    if (input.actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can update draft quote requests.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot update draft quote requests.',
+      roleDeniedMessage: 'Only buyers can update draft quote requests.',
+    });
 
     const requestId = input.requestId ?? input.id;
     if (!requestId) {
@@ -228,19 +223,12 @@ export class UpdateDraftQuoteRequestUseCase {
       }),
     };
 
-    return this.txRunner.run(async (tx) => {
+    const runWithTx = async (tx: TransactionContext): Promise<QuoteRequest> => {
       const existing = await this.quoteRequestRepo.lockById(requestId, tx);
       if (!existing) {
         throw new QuoteRequestNotFoundError(
           `QuoteRequest ${requestId} was not found.`,
           { entity: 'QuoteRequest', id: requestId },
-        );
-      }
-
-      if (existing.buyer_id !== input.actor.accountId) {
-        throw new TradingPermissionDeniedError(
-          'Actor is not the Buyer owner of this QuoteRequest.',
-          { entity: 'QuoteRequest' },
         );
       }
 
@@ -259,6 +247,12 @@ export class UpdateDraftQuoteRequestUseCase {
         },
         tx,
       );
-    });
+    };
+
+    if (input.tx) {
+      return runWithTx(input.tx);
+    }
+
+    return this.txRunner.run((tx) => runWithTx(tx));
   }
 }

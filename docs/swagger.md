@@ -61,6 +61,6 @@ Các phương thức ghi tự có header X-CSRF-Token trong mô tả, kể cả 
 
 ## Phiên bản và kiểm tra
 
-Manifest hiện dùng Nest 10/Swagger 8, sinh OpenAPI **3.0.0**. Không đổi nhãn thành phiên bản mục tiêu 3.2.1 của tài liệu công nghệ. Nâng Nest/Swagger theo mục tiêu công nghệ là task riêng; lần này không đổi dependency/lockfile. Frontend phải dùng phiên bản và paths trong JSON thực tế.
+Manifest hiện dùng NestJS **12.3.3** và `@nestjs/swagger` **12.1.0**, sinh OpenAPI **3.0.0** (đồng bộ với `backend/package.json` và `docsAI/03-technology/technology-stack.md`). Frontend phải dùng phiên bản và paths trong JSON thực tế.
 
 Kiểm thử `tests/unit/swagger.spec.ts` sinh document bằng Nest thật nhưng không mở cổng: kiểm tra cookie theo môi trường, quyền public/private, CSRF, Zod input, pagination, lỗi, file/204 và bật/tắt UI theo môi trường.
