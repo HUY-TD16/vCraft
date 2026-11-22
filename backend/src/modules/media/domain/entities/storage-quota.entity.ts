@@ -55,3 +55,17 @@ export function releaseUsedBytes(q: StorageQuotaState, bytes: bigint): StorageQu
   if (bytes > q.usedBytes) throw new RangeError('Cannot release more than used');
   return assertInvariant({ ...q, usedBytes: q.usedBytes - bytes });
 }
+
+/**
+ * Hạn mức gộp nhiều quota (ví dụ: mọi phạm vi ảnh khởi tạo của cùng một Admin ≤ 2 GiB).
+ * `currentTotal` = tổng used + reserved hiện có của cả nhóm.
+ */
+export function assertFitsWithin(currentTotal: bigint, additional: bigint, limit: bigint): void {
+  if (currentTotal < ZERO || additional <= ZERO || limit < ZERO) throw new RangeError('Invalid byte amounts');
+  if (currentTotal + additional > limit) {
+    throw new BusinessRuleException('STORAGE_QUOTA_EXCEEDED', 'STORAGE_QUOTA_EXCEEDED', {
+      limit_bytes: limit.toString(),
+      free_bytes: (limit > currentTotal ? limit - currentTotal : ZERO).toString(),
+    });
+  }
+}

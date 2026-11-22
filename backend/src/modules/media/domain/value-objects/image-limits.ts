@@ -18,6 +18,8 @@ export const UPLOAD_LIMITS = Object.freeze({
   maxConcurrentProcessingPerAccount: 2,
   /** Ngân sách giữ chỗ cho MỖI ảnh (đầu vào + tệp tạm + đầu ra). */
   reservationBudgetBytes: BigInt(16 * MIB),
+  /** Lease của reservation: timeout xử lý (10 giây) cộng dư địa ghi tệp và quyết toán. */
+  reservationLeaseMs: 30_000,
   unattachedTtlHours: 24,
   initialScopeTtlHours: 24,
   maxOpenInitialScopesPerAdmin: 3,
