@@ -175,6 +175,17 @@ export interface InvitedRequestWithAllocationDto extends InvitedRequestBaseDto {
 export type InvitedRequestDto = InvitedRequestBaseDto | InvitedRequestWithAllocationDto;
 
 /**
+ * Detailed Allocation response DTO for `GET /api/v1/allocations/:id` (`UC-23`, `BR-04`).
+ * Unlocks Buyer recipient contact and full delivery address for authorized principals
+ * (owning Artisan, owning Buyer, and Admin). Never exposes Buyer account PII (`buyer_id`, account phone, username).
+ */
+export interface AllocationDetailDto extends AllocationDto {
+  readonly recipient_name: string | null;
+  readonly recipient_phone: string | null;
+  readonly delivery_address: string | null;
+}
+
+/**
  * AllocationBatch DTO (`docsAI/04-architecture/api-dtos.md` §2.3).
  */
 export interface AllocationBatchDto {

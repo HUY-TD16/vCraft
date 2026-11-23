@@ -55,18 +55,27 @@ export class PrismaRequestRecipientRepository
       EntityId.compare(a.workshop_id, b.workshop_id),
     );
 
-    const created: RequestRecipient[] = [];
-    for (const item of sortedInputs) {
-      const row = await client.requestRecipient.create({
-        data: RequestRecipientMapper.toPrismaCreateInput({
-          id: item.id,
-          request_id: item.request_id,
-          workshop_id: item.workshop_id,
-          response_status: 'pending',
-          sent_at: item.sent_at,
-          version: 1,
-        }),
+    const createInputs = sortedInputs.map((item) =>
+      RequestRecipientMapper.toPrismaCreateInput({
+        id: item.id,
+        request_id: item.request_id,
+        workshop_id: item.workshop_id,
+        response_status: 'pending',
+        sent_at: item.sent_at,
+        version: 1,
+      }),
+    );
+
+    if (typeof client.requestRecipient.createManyAndReturn === 'function') {
+      const rows = await client.requestRecipient.createManyAndReturn({
+        data: createInputs,
       });
+      return rows.map((row) => RequestRecipientMapper.toDomain(row));
+    }
+
+    const created: RequestRecipient[] = [];
+    for (const data of createInputs) {
+      const row = await client.requestRecipient.create({ data });
       created.push(RequestRecipientMapper.toDomain(row));
     }
 

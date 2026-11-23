@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -67,27 +68,13 @@ export class WithdrawQuoteUseCase {
   ) {}
 
   async execute(input: WithdrawQuoteInput): Promise<WithdrawQuoteResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot withdraw quotes.',
-      );
-    }
-
-    if (input.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can withdraw quotes for quote requests.',
-      );
-    }
-
-    if (!input.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot withdraw quotes.',
+      roleDeniedMessage: 'Only artisans can withdraw quotes for quote requests.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+    });
 
     const actorId = EntityId.of(input.actor.accountId, 'accountId').value;
     const workshopId = EntityId.of(input.actor.workshopId, 'workshopId').value;

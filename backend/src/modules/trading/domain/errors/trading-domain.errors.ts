@@ -238,6 +238,22 @@ export class QuoteRequestNotFoundError extends TradingResourceNotFoundError {
 }
 
 /**
+ * Resource not found error specifically for Allocation entities.
+ * Maps to HTTP 404 RESOURCE_NOT_FOUND.
+ */
+export class AllocationNotFoundError extends TradingResourceNotFoundError {
+  constructor(
+    message: string = 'Allocation was not found.',
+    details: TradingErrorDetails = {},
+  ) {
+    super(message, {
+      entity: 'Allocation',
+      ...details,
+    });
+  }
+}
+
+/**
  * General permission denied error.
  * Maps to HTTP 403 PERMISSION_DENIED.
  */

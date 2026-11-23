@@ -1,3 +1,4 @@
+import { assertTradingNormalSession } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -41,12 +42,10 @@ export class ListQuoteRequestRecipientsUseCase {
     command: ListQuoteRequestRecipientsCommand,
   ): Promise<HttpResult<readonly RecipientDto[]>> {
     // 1. Kiểm tra cấp độ phiên bảo mật (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote request recipients.',
-      );
-    }
+    assertTradingNormalSession(
+      command.actor,
+      'Temporary password session cannot access quote request recipients.',
+    );
 
     // 2. Kiểm tra tính hợp lệ của requestId (Positive 64-bit integer)
     const entityId = EntityId.of(command.requestId, 'id');

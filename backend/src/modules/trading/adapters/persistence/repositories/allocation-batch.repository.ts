@@ -1,8 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
+import { PAGINATION } from '../../../../../common/application/types/pagination';
+import type { Prisma } from '../../../../../generated/prisma/client';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
-import type { IAllocationBatchRepository } from '../../../application/ports/repositories/trading-repositories.port';
+import type {
+  FindAllocationBatchesInput,
+  FindAllocationBatchesResult,
+  IAllocationBatchRepository,
+} from '../../../application/ports/repositories/trading-repositories.port';
 import {
   type AllocationBatchLink,
   EntityId,
@@ -84,11 +90,20 @@ export class PrismaAllocationBatchRepository
       EntityId.compare(a.batch_id, b.batch_id),
     );
 
-    const created: AllocationBatchLink[] = [];
-    for (const link of sortedLinks) {
-      const row = await client.allocationBatch.create({
-        data: AllocationBatchMapper.toPrismaCreateInput(link),
+    const createInputs = sortedLinks.map((link) =>
+      AllocationBatchMapper.toPrismaCreateInput(link),
+    );
+
+    if (typeof client.allocationBatch.createManyAndReturn === 'function') {
+      const rows = await client.allocationBatch.createManyAndReturn({
+        data: createInputs,
       });
+      return rows.map((row) => AllocationBatchMapper.toDomain(row));
+    }
+
+    const created: AllocationBatchLink[] = [];
+    for (const data of createInputs) {
+      const row = await client.allocationBatch.create({ data });
       created.push(AllocationBatchMapper.toDomain(row));
     }
 
@@ -110,5 +125,74 @@ export class PrismaAllocationBatchRepository
       orderBy: [{ linked_at: 'asc' }, { id: 'asc' }],
     });
     return rows.map((row) => AllocationBatchMapper.toDomain(row));
+  }
+
+  async findBatchesWithPagination(
+    input: FindAllocationBatchesInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationBatchesResult> {
+    if (tx) {
+      return this.executeFindBatchesWithPagination(
+        this.txRunner.getClient(tx),
+        input,
+      );
+    }
+    return this.txRunner.run(async (innerTx) => {
+      return this.executeFindBatchesWithPagination(
+        this.txRunner.getClient(innerTx),
+        input,
+      );
+    });
+  }
+
+  private async executeFindBatchesWithPagination(
+    client: Prisma.TransactionClient,
+    input: FindAllocationBatchesInput,
+  ): Promise<FindAllocationBatchesResult> {
+    const allocationIdBigInt = idToBigInt(
+      input.allocationId,
+      'allocation_batch.allocation_id',
+    );
+    const page =
+      input.page && Number.isSafeInteger(input.page) && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit && Number.isSafeInteger(input.limit) && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+    const take = limit;
+
+    const where = {
+      allocation_id: allocationIdBigInt,
+    };
+
+    const [totalRecords, rows] = await Promise.all([
+      client.allocationBatch.count({ where }),
+      client.allocationBatch.findMany({
+        where,
+        include: {
+          batch: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              qr_token: true,
+            },
+          },
+        },
+        orderBy: [{ linked_at: 'asc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+
+    return {
+      rows: rows.map((row) =>
+        AllocationBatchMapper.fromPrismaWithBatchToDto(row),
+      ),
+      totalRecords,
+    };
   }
 }

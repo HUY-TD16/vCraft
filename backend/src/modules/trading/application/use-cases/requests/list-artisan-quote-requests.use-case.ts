@@ -1,3 +1,5 @@
+import { resolveTradingPagination } from '../../helpers/trading-pagination.helper';
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -81,49 +83,19 @@ export class ListArtisanQuoteRequestsUseCase {
     command: ListArtisanQuoteRequestsCommand,
   ): Promise<ListArtisanQuoteRequestsResult> {
     // 1. Phân quyền vai trò (SEC-04, UC-18)
-    if (command.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can access their invited quote requests.',
-      );
-    }
-
-    // 2. Cô lập xưởng (SEC-06 IDOR: Nghệ nhân phải gắn liền với workshopId hợp lệ)
-    if (!command.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
-
-    // 3. Giới hạn phiên mật khẩu tạm (SEC-05)
-    if (command.actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot access quote requests.',
-      );
-    }
+    assertTradingActor(command.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot access quote requests.',
+      roleDeniedMessage: 'Only artisans can access their invited quote requests.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+      checkRoleFirst: true,
+    });
 
     const { query } = command;
 
     // 4. Chuẩn hóa và xác thực phân trang (SEC-14, api-design §1.4)
-    const page = query.page ?? PAGINATION.defaultPage;
-    const limit = query.limit ?? PAGINATION.defaultLimit;
-
-    if (!Number.isSafeInteger(page) || page < 1) {
-      throw new InvalidTradingInputError('page must be an integer >= 1.', {
-        field: 'page',
-      });
-    }
-
-    if (
-      !Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      limit > PAGINATION.maxLimit
-    ) {
-      throw new InvalidTradingInputError(
-        `limit must be an integer between 1 and ${PAGINATION.maxLimit}.`,
-        { field: 'limit' },
-      );
-    }
+    const { page, limit } = resolveTradingPagination(command);
 
     // 5. Chuẩn hóa tiêu chí sắp xếp
     const sortBy = query.sortBy ?? query.sort_by ?? 'created_at';

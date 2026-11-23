@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../helpers/trading-actor.helper';
 import type { TransactionContext } from '../../../../common/application/ports/transaction-runner';
 import type {
   AuthenticatedActor,
@@ -494,18 +495,11 @@ export class TradingAcceptanceService implements ITradingContract {
   }
 
   private assertBuyerActor(actor: TrustedActor | AuthenticatedActor): Id {
-    if ('sessionLevel' in actor && actor.sessionLevel === 'temp_password') {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot accept quotes.',
-      );
-    }
-
-    if (actor.role !== 'buyer') {
-      throw new TradingPermissionDeniedError(
-        'Only buyers can accept quotes for quote requests.',
-      );
-    }
+    assertTradingActor(actor, {
+      expectedRole: 'buyer',
+      tempPasswordMessage: 'Temporary password session cannot accept quotes.',
+      roleDeniedMessage: 'Only buyers can accept quotes for quote requests.',
+    });
 
     return EntityId.of(actor.accountId, 'accountId').value;
   }

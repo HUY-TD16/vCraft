@@ -8,6 +8,7 @@ import {
   InvalidTradingInputError,
 } from '../../../domain';
 import {
+  assertEnumValue,
   bigintToId,
   dateToInstant,
   idToBigInt,
@@ -90,6 +91,44 @@ export class AllocationBatchMapper {
       is_trace_public: isTracePublic,
       trace_url: exposedTraceUrl,
       linked_at: dateToInstant(entity.linked_at, 'linked_at'),
+    });
+  }
+
+  /**
+   * Maps a Prisma `AllocationBatch` row joined with `Batch` metadata into `AllocationBatchDto`
+   * (`UC-23`, `BR-09`, `BR-24`, `api-dtos.md` §2.3, `api-design.md` §10.4).
+   * - `is_trace_public` is `true` only when `batch.status === 'published'`.
+   * - `trace_url` is `/api/v1/trace/${qr_token}` when published, and `null` when draft.
+   */
+  static fromPrismaWithBatchToDto(
+    row: PrismaAllocationBatch & {
+      readonly batch: {
+        readonly id?: bigint;
+        readonly name: string;
+        readonly status: string;
+        readonly qr_token: string;
+      };
+    },
+    options?: { readonly maskDraftTraceUrl?: boolean },
+  ): AllocationBatchDto {
+    const domain = AllocationBatchMapper.toDomain(row);
+    const batchStatus = assertEnumValue(
+      row.batch.status,
+      ['draft', 'published'] as const,
+      'batch.status',
+    );
+    const qrToken =
+      typeof row.batch.qr_token === 'string' ? row.batch.qr_token.trim() : '';
+    const traceUrl =
+      batchStatus === 'published' && qrToken.length > 0
+        ? `/api/v1/trace/${qrToken}`
+        : null;
+
+    return AllocationBatchMapper.toDto(domain, {
+      batchName: row.batch.name,
+      batchStatus,
+      traceUrl,
+      maskDraftTraceUrl: options?.maskDraftTraceUrl,
     });
   }
 }

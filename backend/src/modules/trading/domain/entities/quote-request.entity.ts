@@ -67,6 +67,8 @@ export interface RecipientResponseRecord {
 }
 
 export const MAX_DECLINE_REASON_LENGTH = 10_000;
+export const MAX_CANCEL_REASON_LENGTH = 10_000;
+export const MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH = 10_000;
 
 export interface RequestRecipientProps {
   readonly id: string;
@@ -1036,13 +1038,40 @@ export class QuoteRequest {
       this.assertOwner(actor);
     } else {
       const trimmedReason = input.reason?.trim() ?? '';
-      const trimmedEvidence = input.evidence?.trim() ?? '';
-      if (trimmedReason.length === 0 || trimmedEvidence.length === 0) {
+      if (trimmedReason.length === 0) {
         throw new InvalidTradingInputError(
-          'Admin delivery confirmation requires both non-empty reason and evidence.',
+          'Admin delivery confirmation requires a non-empty reason.',
           {
             invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
             field: 'reason',
+          },
+        );
+      }
+      if (trimmedReason.length > MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH) {
+        throw new InvalidTradingInputError(
+          `reason cannot exceed ${MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH} characters.`,
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'reason',
+          },
+        );
+      }
+      const trimmedEvidence = input.evidence?.trim() ?? '';
+      if (trimmedEvidence.length === 0) {
+        throw new InvalidTradingInputError(
+          'Admin delivery confirmation requires non-empty evidence.',
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'evidence',
+          },
+        );
+      }
+      if (trimmedEvidence.length > MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH) {
+        throw new InvalidTradingInputError(
+          `evidence cannot exceed ${MAX_ADMIN_CONFIRM_DELIVERY_TEXT_LENGTH} characters.`,
+          {
+            invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+            field: 'evidence',
           },
         );
       }
@@ -1098,8 +1127,32 @@ export class QuoteRequest {
     const actor = EntityId.of(input.actorId, 'actorId').value;
     const trimmedReason = input.cancelReason?.trim() ?? '';
     const normalizedReason = trimmedReason.length > 0 ? trimmedReason : null;
+    if (
+      normalizedReason !== null &&
+      normalizedReason.length > MAX_CANCEL_REASON_LENGTH
+    ) {
+      throw new InvalidTradingInputError(
+        `cancel_reason cannot exceed ${MAX_CANCEL_REASON_LENGTH} characters.`,
+        {
+          field: 'cancel_reason',
+          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
+        },
+      );
+    }
     const trimmedHandling = input.goodsHandlingNote?.trim() ?? '';
     const normalizedHandling = trimmedHandling.length > 0 ? trimmedHandling : null;
+    if (
+      normalizedHandling !== null &&
+      normalizedHandling.length > MAX_CANCEL_REASON_LENGTH
+    ) {
+      throw new InvalidTradingInputError(
+        `goods_handling_note cannot exceed ${MAX_CANCEL_REASON_LENGTH} characters.`,
+        {
+          field: 'goods_handling_note',
+          invariant: TRADING_INVARIANTS.INV_01_STATE_MACHINE_AND_CANCELLATION,
+        },
+      );
+    }
 
     if (input.actorRole === 'buyer') {
       this.assertOwner(actor);

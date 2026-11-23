@@ -44,11 +44,20 @@ export class PrismaStatusLogRepository implements IStatusLogRepository {
       return [];
     }
 
-    const created: PersistedStatusLogRecord[] = [];
-    for (const record of records) {
-      const row = await client.statusLog.create({
-        data: StatusLogMapper.toPrismaCreateInput(record),
+    const createInputs = records.map((record) =>
+      StatusLogMapper.toPrismaCreateInput(record),
+    );
+
+    if (typeof client.statusLog.createManyAndReturn === 'function') {
+      const rows = await client.statusLog.createManyAndReturn({
+        data: createInputs,
       });
+      return rows.map((row) => StatusLogMapper.toDomain(row));
+    }
+
+    const created: PersistedStatusLogRecord[] = [];
+    for (const data of createInputs) {
+      const row = await client.statusLog.create({ data });
       created.push(StatusLogMapper.toDomain(row));
     }
 

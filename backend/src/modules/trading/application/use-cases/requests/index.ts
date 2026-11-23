@@ -12,5 +12,7 @@ export * from './get-quote-request-by-id.use-case';
 export * from './list-quote-request-recipients.use-case';
 export * from './get-contact-history.use-case';
 export * from './get-status-history.use-case';
+export * from './cancel-quote-request-by-buyer.use-case';
+export * from './cancel-quote-request-by-admin.use-case';
 
 

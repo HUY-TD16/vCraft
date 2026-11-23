@@ -16,6 +16,7 @@ import type {
 } from '../../../domain';
 import type {
   ActorDto,
+  AllocationBatchDto,
   AllocationDto,
   AllocationEventDto,
   AllocationStatus,
@@ -81,6 +82,10 @@ export interface IQuoteRequestRepository {
     tx: TransactionContext,
   ): Promise<void>;
   findById(requestId: Id, tx: TransactionContext): Promise<QuoteRequest | null>;
+  findDraftDetailById?(
+    requestId: Id,
+    tx?: TransactionContext,
+  ): Promise<QuoteRequestDetailRecord | null>;
   findDetailById(
     requestId: Id,
     tx?: TransactionContext,
@@ -385,6 +390,28 @@ export interface FindAllocationsWithDetailsResult {
   readonly totalRecords: number;
 }
 
+export interface FindArtisanAllocationsInput {
+  readonly workshopId: Id;
+  readonly status?: AllocationStatus | string;
+  readonly deliveryDeadline?: Date;
+  readonly requestId?: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindArtisanAllocationsResult {
+  readonly rows: readonly AllocationDto[];
+  readonly totalRecords: number;
+}
+
+export interface AllocationDetailRecord {
+  readonly allocation: AllocationDto;
+  readonly requestBuyerId: Id;
+  readonly recipientName: string | null;
+  readonly recipientPhone: string | null;
+  readonly deliveryAddress: string | null;
+}
+
 export interface IAllocationRepository {
   create(
     input: {
@@ -428,6 +455,14 @@ export interface IAllocationRepository {
     input: FindAllocationsWithDetailsInput,
     tx?: TransactionContext,
   ): Promise<FindAllocationsWithDetailsResult>;
+  findArtisanAllocations(
+    input: FindArtisanAllocationsInput,
+    tx?: TransactionContext,
+  ): Promise<FindArtisanAllocationsResult>;
+  findDetailById(
+    allocationId: Id,
+    tx?: TransactionContext,
+  ): Promise<AllocationDetailRecord | null>;
   lockById(allocationId: Id, tx: TransactionContext): Promise<Allocation | null>;
   lockByRequestId(
     requestId: Id,
@@ -437,6 +472,17 @@ export interface IAllocationRepository {
     allocationIds: readonly Id[],
     tx: TransactionContext,
   ): Promise<readonly Allocation[]>;
+}
+
+export interface FindAllocationBatchesInput {
+  readonly allocationId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindAllocationBatchesResult {
+  readonly rows: readonly AllocationBatchDto[];
+  readonly totalRecords: number;
 }
 
 export interface IAllocationBatchRepository {
@@ -452,6 +498,21 @@ export interface IAllocationBatchRepository {
     allocationId: Id,
     tx: TransactionContext,
   ): Promise<readonly AllocationBatchLink[]>;
+  findBatchesWithPagination(
+    input: FindAllocationBatchesInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationBatchesResult>;
+}
+
+export interface FindAllocationLogEventsInput {
+  readonly allocationId: Id;
+  readonly page?: number;
+  readonly limit?: number;
+}
+
+export interface FindAllocationLogEventsResult {
+  readonly rows: readonly AllocationEventDto[];
+  readonly totalRecords: number;
 }
 
 export interface IAllocationLogRepository {
@@ -471,6 +532,10 @@ export interface IAllocationLogRepository {
     allocationId: Id,
     tx: TransactionContext,
   ): Promise<readonly AllocationEventDto[]>;
+  findEventsWithPagination(
+    input: FindAllocationLogEventsInput,
+    tx?: TransactionContext,
+  ): Promise<FindAllocationLogEventsResult>;
 }
 
 export interface FindStatusLogEventsInput {

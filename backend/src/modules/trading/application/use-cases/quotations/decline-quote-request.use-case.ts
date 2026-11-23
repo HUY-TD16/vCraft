@@ -1,3 +1,4 @@
+import { assertTradingActor } from '../../helpers/trading-actor.helper';
 import type {
   TransactionContext,
   TransactionRunner,
@@ -60,27 +61,13 @@ export class DeclineQuoteRequestUseCase {
   async execute(
     input: DeclineQuoteRequestInput,
   ): Promise<DeclineQuoteRequestResult> {
-    if (
-      'sessionLevel' in input.actor &&
-      input.actor.sessionLevel === 'temp_password'
-    ) {
-      throw new TradingDomainError(
-        'TEMP_PASSWORD_RESTRICTED',
-        'Temporary password session cannot decline quote requests.',
-      );
-    }
-
-    if (input.actor.role !== 'artisan') {
-      throw new TradingPermissionDeniedError(
-        'Only artisans can decline quote request invitations.',
-      );
-    }
-
-    if (!input.actor.workshopId) {
-      throw new TradingPermissionDeniedError(
-        'Artisan actor is not associated with any workshop.',
-      );
-    }
+    assertTradingActor(input.actor, {
+      expectedRole: 'artisan',
+      tempPasswordMessage: 'Temporary password session cannot decline quote requests.',
+      roleDeniedMessage: 'Only artisans can decline quote request invitations.',
+      requireWorkshop: true,
+      workshopDeniedMessage: 'Artisan actor is not associated with any workshop.',
+    });
 
     const actorId = EntityId.of(input.actor.accountId, 'accountId').value;
     const workshopId = EntityId.of(input.actor.workshopId, 'workshopId').value;
