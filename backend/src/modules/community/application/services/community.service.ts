@@ -3,7 +3,7 @@ import type { AuthenticatedActor } from '../../../../common/application/types/co
 import { findOrThrow, toBigIntId } from '../../../../common/application/helpers/find-or-throw';
 import { toPrismaOffset } from '../../../../common/application/types/pagination';
 import { HttpResult } from '../../../../common/http/interceptors/response-envelope.interceptor';
-import { NewsPostRules } from '../../domain/entities/news-post.entity';
+import { NewsPostRules, type NewsPostRecord } from '../../domain/entities/news-post.entity';
 import {
   NEWS_REPOSITORY,
   type INewsRepository,
@@ -29,6 +29,11 @@ export class CommunityService {
     @Inject(NEWS_REPOSITORY) private readonly newsRepo: INewsRepository,
   ) {}
 
+  private async getOrThrow(id: string): Promise<NewsPostRecord> {
+    const newsId = toBigIntId(id);
+    return findOrThrow(() => this.newsRepo.findById(newsId));
+  }
+
   async listPublicNews(
     query: ListPublicNewsQueryDto,
   ): Promise<HttpResult<readonly PublicNewsSummaryDto[]>> {
@@ -40,10 +45,7 @@ export class CommunityService {
       take,
     });
 
-    return HttpResult.paginated(items.map(toPublicNewsSummaryDto), totalRecords, {
-      page: query.page,
-      limit: query.limit,
-    });
+    return HttpResult.paginated(items.map(toPublicNewsSummaryDto), totalRecords, query);
   }
 
   async getPublicNewsDetail(id: string): Promise<PublicNewsDto> {
@@ -64,15 +66,11 @@ export class CommunityService {
       take,
     });
 
-    return HttpResult.paginated(items.map(toAdminNewsDto), totalRecords, {
-      page: query.page,
-      limit: query.limit,
-    });
+    return HttpResult.paginated(items.map(toAdminNewsDto), totalRecords, query);
   }
 
   async getAdminNewsDetail(id: string): Promise<AdminNewsDto> {
-    const newsId = toBigIntId(id);
-    const post = await findOrThrow(() => this.newsRepo.findById(newsId));
+    const post = await this.getOrThrow(id);
     return toAdminNewsDto(post);
   }
 
@@ -92,10 +90,9 @@ export class CommunityService {
     id: string,
     dto: NewsWriteDto,
   ): Promise<AdminNewsDto> {
-    const newsId = toBigIntId(id);
-    await findOrThrow(() => this.newsRepo.findById(newsId));
+    const existing = await this.getOrThrow(id);
 
-    const updated = await this.newsRepo.update(newsId, {
+    const updated = await this.newsRepo.update(existing.id, {
       title: dto.title.trim(),
       content: dto.content.trim(),
       postType: dto.post_type,
@@ -110,16 +107,15 @@ export class CommunityService {
     id: string,
     dto: ChangeNewsStatusDto,
   ): Promise<AdminNewsDto> {
-    const newsId = toBigIntId(id);
-    const existing = await findOrThrow(() => this.newsRepo.findById(newsId));
+    const existing = await this.getOrThrow(id);
 
     if (existing.status === dto.status) {
       return toAdminNewsDto(existing);
     }
 
-    const updated = await this.newsRepo.updateStatus(newsId, {
+    const updated = await this.newsRepo.updateStatus(existing.id, {
       status: dto.status,
-      publishedAt: NewsPostRules.resolvePublishedAt(dto.status),
+      publishedAt: NewsPostRules.resolvePublishedAt(dto.status, existing.published_at),
       updatedBy: toBigIntId(actor.accountId),
     });
 
@@ -127,9 +123,8 @@ export class CommunityService {
   }
 
   async deleteNews(id: string): Promise<void> {
-    const newsId = toBigIntId(id);
-    const existing = await findOrThrow(() => this.newsRepo.findById(newsId));
+    const existing = await this.getOrThrow(id);
     NewsPostRules.assertCanDelete(existing.status);
-    await this.newsRepo.deleteById(newsId);
+    await this.newsRepo.deleteById(existing.id);
   }
 }

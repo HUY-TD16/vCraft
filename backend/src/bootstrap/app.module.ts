@@ -5,6 +5,7 @@ import { IdentityModule } from "../modules/identity/identity.module";
 import { IdentityService } from "../modules/identity/application/services/identity.service";
 import { TradingModule } from "../modules/trading/trading.module";
 import { WorkshopsModule } from "../modules/workshops/workshops.module";
+import { CommunityModule } from "../modules/community/community.module";
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { WorkshopsModule } from "../modules/workshops/workshops.module";
     SecurityModule.register([IdentityModule.register(IdentityService)]),
     TradingModule,
     WorkshopsModule,
+    CommunityModule,
   ],
   controllers: [],
   providers: [],
