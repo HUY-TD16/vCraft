@@ -6,7 +6,7 @@ export const NumericIdSchema = z
   .trim()
   .regex(/^[1-9][0-9]*$/, 'ID phải là số nguyên dương');
 
-export const PaginationQuerySchema = z.object({
+export const PaginationQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).default(PAGINATION.defaultPage),
   limit: z.coerce.number().int().min(1).max(PAGINATION.maxLimit).default(PAGINATION.defaultLimit),
 });
