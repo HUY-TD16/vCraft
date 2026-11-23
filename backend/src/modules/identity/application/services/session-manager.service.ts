@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { ServiceUnavailableException } from '../../../../common/application/errors/service-unavailable.exception';
@@ -17,7 +17,7 @@ const TEMP_PASSWORD_MAX_AGE_MS = 15 * 60 * 1000;
 export class SessionManagerService implements ISessionManager {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    private readonly nowProvider: () => Date = () => new Date(),
+    @Optional() private readonly nowProvider: () => Date = () => new Date(),
   ) {}
 
   generateToken(): string {

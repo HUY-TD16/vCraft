@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import type { IPasswordHasher } from '../../application/ports/password-hasher.port';
 
@@ -6,7 +6,7 @@ import type { IPasswordHasher } from '../../application/ports/password-hasher.po
 export class Argon2PasswordHasher implements IPasswordHasher {
   private readonly options: argon2.Options;
 
-  constructor(options?: Partial<argon2.Options>) {
+  constructor(@Optional() options?: Partial<argon2.Options>) {
     this.options = {
       type: argon2.argon2id,
       memoryCost: 19 * 1024,
