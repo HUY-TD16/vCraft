@@ -5,6 +5,7 @@ import {
   Header,
   HttpCode,
   HttpStatus,
+  Inject,
   InternalServerErrorException,
   Optional,
   Param,
@@ -68,12 +69,16 @@ import type {
 @Roles('artisan')
 export class ArtisanQuoteRequestController {
   constructor(
+    @Inject(ListArtisanQuoteRequestsUseCase)
     private readonly listArtisanQuoteRequestsUseCase: ListArtisanQuoteRequestsUseCase,
     @Optional()
+    @Inject(DeclineQuoteRequestUseCase)
     private readonly declineQuoteRequestUseCase?: DeclineQuoteRequestUseCase,
     @Optional()
+    @Inject(SubmitQuoteUseCase)
     private readonly submitQuoteUseCase?: SubmitQuoteUseCase,
     @Optional()
+    @Inject(WithdrawQuoteUseCase)
     private readonly withdrawQuoteUseCase?: WithdrawQuoteUseCase,
   ) {}
 

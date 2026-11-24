@@ -6,8 +6,11 @@ import { PAGINATION } from '../../../../../common/application/types/pagination';
 import { PrismaService } from '../../../../../infrastructure/database/prisma/prisma.service';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
 import type {
+  AllocationDetailRecord,
   FindAllocationsWithDetailsInput,
   FindAllocationsWithDetailsResult,
+  FindArtisanAllocationsInput,
+  FindArtisanAllocationsResult,
   IAllocationRepository,
 } from '../../../application/ports/repositories/trading-repositories.port';
 import {
@@ -168,18 +171,30 @@ export class PrismaAllocationRepository implements IAllocationRepository {
       const sortedLinks = [...input.allocation.batch_links].sort((a, b) =>
         EntityId.compare(a.batch_id, b.batch_id),
       );
-      for (const link of sortedLinks) {
-        await client.allocationBatch.create({
-          data: AllocationBatchMapper.toPrismaCreateInput(link, false),
-        });
+      if (sortedLinks.length > 0) {
+        const batchData = sortedLinks.map((link) =>
+          AllocationBatchMapper.toPrismaCreateInput(link, false),
+        );
+        if (typeof client.allocationBatch.createMany === 'function') {
+          await client.allocationBatch.createMany({ data: batchData });
+        } else {
+          for (const data of batchData) {
+            await client.allocationBatch.create({ data });
+          }
+        }
       }
     }
 
     if (input.logs && input.logs.length > 0) {
-      for (const log of input.logs) {
-        await client.allocationLog.create({
-          data: AllocationLogMapper.toPrismaCreateInput(log),
-        });
+      const logData = input.logs.map((log) =>
+        AllocationLogMapper.toPrismaCreateInput(log),
+      );
+      if (typeof client.allocationLog.createMany === 'function') {
+        await client.allocationLog.createMany({ data: logData });
+      } else {
+        for (const data of logData) {
+          await client.allocationLog.create({ data });
+        }
       }
     }
 
@@ -377,6 +392,208 @@ export class PrismaAllocationRepository implements IAllocationRepository {
     return {
       rows: dtos,
       totalRecords,
+    };
+  }
+
+  async findArtisanAllocations(
+    input: FindArtisanAllocationsInput,
+    tx?: TransactionContext,
+  ): Promise<FindArtisanAllocationsResult> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindArtisanAllocations(client, input);
+    }
+    if (this.prisma) {
+      return this.executeFindArtisanAllocations(this.prisma, input);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindArtisanAllocations(client, input);
+    });
+  }
+
+  private async executeFindArtisanAllocations(
+    client: Prisma.TransactionClient | PrismaService,
+    input: FindArtisanAllocationsInput,
+  ): Promise<FindArtisanAllocationsResult> {
+    const workshopIdBigInt = idToBigInt(
+      input.workshopId,
+      'allocation.workshop_id',
+    );
+    const where: Prisma.AllocationWhereInput = {
+      workshop_id: workshopIdBigInt,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.deliveryDeadline !== undefined
+        ? { committed_delivery_at: { lte: input.deliveryDeadline } }
+        : {}),
+      ...(input.requestId !== undefined
+        ? { request_id: idToBigInt(input.requestId, 'allocation.request_id') }
+        : {}),
+    };
+
+    const page =
+      input.page !== undefined && input.page > 0
+        ? input.page
+        : PAGINATION.defaultPage;
+    const limit =
+      input.limit !== undefined && input.limit > 0
+        ? Math.min(input.limit, PAGINATION.maxLimit)
+        : PAGINATION.defaultLimit;
+    const skip = (page - 1) * limit;
+
+    const [totalRecords, rows] = await Promise.all([
+      client.allocation.count({ where }),
+      client.allocation.findMany({
+        where,
+        include: {
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          startedBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          handedOverBy: {
+            select: {
+              id: true,
+              display_name: true,
+            },
+          },
+          allocationBatches: {
+            include: {
+              batch: {
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: { id: 'asc' },
+          },
+        },
+        orderBy: { id: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const dtos = rows.map((row) => {
+      const publishedBatchIds = new Set<string>();
+      for (const link of row.allocationBatches ?? []) {
+        if (link.batch?.status === 'published') {
+          publishedBatchIds.add(link.batch.id.toString());
+        }
+      }
+      const entity = AllocationMapper.toDomain(row);
+      return AllocationMapper.toDto(entity, {
+        workshop: toWorkshopRefDto(row.workshop),
+        startedByActor: toNullableActorDto(row.startedBy),
+        handedOverByActor: toNullableActorDto(row.handedOverBy),
+        publishedBatchIds,
+      });
+    });
+
+    return {
+      rows: dtos,
+      totalRecords,
+    };
+  }
+
+  async findDetailById(
+    allocationId: Id,
+    tx?: TransactionContext,
+  ): Promise<AllocationDetailRecord | null> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindDetailById(client, allocationId);
+    }
+    if (this.prisma) {
+      return this.executeFindDetailById(this.prisma, allocationId);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindDetailById(client, allocationId);
+    });
+  }
+
+  private async executeFindDetailById(
+    client: Prisma.TransactionClient | PrismaService,
+    allocationId: Id,
+  ): Promise<AllocationDetailRecord | null> {
+    const row = await client.allocation.findUnique({
+      where: { id: idToBigInt(allocationId, 'allocation.id') },
+      include: {
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        startedBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+        handedOverBy: {
+          select: {
+            id: true,
+            display_name: true,
+          },
+        },
+        allocationBatches: {
+          include: {
+            batch: {
+              select: {
+                id: true,
+                status: true,
+              },
+            },
+          },
+          orderBy: { id: 'asc' },
+        },
+        request: {
+          select: {
+            id: true,
+            buyer_id: true,
+            recipient_name: true,
+            recipient_phone: true,
+            delivery_address: true,
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    const publishedBatchIds = new Set<string>();
+    for (const link of row.allocationBatches ?? []) {
+      if (link.batch?.status === 'published') {
+        publishedBatchIds.add(link.batch.id.toString());
+      }
+    }
+
+    const entity = AllocationMapper.toDomain(row);
+    const allocation = AllocationMapper.toDto(entity, {
+      workshop: toWorkshopRefDto(row.workshop),
+      startedByActor: toNullableActorDto(row.startedBy),
+      handedOverByActor: toNullableActorDto(row.handedOverBy),
+      publishedBatchIds,
+    });
+
+    return {
+      allocation,
+      requestBuyerId: row.request.buyer_id.toString(),
+      recipientName: row.request.recipient_name,
+      recipientPhone: row.request.recipient_phone,
+      deliveryAddress: row.request.delivery_address,
     };
   }
 

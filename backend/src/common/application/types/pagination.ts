@@ -30,3 +30,12 @@ export function createPageResult<T>(data: readonly T[], totalRecords: number, pa
     },
   };
 }
+
+export function toPrismaOffset(params: PaginationParams): { skip: number; take: number } {
+  const page = Math.max(1, params.page || PAGINATION.defaultPage);
+  const limit = Math.min(PAGINATION.maxLimit, Math.max(1, params.limit || PAGINATION.defaultLimit));
+  return {
+    skip: (page - 1) * limit,
+    take: limit,
+  };
+}

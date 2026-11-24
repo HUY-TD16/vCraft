@@ -231,6 +231,8 @@ model ContactEditHistory {
   version              Int
   request              QuoteRequest @relation(fields: [request_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   editedBy             Account      @relation(fields: [edited_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([request_id, edited_at])
 }
 
 model RequestRecipient {
@@ -420,6 +422,7 @@ model IdempotencyRecord {
   account             Account  @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([account_id, action, object_type, object_id, idempotency_key])
+  @@index([expires_at])
 }
 
 model RecipientResponseHistory {

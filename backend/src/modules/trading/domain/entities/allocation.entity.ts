@@ -103,6 +103,9 @@ export interface AllocationProps {
   readonly batch_links?: readonly AllocationBatchLink[];
 }
 
+export const MAX_DELIVERY_NOTE_LENGTH = 10_000;
+export const MAX_ADMIN_HANDOVER_TEXT_LENGTH = 10_000;
+
 const ORDERED_ALLOCATION_STEPS: readonly AllocationStatus[] = [
   'not_started',
   'in_production',
@@ -547,8 +550,33 @@ export class Allocation {
     Allocation.assertSequentialTransition(this.status, 'handed_over');
 
     const actor = EntityId.of(input.actorId, 'actorId').value;
+    if (
+      input.deliveryNote !== undefined &&
+      input.deliveryNote !== null &&
+      typeof input.deliveryNote !== 'string'
+    ) {
+      throw new InvalidTradingInputError(
+        'delivery_note must be a string or null.',
+        {
+          field: 'delivery_note',
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+        },
+      );
+    }
     const trimmedNote = input.deliveryNote?.trim() ?? '';
     const normalizedNote = trimmedNote.length > 0 ? trimmedNote : null;
+    if (
+      normalizedNote !== null &&
+      normalizedNote.length > MAX_DELIVERY_NOTE_LENGTH
+    ) {
+      throw new InvalidTradingInputError(
+        `delivery_note cannot exceed ${MAX_DELIVERY_NOTE_LENGTH} characters.`,
+        {
+          field: 'delivery_note',
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+        },
+      );
+    }
 
     const updatedAllocation = new Allocation({
       ...this,
@@ -606,6 +634,24 @@ export class Allocation {
 
     const trimmedReason = input.reason.trim();
     const trimmedEvidence = input.evidence.trim();
+    if (trimmedReason.length > MAX_ADMIN_HANDOVER_TEXT_LENGTH) {
+      throw new InvalidTradingInputError(
+        `reason cannot exceed ${MAX_ADMIN_HANDOVER_TEXT_LENGTH} characters.`,
+        {
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+          field: 'reason',
+        },
+      );
+    }
+    if (trimmedEvidence.length > MAX_ADMIN_HANDOVER_TEXT_LENGTH) {
+      throw new InvalidTradingInputError(
+        `evidence cannot exceed ${MAX_ADMIN_HANDOVER_TEXT_LENGTH} characters.`,
+        {
+          invariant: TRADING_INVARIANTS.INV_04_ALLOCATION_AND_BATCH_TRACEABILITY,
+          field: 'evidence',
+        },
+      );
+    }
     if (trimmedReason.length === 0 || trimmedEvidence.length === 0) {
       throw new InvalidTradingInputError(
         'Admin handover requires both non-empty reason and evidence.',

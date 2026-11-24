@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiBody, ApiHeader, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import type { ReferenceObject, SchemaObject } from '@nestjs/swagger';
+import type { ReferenceObject, SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { z } from 'zod';
 import { statusByCode } from '../filters/api-problem';
 import { requestIdHeader } from './api-schemas';

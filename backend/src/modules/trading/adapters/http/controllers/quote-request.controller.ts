@@ -63,12 +63,16 @@ import type {
 @Roles('buyer', 'artisan', 'admin')
 export class QuoteRequestController {
   constructor(
+    @Inject(GetQuoteRequestByIdUseCase)
     private readonly getQuoteRequestByIdUseCase: GetQuoteRequestByIdUseCase,
     @Optional()
+    @Inject(ListQuoteRequestRecipientsUseCase)
     private readonly listQuoteRequestRecipientsUseCase?: ListQuoteRequestRecipientsUseCase,
     @Optional()
+    @Inject(GetContactHistoryUseCase)
     private readonly getContactHistoryUseCase?: GetContactHistoryUseCase,
     @Optional()
+    @Inject(GetStatusHistoryUseCase)
     private readonly getStatusHistoryUseCase?: GetStatusHistoryUseCase,
     @Optional()
     @Inject(ListQuoteRequestQuotesUseCase)

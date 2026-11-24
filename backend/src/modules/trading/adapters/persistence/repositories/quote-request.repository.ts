@@ -124,10 +124,15 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
     }
 
     if (input.statusLogs && input.statusLogs.length > 0) {
-      for (const log of input.statusLogs) {
-        await client.statusLog.create({
-          data: StatusLogMapper.toPrismaCreateInput(log),
-        });
+      const statusLogData = input.statusLogs.map((log) =>
+        StatusLogMapper.toPrismaCreateInput(log),
+      );
+      if (typeof client.statusLog.createMany === 'function') {
+        await client.statusLog.createMany({ data: statusLogData });
+      } else {
+        for (const data of statusLogData) {
+          await client.statusLog.create({ data });
+        }
       }
     }
 
@@ -244,6 +249,50 @@ export class PrismaQuoteRequestRepository implements IQuoteRequestRepository {
       where: { id: idToBigInt(requestId, 'quote_request.id') },
     });
     return row ? QuoteRequestMapper.toDomain(row) : null;
+  }
+
+  async findDraftDetailById(
+    requestId: Id,
+    tx?: TransactionContext,
+  ): Promise<QuoteRequestDetailRecord | null> {
+    if (tx) {
+      const client = this.txRunner.getClient(tx);
+      return this.executeFindDraftDetailById(client, requestId);
+    }
+    return this.txRunner.run(async (innerTx) => {
+      const client = this.txRunner.getClient(innerTx);
+      return this.executeFindDraftDetailById(client, requestId);
+    });
+  }
+
+  private async executeFindDraftDetailById(
+    client: Prisma.TransactionClient,
+    requestId: Id,
+  ): Promise<QuoteRequestDetailRecord | null> {
+    const idBigInt = idToBigInt(requestId, 'quote_request.id');
+    const row = await client.quoteRequest.findUnique({
+      where: { id: idBigInt },
+      include: {
+        category: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    if (row.status !== 'draft_request') {
+      return this.executeFindDetailById(client, requestId);
+    }
+
+    return {
+      entity: QuoteRequestMapper.toDomain(row),
+      category: toCategoryRefDto(row.category),
+      recipients: [],
+      quotes: [],
+      allocations: [],
+      statusLogs: [],
+    };
   }
 
   async findDetailById(
