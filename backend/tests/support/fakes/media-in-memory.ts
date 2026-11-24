@@ -170,6 +170,8 @@ export class FakeProcessor implements ImageProcessor {
   displayBytes = 300_000;
   /** Mô phỏng thời gian xử lý trôi qua trong lúc worker chạy (đồng hồ DB giả). */
   onProcess: () => void = () => undefined;
+  /** Giữ reservation trong N ms để ép các giao dịch giữ chỗ đồng thời xảy ra trước mọi quyết toán. */
+  delayMs = 0;
   processCalls = 0;
   async inspect(): Promise<DecodedImageInfo> {
     if (this.info instanceof Error) throw this.info;
@@ -178,6 +180,7 @@ export class FakeProcessor implements ImageProcessor {
   async process(): Promise<ProcessedImage> {
     this.processCalls += 1;
     this.onProcess();
+    if (this.delayMs > 0) await new Promise(resolve => setTimeout(resolve, this.delayMs));
     if (this.outcome === 'timeout') throw new ImageProcessingUnavailableError();
     if (this.outcome instanceof Error) throw this.outcome;
     return {
