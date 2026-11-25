@@ -9,10 +9,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const connectionString = config.DATABASE_URL;
     const url = new URL(connectionString);
     const schema = url.searchParams.get('schema') ?? undefined;
-    const poolConfig =
-      schema && !url.searchParams.has('options') && /^[A-Za-z_][A-Za-z0-9_$]*$/.test(schema)
-        ? { connectionString, options: `-c search_path="${schema}"` }
-        : { connectionString };
+    const connectionOptions = url.searchParams.get('options');
+    const searchPathOption = schema && !connectionOptions && /^[A-Za-z_][A-Za-z0-9_$]*$/.test(schema)
+      ? `-c search_path="${schema}"`
+      : undefined;
+    const poolConfig = {
+      connectionString,
+      options: [connectionOptions, searchPathOption, '-c timezone=UTC'].filter(Boolean).join(' '),
+    };
     super({ adapter: new PrismaPg(poolConfig, { schema }) });
   }
 
