@@ -30,7 +30,7 @@ function setup() {
   const capacity = new FakeCapacity();
   const adminCalls: TrustedActor[] = [];
   const admins: AdminAssertion = { lockAndAssertAdmin: async (a) => { adminCalls.push(a); } };
-  const cleanup = new ReservationCleanupService({ txRunner, quotas, reservations, storage });
+  const cleanup = new ReservationCleanupService({ txRunner, quotas, reservations, images, storage });
   let n = 0;
   const useCase = new UploadImageUseCase({
     txRunner, quotas, scopes, reservations, images, processor, storage, capacity, cleanup, admins,

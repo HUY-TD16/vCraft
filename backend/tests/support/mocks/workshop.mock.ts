@@ -33,4 +33,5 @@ export class MockWorkshopContract implements IWorkshopContract {
   readonly createWorkshop = unconfigured<IWorkshopContract['createWorkshop']>('IWorkshopContract.createWorkshop');
   readonly changeStatus = unconfigured<IWorkshopContract['changeStatus']>('IWorkshopContract.changeStatus');
   readonly getProfileImageAccess = unconfigured<IWorkshopContract['getProfileImageAccess']>('IWorkshopContract.getProfileImageAccess');
+  readonly canManageImageTarget = unconfigured<IWorkshopContract['canManageImageTarget']>('IWorkshopContract.canManageImageTarget');
 }

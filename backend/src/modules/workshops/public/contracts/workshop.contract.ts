@@ -35,4 +35,9 @@ export interface IWorkshopContract {
     certificateId: Id | null;
     actorOrNull: TrustedActor | null;
   }, tx: TransactionContext): Promise<{ canRead: boolean }>;
+  canManageImageTarget(input: {
+    contextType: 'workshop_profile' | 'certificate';
+    contextId: Id;
+    workshopId: Id;
+  }, tx: TransactionContext): Promise<boolean>;
 }

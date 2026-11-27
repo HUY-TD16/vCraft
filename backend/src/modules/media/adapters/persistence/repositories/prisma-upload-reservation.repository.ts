@@ -53,6 +53,21 @@ export class PrismaUploadReservationRepository implements IUploadReservationRepo
     });
   }
 
+  async findCleanupCandidates(now: Date, limit: number, tx: TransactionContext): Promise<Id[]> {
+    const rows = await this.runner.getClient(tx).uploadReservation.findMany({
+      where: {
+        OR: [
+          { status: 'cleanup_pending' },
+          { status: 'reserved', expires_at: { lte: now } },
+        ],
+      },
+      select: { id: true },
+      orderBy: { id: 'asc' },
+      take: limit,
+    });
+    return rows.map(row => row.id.toString());
+  }
+
   async lockById(reservationId: Id, tx: TransactionContext): Promise<UploadReservationRecord | null> {
     const rows = await this.runner.getClient(tx).$queryRaw<ReservationRow[]>(Prisma.sql`
       SELECT "id", "quota_id", "uploaded_by", "context_type", "context_id", "budget_bytes", "actual_bytes",

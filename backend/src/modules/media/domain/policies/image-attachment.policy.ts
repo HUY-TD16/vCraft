@@ -1,4 +1,5 @@
 import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../errors/media-domain.error';
 import { MAX_IMAGES_PER_OBJECT, type ImageContextType } from '../value-objects/image-context';
 
 export interface ImageForAttach {
@@ -40,7 +41,7 @@ export function assertImagesAttachable(
     const sameContext = image.contextType === target.contextType
       && (image.contextId === null || image.contextId === target.contextId);
     if (!sameContext || image.quotaWorkshopId !== target.workshopId) {
-      throw new BusinessRuleException('IMAGE_CONTEXT_MISMATCH');
+      throw new MediaDomainError('IMAGE_CONTEXT_MISMATCH');
     }
   }
 }

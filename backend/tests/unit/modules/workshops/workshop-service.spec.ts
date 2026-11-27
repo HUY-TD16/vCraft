@@ -192,6 +192,10 @@ function createMocks() {
       }),
     },
     certificate: {
+      findMany: vi.fn().mockImplementation(async ({ where }: { where?: { workshop_id?: bigint } }) =>
+        Array.from(certificatesDb.values())
+          .filter(c => where?.workshop_id === undefined || c.workshop_id === where.workshop_id)
+          .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
       findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id?: bigint } }) => {
         if (where.id !== undefined) return certificatesDb.get(where.id) ?? null;
         return null;
@@ -249,7 +253,8 @@ function createMocks() {
 
   const prisma = client as unknown as PrismaService;
   const repo = new PrismaWorkshopRepository(runner, prisma);
-  const service = new WorkshopService(repo, runner);
+  const media = { replaceImages: vi.fn().mockResolvedValue(undefined) } as any;
+  const service = new WorkshopService(repo, runner, media);
 
   return {
     service,
@@ -257,6 +262,7 @@ function createMocks() {
     client,
     runner,
     prisma,
+    media,
     fakeTx,
     workshopsDb,
     accountsDb,

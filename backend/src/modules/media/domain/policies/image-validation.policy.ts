@@ -1,12 +1,12 @@
-import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../errors/media-domain.error';
 import { IMAGE_LIMITS } from '../value-objects/image-limits';
 
 export type ImageRejectReason =
   | 'undecodable' | 'file_too_large' | 'unsupported_format'
   | 'multi_frame' | 'invalid_dimensions' | 'too_many_pixels';
 
-export function invalidImage(reason: ImageRejectReason): BusinessRuleException {
-  return new BusinessRuleException('INVALID_IMAGE_FORMAT', 'INVALID_IMAGE_FORMAT', { reason });
+export function invalidImage(reason: ImageRejectReason): MediaDomainError {
+  return new MediaDomainError('INVALID_IMAGE_FORMAT', { reason });
 }
 
 /** Thông tin lấy từ việc GIẢI MÃ thật (không tin Content-Type/đuôi tệp của client). */

@@ -1,4 +1,5 @@
 import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../errors/media-domain.error';
 
 export type UploadScopeStatus = 'open' | 'attached' | 'expired';
 
@@ -15,6 +16,6 @@ export interface UploadScopeState {
 export function assertScopeUsable(scope: UploadScopeState | null, adminId: string, now: Date): void {
   if (scope === null || scope.createdBy !== adminId) throw new BusinessRuleException('RESOURCE_NOT_FOUND');
   if (scope.status !== 'open' || now.getTime() >= scope.expiresAt.getTime()) {
-    throw new BusinessRuleException('UPLOAD_SCOPE_UNAVAILABLE');
+    throw new MediaDomainError('UPLOAD_SCOPE_UNAVAILABLE');
   }
 }

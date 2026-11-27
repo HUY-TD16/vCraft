@@ -51,7 +51,8 @@ function setup() {
     db.images.set(id, image);
     return image;
   };
-  const service = new MediaService({ images, quotas: new InMemoryQuotaRepository(db), scopes, reservations, access });
+  const admins = { lockAndAssertAdmin: async () => undefined };
+  const service = new MediaService(images, new InMemoryQuotaRepository(db), scopes, reservations, access, admins);
   return { db, getImage, createScope, adminCalls, access, addImage, service };
 }
 

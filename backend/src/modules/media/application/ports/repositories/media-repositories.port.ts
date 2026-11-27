@@ -75,6 +75,7 @@ export interface IUploadReservationRepository {
   findById(reservationId: Id, tx: TransactionContext): Promise<UploadReservationRecord | null>;
   /** Số reservation còn reserved/cleanup_pending của quota (upload hoặc dọn đang chạy). */
   countActiveByQuota(quotaId: Id, tx: TransactionContext): Promise<number>;
+  findCleanupCandidates(now: Date, limit: number, tx: TransactionContext): Promise<Id[]>;
   lockById(reservationId: Id, tx: TransactionContext): Promise<UploadReservationRecord | null>;
   saveState(reservationId: Id, state: UploadReservationState, tx: TransactionContext): Promise<void>;
 }
@@ -116,9 +117,25 @@ export interface ImageStateRecord {
   readonly displaySizeBytes: bigint;
 }
 
+export interface ImageCleanupCandidate {
+  readonly id: Id;
+  readonly quotaId: Id;
+}
+
+export interface ImageCleanupRecord extends ImageCleanupCandidate {
+  readonly thumbnailKey: string;
+  readonly displayKey: string;
+  readonly actualBytes: bigint;
+}
+
 export interface IImageRepository {
   create(input: NewImage, tx: TransactionContext): Promise<ImageRecord>;
   findById(imageId: Id, tx: TransactionContext): Promise<ImageStateRecord | null>;
+  findImageCleanupCandidates(cutoff: Date, limit: number, tx: TransactionContext): Promise<ImageCleanupCandidate[]>;
+  /** Locks an unattached, unreferenced image and changes ready → deleting before touching storage. */
+  claimImageForCleanup(imageId: Id, cutoff: Date, tx: TransactionContext): Promise<ImageCleanupRecord | null>;
+  /** Rechecks references under row lock and deletes the image row after its storage files are gone. */
+  deleteClaimedImage(imageId: Id, cutoff: Date, tx: TransactionContext): Promise<ImageCleanupRecord | null>;
   /** Khóa các ảnh theo ID TĂNG DẦN (tránh deadlock) rồi trả trạng thái; ID không tồn tại bị bỏ qua. */
   lockByIds(imageIds: readonly Id[], tx: TransactionContext): Promise<ImageStateRecord[]>;
   /**
@@ -136,5 +153,7 @@ export interface IImageRepository {
   addHistoryLinks(historyId: Id, imageIds: readonly Id[], tx: TransactionContext): Promise<void>;
   /** Mục nhật ký của một bản lịch sử nếu bản đó có ảnh này; ngược lại null. */
   findHistoryEntry(historyId: Id, imageId: Id, tx: TransactionContext): Promise<{ readonly entryId: Id } | null>;
+  /** Mục nhật ký sở hữu historyId; null nếu history không tồn tại. */
+  findJournalEntryForHistory(historyId: Id, tx: TransactionContext): Promise<Id | null>;
   isReferencedByHistory(imageId: Id, tx: TransactionContext): Promise<boolean>;
 }

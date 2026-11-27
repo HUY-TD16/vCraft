@@ -24,7 +24,8 @@ function setup() {
   const scopes = new InMemoryScopeRepository(db);
   const reservations = new InMemoryReservationRepository(db);
   const access = new FakeImageAccessResolver();
-  const service = new MediaService({ images, quotas, scopes, reservations, access });
+  const admins = { lockAndAssertAdmin: async () => undefined };
+  const service = new MediaService(images, quotas, scopes, reservations, access, admins);
   const runner = new InMemoryTransactionRunner(db);
 
   const workshopQuota = (workshopId: string) => {
@@ -148,15 +149,25 @@ describe('MediaService.retainHistoryImages', () => {
     await s.service.retainHistoryImages({ historyId: '900', entryId: '70', imageIds: [b.id, a.id] }, tx);
     expect(s.db.historyLinks.map(l => [l.imageId, l.position])).toEqual([[b.id, 0], [a.id, 1]]);
 
+    s.db.historyEntries.set('901', '70');
     const other = s.addImage({ quotaId: quota });
     expect(await codeOf(s.service.retainHistoryImages({ historyId: '901', entryId: '70', imageIds: [other.id] }, tx))).toBe('IMAGE_CONTEXT_MISMATCH');
     expect(await codeOf(s.service.retainHistoryImages({ historyId: '901', entryId: '70', imageIds: ['9999'] }, tx))).toBe('RESOURCE_NOT_FOUND');
     expect(await codeOf(s.service.retainHistoryImages({ historyId: '901', entryId: '70', imageIds: [a.id, a.id] }, tx))).toBe('INVALID_INPUT');
   });
-  it('danh sách rỗng là hợp lệ và không ghi gì', async () => {
+  it('từ chối history không có ảnh theo quy tắc nhật ký', async () => {
     const s = setup();
-    await s.service.retainHistoryImages({ historyId: '900', entryId: '70', imageIds: [] }, tx);
+    expect(await codeOf(s.service.retainHistoryImages({ historyId: '900', entryId: '70', imageIds: [] }, tx))).toBe('INVALID_INPUT');
     expect(s.db.historyLinks).toHaveLength(0);
+  });
+
+  it('từ chối history thuộc nhật ký khác', async () => {
+    const s = setup();
+    const quota = s.workshopQuota('7');
+    const image = s.addImage({ quotaId: quota, contextType: 'journal_entry', contextId: '70', isAttached: true });
+    s.db.historyEntries.set('900', '71');
+    expect(await codeOf(s.service.retainHistoryImages({ historyId: '900', entryId: '70', imageIds: [image.id] }, tx)))
+      .toBe('IMAGE_CONTEXT_MISMATCH');
   });
 });
 

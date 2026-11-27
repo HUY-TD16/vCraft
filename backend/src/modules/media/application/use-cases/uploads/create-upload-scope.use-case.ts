@@ -1,14 +1,12 @@
 import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
-import type { TrustedActor } from '../../../../../common/application/types/contract-types';
 import { BusinessRuleException } from '../../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../../../domain/errors/media-domain.error';
 import { QUOTA_LIMIT_BYTES, UPLOAD_LIMITS } from '../../../domain/value-objects/image-limits';
 import type { AdminAssertion } from '../../ports/admin-assertion.port';
 import type { IUploadReservationRepository, IUploadScopeRepository } from '../../ports/repositories/media-repositories.port';
+import type { CreateUploadScopeCommand, UploadScopeResult } from '../../dtos/media-use-case.dtos';
 
-export interface UploadScopeResult {
-  readonly initialWorkshopKey: string;
-  readonly expiresAt: Date;
-}
+export type { CreateUploadScopeCommand, UploadScopeResult } from '../../dtos/media-use-case.dtos';
 
 export interface CreateUploadScopeDependencies {
   readonly txRunner: TransactionRunner;
@@ -24,7 +22,7 @@ export interface CreateUploadScopeDependencies {
 export class CreateUploadScopeUseCase {
   constructor(private readonly deps: CreateUploadScopeDependencies) {}
 
-  async execute(command: { readonly actor: TrustedActor }): Promise<UploadScopeResult> {
+  async execute(command: CreateUploadScopeCommand): Promise<UploadScopeResult> {
     const { txRunner, scopes, reservations, admins } = this.deps;
     const { actor } = command;
     if (actor.role !== 'admin') throw new BusinessRuleException('PERMISSION_DENIED');
@@ -34,7 +32,7 @@ export class CreateUploadScopeUseCase {
       const now = await reservations.databaseNow(tx);
       const open = await scopes.countOpenUnexpired(actor.accountId, now, tx);
       if (open >= UPLOAD_LIMITS.maxOpenInitialScopesPerAdmin) {
-        throw new BusinessRuleException('UPLOAD_SCOPE_LIMIT_EXCEEDED');
+        throw new MediaDomainError('UPLOAD_SCOPE_LIMIT_EXCEEDED');
       }
       const created = await scopes.create({
         adminId: actor.accountId,

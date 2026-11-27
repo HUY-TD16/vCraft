@@ -1,29 +1,11 @@
 import type { TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
-import type { Id, TrustedActor } from '../../../../../common/application/types/contract-types';
 import { BusinessRuleException } from '../../../../../common/domain/errors/business-rule.exception';
 import { canReadPendingImage, isCurrentImageOf } from '../../../domain/policies/image-reading.policy';
-import type { ImageContextType } from '../../../domain/value-objects/image-context';
-import type { ImageVariant } from '../../../domain/value-objects/image-variant';
-import type { ImageAccessResolver } from '../../ports/image-access-resolver.port';
+import type { ImageAccessResolver } from '../../ports/queries/image-access-resolver.port';
 import type { IImageRepository, IUploadReservationRepository } from '../../ports/repositories/media-repositories.port';
+import type { GetImageCommand, ImageReadTarget } from '../../dtos/media-use-case.dtos';
 
-export type ImageSource =
-  | { readonly kind: 'pending'; readonly imageId: Id }
-  | { readonly kind: 'current'; readonly contextType: ImageContextType; readonly contextId: Id; readonly imageId: Id }
-  | { readonly kind: 'history'; readonly historyId: Id; readonly imageId: Id };
-
-export interface GetImageCommand {
-  readonly actorOrNull: TrustedActor | null;
-  readonly source: ImageSource;
-  readonly variant: ImageVariant;
-}
-
-/** Tệp cần trả về. Controller đọc `key` từ kho; `key` không bao giờ ra khỏi backend. */
-export interface ImageReadTarget {
-  readonly key: string;
-  readonly sizeBytes: bigint;
-  readonly contentType: 'image/webp';
-}
+export type { GetImageCommand, ImageReadTarget, ImageSource } from '../../dtos/media-use-case.dtos';
 
 export interface GetImageDependencies {
   readonly txRunner: TransactionRunner;

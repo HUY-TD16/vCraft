@@ -1,4 +1,4 @@
-import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../errors/media-domain.error';
 
 export type ReservationStatus = 'reserved' | 'committed' | 'cleanup_pending' | 'released';
 
@@ -10,7 +10,7 @@ export interface UploadReservationState {
 }
 
 const ZERO = BigInt(0);
-const invalidState = () => new BusinessRuleException('INVALID_STATE');
+const invalidState = () => new MediaDomainError('INVALID_STATE');
 
 /** `now` do máy chủ truyền vào (không dùng giờ client). */
 export function isLeaseExpired(r: UploadReservationState, now: Date): boolean {

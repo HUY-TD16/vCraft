@@ -1,18 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TransactionContext } from '../../../../../common/application/ports/transaction-runner';
 import type { Id } from '../../../../../common/application/types/contract-types';
-import { Prisma } from '../../../../../generated/prisma/client';
 import { PrismaTransactionRunner } from '../../../../../infrastructure/database/transactions/prisma-transaction-runner';
+import {
+  claimImageForCleanupQuery,
+  CONTEXT_LOCK_NAMESPACE,
+  deleteClaimedImageQuery,
+  lockImageContextQuery,
+  lockImagesByIdsQuery,
+} from '../queries/image.queries';
 import type {
-  IImageRepository, ImageRecord, ImageStateRecord, NewImage,
+  IImageRepository, ImageCleanupCandidate, ImageCleanupRecord, ImageRecord, ImageStateRecord, NewImage,
 } from '../../../application/ports/repositories/media-repositories.port';
 import type { ImageContextType } from '../../../domain/value-objects/image-context';
 import {
   bigintToId, idToBigInt, nullableIdToBigInt, toImageRecord, toImageStateRecord,
 } from '../mappers/media-persistence.mapper';
-
-/** Vùng khóa advisory dành cho khóa theo đối tượng của media (khác khóa kho dùng bigint đơn). */
-export const CONTEXT_LOCK_NAMESPACE = 7302;
 
 const WITH_QUOTA_WORKSHOP = { quota: { select: { workshop_id: true } } } as const;
 
@@ -51,13 +54,76 @@ export class PrismaImageRepository implements IImageRepository {
     return row ? toImageStateRecord(row) : null;
   }
 
+  async findImageCleanupCandidates(cutoff: Date, limit: number, tx: TransactionContext): Promise<ImageCleanupCandidate[]> {
+    const rows = await this.runner.getClient(tx).image.findMany({
+      where: {
+        is_attached: false,
+        unreferenced_at: { lte: cutoff },
+        storage_state: { in: ['ready', 'deleting'] },
+        journalHistoryImages: { none: {} },
+        workshops: { none: {} },
+        certificate: null,
+      },
+      select: { id: true, quota_id: true },
+      orderBy: { id: 'asc' },
+      take: limit,
+    });
+    return rows.map(row => ({ id: bigintToId(row.id), quotaId: bigintToId(row.quota_id) }));
+  }
+
+  async claimImageForCleanup(imageId: Id, cutoff: Date, tx: TransactionContext): Promise<ImageCleanupRecord | null> {
+    const client = this.runner.getClient(tx);
+    const rows = await client.$queryRaw<Array<{
+      id: bigint;
+      quota_id: bigint;
+      thumbnail_key: string;
+      display_key: string;
+      thumbnail_size_bytes: bigint;
+      display_size_bytes: bigint;
+      storage_state: string;
+    }>>(claimImageForCleanupQuery(idToBigInt(imageId), cutoff));
+    const row = rows[0];
+    if (!row) return null;
+    if (row.storage_state === 'ready') {
+      await client.image.update({ where: { id: row.id }, data: { storage_state: 'deleting' } });
+    }
+    return {
+      id: bigintToId(row.id),
+      quotaId: bigintToId(row.quota_id),
+      thumbnailKey: row.thumbnail_key,
+      displayKey: row.display_key,
+      actualBytes: row.thumbnail_size_bytes + row.display_size_bytes,
+    };
+  }
+
+  async deleteClaimedImage(imageId: Id, cutoff: Date, tx: TransactionContext): Promise<ImageCleanupRecord | null> {
+    const client = this.runner.getClient(tx);
+    const rows = await client.$queryRaw<Array<{
+      id: bigint;
+      quota_id: bigint;
+      thumbnail_key: string;
+      display_key: string;
+      thumbnail_size_bytes: bigint;
+      display_size_bytes: bigint;
+    }>>(deleteClaimedImageQuery(idToBigInt(imageId), cutoff));
+    const row = rows[0];
+    if (!row) return null;
+    await client.image.delete({ where: { id: row.id } });
+    return {
+      id: bigintToId(row.id),
+      quotaId: bigintToId(row.quota_id),
+      thumbnailKey: row.thumbnail_key,
+      displayKey: row.display_key,
+      actualBytes: row.thumbnail_size_bytes + row.display_size_bytes,
+    };
+  }
+
   async lockByIds(imageIds: readonly Id[], tx: TransactionContext): Promise<ImageStateRecord[]> {
     if (imageIds.length === 0) return [];
     const client = this.runner.getClient(tx);
     const ids = imageIds.map(idToBigInt);
     // ORDER BY id: mọi giao dịch khóa cùng một thứ tự nên không tạo deadlock. Dữ liệu đọc qua model sau khi đã khóa.
-    const locked = await client.$queryRaw<Array<{ id: bigint }>>(Prisma.sql`
-      SELECT "id" FROM "Image" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`);
+    const locked = await client.$queryRaw<Array<{ id: bigint }>>(lockImagesByIdsQuery(ids));
     if (locked.length === 0) return [];
     const rows = await client.image.findMany({
       where: { id: { in: locked.map(row => row.id) } }, orderBy: { id: 'asc' }, include: WITH_QUOTA_WORKSHOP,
@@ -67,8 +133,9 @@ export class PrismaImageRepository implements IImageRepository {
 
   async lockContext(contextType: ImageContextType, contextId: Id, tx: TransactionContext): Promise<void> {
     // Hai số nguyên: (vùng khóa riêng của media, băm đối tượng). Va chạm băm chỉ gây tuần tự hóa thừa, không sai.
-    await this.runner.getClient(tx).$queryRaw(Prisma.sql`
-      SELECT pg_advisory_xact_lock(${CONTEXT_LOCK_NAMESPACE}, hashtext(${`${contextType}:${contextId}`}))::text AS locked`);
+    await this.runner.getClient(tx).$queryRaw(
+      lockImageContextQuery(CONTEXT_LOCK_NAMESPACE, `${contextType}:${contextId}`),
+    );
   }
 
   async listAttachedIds(contextType: ImageContextType, contextId: Id, tx: TransactionContext): Promise<Id[]> {
@@ -108,6 +175,14 @@ export class PrismaImageRepository implements IImageRepository {
       select: { history: { select: { journal_entry_id: true } } },
     });
     return row ? { entryId: bigintToId(row.history.journal_entry_id) } : null;
+  }
+
+  async findJournalEntryForHistory(historyId: Id, tx: TransactionContext): Promise<Id | null> {
+    const row = await this.runner.getClient(tx).journalEditHistory.findUnique({
+      where: { id: idToBigInt(historyId) },
+      select: { journal_entry_id: true },
+    });
+    return row ? bigintToId(row.journal_entry_id) : null;
   }
 
   async isReferencedByHistory(imageId: Id, tx: TransactionContext): Promise<boolean> {

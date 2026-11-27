@@ -313,7 +313,7 @@ describe.skipIf(!testUrl)('Media repositories on a migrated PostgreSQL test sche
     function build(over: { processor?: FakeProcessor; storage?: InMemoryStorage } = {}) {
       const processor = over.processor ?? new FakeProcessor();
       const storage = over.storage ?? new InMemoryStorage();
-      const cleanup = new ReservationCleanupService({ txRunner: runner, quotas, reservations, storage });
+      const cleanup = new ReservationCleanupService({ txRunner: runner, quotas, reservations, images, storage });
       const useCase = new UploadImageUseCase({
         txRunner: runner, quotas, scopes, reservations, images, processor, storage, capacity: new FakeCapacity(),
         cleanup, admins: { lockAndAssertAdmin: async () => undefined },
@@ -419,7 +419,7 @@ describe.skipIf(!testUrl)('Media repositories on a migrated PostgreSQL test sche
     const codeOf = (e: unknown) => (e instanceof BusinessRuleException ? e.code : `OTHER:${String(e)}`);
 
     beforeAll(() => {
-      service = new MediaService({ images, quotas, scopes, reservations, access });
+      service = new MediaService(images, quotas, scopes, reservations, access, adminAssertion);
       getImage = new GetImageUseCase({ txRunner: runner, images, reservations, access });
       createScope = new CreateUploadScopeUseCase({ txRunner: runner, scopes, reservations, admins: adminAssertion });
     });
@@ -635,7 +635,7 @@ describe.skipIf(!testUrl)('Media repositories on a migrated PostgreSQL test sche
         const scope = await createScope.execute({ actor: adminActor });
         created.scopes.push(scope.initialWorkshopKey);
         const storage = new InMemoryStorage();
-        const cleanup = new ReservationCleanupService({ txRunner: runner, quotas, reservations, storage });
+        const cleanup = new ReservationCleanupService({ txRunner: runner, quotas, reservations, images, storage });
         const upload = new UploadImageUseCase({
           txRunner: runner, quotas, scopes, reservations, images, processor: new FakeProcessor(), storage, capacity: new FakeCapacity(), cleanup, admins: adminAssertion,
         });

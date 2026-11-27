@@ -10,7 +10,7 @@ import {
 import {
   StorageObjectNotFoundError, type ImageStorage,
 } from '../../../src/modules/media/application/ports/image-storage.port';
-import type { ImageAccessResolver } from '../../../src/modules/media/application/ports/image-access-resolver.port';
+import type { ImageAccessResolver } from '../../../src/modules/media/application/ports/queries/image-access-resolver.port';
 import type { IStorageCapacity } from '../../../src/modules/media/application/ports/storage-capacity.port';
 import type {
   IImageRepository, IStorageQuotaRepository, IUploadReservationRepository, IUploadScopeRepository,
@@ -169,6 +169,14 @@ export class InMemoryReservationRepository implements IUploadReservationReposito
     return [...this.db.reservations.values()].filter(r =>
       r.quotaId === quotaId && (r.state.status === 'reserved' || r.state.status === 'cleanup_pending')).length;
   }
+  async findCleanupCandidates(now: Date, limit: number): Promise<Id[]> {
+    return [...this.db.reservations.values()]
+      .filter(r => r.state.status === 'cleanup_pending'
+        || (r.state.status === 'reserved' && r.state.expiresAt.getTime() <= now.getTime()))
+      .sort((a, b) => byNumericId(a.id, b.id))
+      .slice(0, limit)
+      .map(r => r.id);
+  }
   async lockById(id: Id): Promise<UploadReservationRecord | null> {
     this.db.locks.push(`reservation:${id}`);
     return this.db.reservations.get(id) ?? null;
@@ -205,6 +213,9 @@ export class InMemoryImageRepository implements IImageRepository {
     const image = this.db.images.get(imageId);
     return image ? this.toState(image) : null;
   }
+  async findImageCleanupCandidates(): Promise<Array<{ id: Id; quotaId: Id }>> { return []; }
+  async claimImageForCleanup(): Promise<null> { return null; }
+  async deleteClaimedImage(): Promise<null> { return null; }
   async lockByIds(imageIds: readonly Id[]): Promise<ImageStateRecord[]> {
     const ids = [...imageIds].sort(byNumericId);
     this.db.locks.push(`images:${ids.join(',')}`);
@@ -237,6 +248,9 @@ export class InMemoryImageRepository implements IImageRepository {
   async findHistoryEntry(historyId: Id, imageId: Id): Promise<{ readonly entryId: Id } | null> {
     const link = this.db.historyLinks.find(l => l.historyId === historyId && l.imageId === imageId);
     return link ? { entryId: link.entryId } : null;
+  }
+  async findJournalEntryForHistory(historyId: Id): Promise<Id | null> {
+    return this.db.historyEntries.get(historyId) ?? null;
   }
   async isReferencedByHistory(imageId: Id): Promise<boolean> {
     return this.db.historyLinks.some(l => l.imageId === imageId);
@@ -300,6 +314,7 @@ export class FakeCapacity implements IStorageCapacity {
 
 /** Phân giải quyền giả: test khai báo ai được đọc gì; ghi lại các lời gọi để kiểm tra dữ liệu truyền đi. */
 export class FakeImageAccessResolver implements ImageAccessResolver {
+  async canManageTarget(): Promise<boolean> { return true; }
   currentAllowed = new Set<string>();
   historyAllowed = new Set<string>();
   calls: Array<{ kind: 'current' | 'history'; input: unknown }> = [];

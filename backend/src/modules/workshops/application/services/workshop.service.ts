@@ -1,9 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { TransactionContext } from '../../../../common/application/ports/transaction-runner';
 import type { AuthenticatedActor, Id, TrustedActor } from '../../../../common/application/types/contract-types';
 import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
 import { WorkshopSuspended } from '../../domain/errors/workshop-suspended';
 import { WorkshopProfileRules } from '../../domain/entities/workshop.entity';
+import { MEDIA_CONTRACT, type IMediaContract } from '../../../media/public';
 import { PrismaTransactionRunner } from '../../../../infrastructure/database/transactions/prisma-transaction-runner';
 import { toBigIntId } from '../../../../common/application/helpers/find-or-throw';
 import { HttpResult } from '../../../../common/http/interceptors/response-envelope.interceptor';
@@ -42,6 +43,7 @@ export class WorkshopService implements IWorkshopContract {
   constructor(
     @Inject(WORKSHOP_REPOSITORY) private readonly workshopRepo: IWorkshopRepository,
     @Inject(PrismaTransactionRunner) private readonly runner: PrismaTransactionRunner,
+    @Optional() @Inject(MEDIA_CONTRACT) private readonly media?: IMediaContract,
   ) {}
 
   async lockAndAssertActive(workshopIds: readonly Id[], tx: TransactionContext): Promise<void> {
@@ -268,6 +270,28 @@ export class WorkshopService implements IWorkshopContract {
     return { canRead: false };
   }
 
+  async canManageImageTarget(
+    input: { contextType: 'workshop_profile' | 'certificate'; contextId: Id; workshopId: Id },
+    tx: TransactionContext,
+  ): Promise<boolean> {
+    let workshopId: bigint;
+    let contextId: bigint;
+    try {
+      workshopId = toBigIntId(input.workshopId);
+      contextId = toBigIntId(input.contextId);
+    } catch {
+      return false;
+    }
+
+    if (input.contextType === 'workshop_profile') {
+      return workshopId === contextId
+        && (await this.workshopRepo.findSummaryById(workshopId, tx)) !== null;
+    }
+
+    const certificate = await this.workshopRepo.findCertificate(contextId, tx);
+    return certificate !== null && certificate.workshop_id === workshopId;
+  }
+
   async listPublicWorkshops(query: ListPublicWorkshopsQueryDto): Promise<HttpResult<readonly PublicWorkshopSummaryDto[]>> {
     const { skip, take } = toPrismaOffset(query);
 
@@ -327,7 +351,7 @@ export class WorkshopService implements IWorkshopContract {
 
     const workshopId = toBigIntId(actor.workshopId);
 
-    return this.runner.run(async tx => {
+    await this.runner.run(async tx => {
       const updateData = await this.workshopRepo.findForProfileUpdate(workshopId, tx);
       if (!updateData) {
         throw new BusinessRuleException('RESOURCE_NOT_FOUND', 'Workshop not found.');
@@ -350,11 +374,48 @@ export class WorkshopService implements IWorkshopContract {
       }
 
       const imageIds = dto.image_ids.map(toBigIntId);
+      if (new Set(imageIds.map(String)).size !== imageIds.length) {
+        throw new BusinessRuleException('INVALID_INPUT', 'INVALID_INPUT', { field: 'image_ids' });
+      }
       const certificates = dto.certificates.map(c => ({
         id: c.id ? toBigIntId(c.id) : undefined,
         name: c.name.trim(),
         imageId: toBigIntId(c.image_id),
       }));
+
+      if (!this.media) throw new Error('Media contract is required to update workshop images');
+      const existingCertificates = updateData.certificates;
+      const existingCertificateIds = new Set(existingCertificates.map(c => c.id.toString()));
+      if (certificates.some(c => c.id !== undefined && !existingCertificateIds.has(c.id.toString()))) {
+        throw new BusinessRuleException('RESOURCE_NOT_FOUND');
+      }
+      if (new Set(certificates.map(c => c.imageId.toString())).size !== certificates.length) {
+        throw new BusinessRuleException('INVALID_INPUT', 'INVALID_INPUT', { field: 'certificates' });
+      }
+
+      const profileImageIds = [...new Set([
+        ...imageIds.map(String),
+        ...(avatarId === null ? [] : [avatarId.toString()]),
+      ])];
+      await this.media.replaceImages({
+        contextType: 'workshop_profile',
+        contextId: workshopId.toString(),
+        workshopId: workshopId.toString(),
+        imageIds: profileImageIds,
+        actor,
+      }, tx);
+
+      const incomingCertificateIds = new Set(certificates.flatMap(c => c.id ? [c.id.toString()] : []));
+      for (const existing of existingCertificates) {
+        if (incomingCertificateIds.has(existing.id.toString())) continue;
+        await this.media.replaceImages({
+          contextType: 'certificate',
+          contextId: existing.id.toString(),
+          workshopId: workshopId.toString(),
+          imageIds: [],
+          actor,
+        }, tx);
+      }
 
       await this.workshopRepo.updateProfileAndAssets(
         {
@@ -365,14 +426,24 @@ export class WorkshopService implements IWorkshopContract {
           latitude: dto.latitude ?? null,
           longitude: dto.longitude ?? null,
           avatarImageId: avatarId,
-          imageIds,
           certificates,
         },
         tx,
       );
 
-      return this.getOwnWorkshop(actor);
+      const savedCertificates = await this.workshopRepo.findCertificatesByWorkshop(workshopId, tx);
+      for (const certificate of savedCertificates) {
+        await this.media.replaceImages({
+          contextType: 'certificate',
+          contextId: certificate.id.toString(),
+          workshopId: workshopId.toString(),
+          imageIds: [certificate.image_id.toString()],
+          actor,
+        }, tx);
+      }
+
     });
+    return this.getOwnWorkshop(actor);
   }
 
   async updateVisitors(
