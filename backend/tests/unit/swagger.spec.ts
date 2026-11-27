@@ -85,7 +85,7 @@ describe('shared OpenAPI contract', () => {
       expect(setup).not.toHaveBeenCalled();
       configureSwagger(app, { NODE_ENV: 'development' });
       expect(setup).toHaveBeenCalledWith('api/docs', app, expect.any(Object), expect.objectContaining({
-        jsonDocumentUrl: 'api/docs/openapi.json', swaggerOptions: { supportedSubmitMethods: [], persistAuthorization: false },
+        jsonDocumentUrl: 'api/docs/openapi.json', swaggerOptions: { persistAuthorization: false },
       }));
     } finally { setup.mockRestore(); }
   });
