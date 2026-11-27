@@ -16,6 +16,7 @@ import { QUOTA_LIMIT_BYTES, UPLOAD_LIMITS } from '../../../domain/value-objects/
 import {
   ImageProcessingUnavailableError, type ImageProcessor,
 } from '../../ports/image-processor.port';
+import type { AdminAssertion } from '../../ports/admin-assertion.port';
 import type { ImageStorage } from '../../ports/image-storage.port';
 import type { IStorageCapacity } from '../../ports/storage-capacity.port';
 import type {
@@ -24,10 +25,7 @@ import type {
 } from '../../ports/repositories/media-repositories.port';
 import type { ReservationCleanupService } from '../../services/reservation-cleanup.service';
 
-/** Khớp chữ ký IIdentityContract.lockAndAssertAdmin (docs/contracts/backend.md), tránh phụ thuộc đường dẫn import. */
-export interface AdminAssertion {
-  lockAndAssertAdmin(actor: TrustedActor, tx: TransactionContext): Promise<void>;
-}
+export type { AdminAssertion };
 
 export interface UploadImageCommand {
   readonly actor: TrustedActor;

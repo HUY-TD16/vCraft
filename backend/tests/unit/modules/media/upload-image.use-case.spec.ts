@@ -193,7 +193,7 @@ describe('ReservationCleanupService', () => {
 describe('UploadImageUseCase — Admin, phạm vi ảnh khởi tạo', () => {
   let t: ReturnType<typeof setup>;
   const seedScope = (over: Partial<{ createdBy: string; status: 'open' | 'attached' | 'expired'; expiresAt: Date }> = {}, key = KEY) => {
-    t.db.scopes.set(key, { initialWorkshopKey: key, createdBy: '5', status: 'open', expiresAt: new Date('2026-11-22T09:00:00Z'), ...over });
+    t.db.scopes.set(key, { initialWorkshopKey: key, createdBy: '5', status: 'open', expiresAt: new Date('2026-11-22T09:00:00Z'), attachedWorkshopId: null, ...over });
     const id = t.db.nextId();
     t.db.quotas.set(id, { id, owner: { kind: 'scope', key }, state: { limitBytes: QUOTA_LIMIT_BYTES.initialScope, usedBytes: BigInt(0), reservedBytes: BigInt(0) } });
     return id;

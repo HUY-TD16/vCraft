@@ -17,11 +17,13 @@ export class PrismaUploadReservationRepository implements IUploadReservationRepo
 
   async databaseNow(tx: TransactionContext): Promise<Date> {
     // clock_timestamp() là giờ thực tại thời điểm gọi; now() chỉ là giờ BẮT ĐẦU giao dịch (cũ nếu phải chờ khóa).
-    const rows = await this.runner.getClient(tx).$queryRaw<Array<{ now: Date }>>(
-      Prisma.sql`SELECT clock_timestamp() AS "now"`);
+    // Trả về epoch (ms), không trả timestamptz: kết quả của hàm như clock_timestamp() đọc bằng truy vấn thô
+    // bị lệch đúng bằng múi giờ của phiên DB (lỗi đã gặp trên PostgreSQL Windows, UTC+7).
+    const rows = await this.runner.getClient(tx).$queryRaw<Array<{ now_ms: bigint }>>(
+      Prisma.sql`SELECT (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS "now_ms"`);
     const row = rows[0];
     if (!row) throw new Error('Database clock unavailable');
-    return row.now;
+    return new Date(Number(row.now_ms));
   }
 
   async create(input: NewUploadReservation, tx: TransactionContext): Promise<UploadReservationRecord> {
@@ -43,6 +45,12 @@ export class PrismaUploadReservationRepository implements IUploadReservationRepo
   async findById(reservationId: Id, tx: TransactionContext): Promise<UploadReservationRecord | null> {
     const row = await this.runner.getClient(tx).uploadReservation.findUnique({ where: { id: idToBigInt(reservationId) } });
     return row ? toReservationRecord(row) : null;
+  }
+
+  async countActiveByQuota(quotaId: Id, tx: TransactionContext): Promise<number> {
+    return this.runner.getClient(tx).uploadReservation.count({
+      where: { quota_id: idToBigInt(quotaId), status: { in: ['reserved', 'cleanup_pending'] } },
+    });
   }
 
   async lockById(reservationId: Id, tx: TransactionContext): Promise<UploadReservationRecord | null> {
