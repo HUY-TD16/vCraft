@@ -30,10 +30,21 @@ const environment = z.object({
     .default('3600000')
     .transform(Number)
     .pipe(z.int().min(1000).max(86_400_000)),
+  MEDIA_CLEANUP_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform(value => (value === undefined ? undefined : value === 'true')),
+  MEDIA_CLEANUP_INTERVAL_MS: z
+    .string()
+    .regex(/^\d+$/)
+    .default('60000')
+    .transform(Number)
+    .pipe(z.int().min(1000).max(86_400_000)),
 }).transform(data => ({
   ...data,
   IDEMPOTENCY_CLEANUP_ENABLED:
     data.IDEMPOTENCY_CLEANUP_ENABLED ?? data.NODE_ENV !== 'test',
+  MEDIA_CLEANUP_ENABLED: data.MEDIA_CLEANUP_ENABLED ?? data.NODE_ENV !== 'test',
 }));
 
 export type AppConfig = Readonly<z.output<typeof environment>>;

@@ -3,7 +3,7 @@ import type { UploadReservationState, ReservationStatus } from '../../../domain/
 import type { UploadScopeStatus } from '../../../domain/policies/upload-scope.policy';
 import { IMAGE_CONTEXT_TYPES, type ImageContextType } from '../../../domain/value-objects/image-context';
 import type {
-  ImageRecord, StorageQuotaRecord, UploadReservationRecord, UploadScopeRecord,
+  ImageRecord, ImageStateRecord, StorageQuotaRecord, UploadReservationRecord, UploadScopeRecord,
 } from '../../../application/ports/repositories/media-repositories.port';
 
 const MAX_BIGINT = BigInt('9223372036854775807');
@@ -86,5 +86,27 @@ export function toImageRecord(row: ImageRow): ImageRecord {
     thumbnailSizeBytes: row.thumbnail_size_bytes, displaySizeBytes: row.display_size_bytes,
     quotaId: bigintToId(row.quota_id), reservationId: bigintToId(row.reservation_id),
     width: row.width, height: row.height, unreferencedAt: row.unreferenced_at ?? new Date(0),
+  };
+}
+
+export interface ImageStateRow {
+  readonly id: bigint; readonly uploaded_by: bigint; readonly context_type: string; readonly context_id: bigint | null;
+  readonly quota_id: bigint; readonly is_attached: boolean; readonly storage_state: string; readonly unreferenced_at: Date | null;
+  readonly thumbnail_key: string; readonly display_key: string;
+  readonly thumbnail_size_bytes: bigint; readonly display_size_bytes: bigint;
+  readonly quota: { readonly workshop_id: bigint | null };
+}
+
+export function toImageStateRecord(row: ImageStateRow): ImageStateRecord {
+  if (row.storage_state !== 'ready' && row.storage_state !== 'deleting') {
+    throw new Error(`Unexpected storage_state: ${row.storage_state}`);
+  }
+  return {
+    id: bigintToId(row.id), uploadedBy: bigintToId(row.uploaded_by), contextType: parseContextType(row.context_type),
+    contextId: nullableBigintToId(row.context_id), quotaId: bigintToId(row.quota_id),
+    quotaWorkshopId: nullableBigintToId(row.quota.workshop_id),
+    isAttached: row.is_attached, storageState: row.storage_state, unreferencedAt: row.unreferenced_at,
+    thumbnailKey: row.thumbnail_key, displayKey: row.display_key,
+    thumbnailSizeBytes: row.thumbnail_size_bytes, displaySizeBytes: row.display_size_bytes,
   };
 }

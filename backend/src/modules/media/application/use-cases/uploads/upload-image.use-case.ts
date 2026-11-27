@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { ServiceUnavailableException } from '../../../../../common/application/errors/service-unavailable.exception';
 import type { TransactionContext, TransactionRunner } from '../../../../../common/application/ports/transaction-runner';
-import type { Id, TrustedActor } from '../../../../../common/application/types/contract-types';
+import type { TrustedActor } from '../../../../../common/application/types/contract-types';
 import { BusinessRuleException } from '../../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../../../domain/errors/media-domain.error';
 import {
   assertFitsWithin, reserveBytes, settleReservation, type StorageQuotaState,
 } from '../../../domain/entities/storage-quota.entity';
@@ -11,11 +12,12 @@ import { assertAcceptableImage } from '../../../domain/policies/image-validation
 import { hasEnoughFreeSpace } from '../../../domain/policies/storage-capacity.policy';
 import { assertCanUpload, type UploadTarget } from '../../../domain/policies/upload-permission.policy';
 import { assertScopeUsable } from '../../../domain/policies/upload-scope.policy';
-import type { ImageContextType } from '../../../domain/value-objects/image-context';
 import { QUOTA_LIMIT_BYTES, UPLOAD_LIMITS } from '../../../domain/value-objects/image-limits';
 import {
   ImageProcessingUnavailableError, type ImageProcessor,
 } from '../../ports/image-processor.port';
+import type { AdminAssertion } from '../../ports/admin-assertion.port';
+import type { ImageAccessResolver } from '../../ports/queries/image-access-resolver.port';
 import type { ImageStorage } from '../../ports/image-storage.port';
 import type { IStorageCapacity } from '../../ports/storage-capacity.port';
 import type {
@@ -23,27 +25,10 @@ import type {
   StorageQuotaRecord, UploadReservationRecord,
 } from '../../ports/repositories/media-repositories.port';
 import type { ReservationCleanupService } from '../../services/reservation-cleanup.service';
+import type { UploadImageCommand, UploadImageResult } from '../../dtos/media-use-case.dtos';
 
-/** Khớp chữ ký IIdentityContract.lockAndAssertAdmin (docs/contracts/backend.md), tránh phụ thuộc đường dẫn import. */
-export interface AdminAssertion {
-  lockAndAssertAdmin(actor: TrustedActor, tx: TransactionContext): Promise<void>;
-}
-
-export interface UploadImageCommand {
-  readonly actor: TrustedActor;
-  readonly file: Uint8Array;
-  readonly contextType: ImageContextType;
-  /** null khi tạo đối tượng mới; được cố định ở lần lưu đầu tiên (không phải lúc upload). */
-  readonly contextId: Id | null;
-  readonly target: UploadTarget;
-}
-
-export interface UploadImageResult {
-  readonly imageId: Id;
-  readonly contextType: ImageContextType;
-  readonly contextId: Id | null;
-  readonly unattachedExpiresAt: Date;
-}
+export type { AdminAssertion };
+export type { UploadImageCommand, UploadImageResult } from '../../dtos/media-use-case.dtos';
 
 export interface UploadImageDependencies {
   readonly txRunner: TransactionRunner;
@@ -56,6 +41,8 @@ export interface UploadImageDependencies {
   readonly capacity: IStorageCapacity;
   readonly cleanup: ReservationCleanupService;
   readonly admins: AdminAssertion;
+  /** Optional in unit harnesses; production DI always supplies the owner-module resolver. */
+  readonly access?: ImageAccessResolver;
   /** Sinh phần ngẫu nhiên của storage_prefix; mặc định UUID v4. */
   readonly newPrefixId?: () => string;
 }
@@ -109,10 +96,18 @@ export class UploadImageUseCase {
 
   /** Giao dịch 1. */
   private reserve(command: UploadImageCommand): Promise<UploadReservationRecord> {
-    const { txRunner, quotas, reservations, capacity } = this.deps;
+    const { txRunner, quotas, reservations, capacity, access } = this.deps;
     const budget = UPLOAD_LIMITS.reservationBudgetBytes;
 
     return txRunner.run(async (tx) => {
+      if (command.contextId !== null && command.target.kind === 'workshop' && access
+        && !(await access.canManageTarget({
+          contextType: command.contextType,
+          contextId: command.contextId,
+          workshopId: command.target.workshopId,
+        }, tx))) {
+        throw new BusinessRuleException('RESOURCE_NOT_FOUND');
+      }
       await quotas.lockStorageBudget(tx);
       const now = await reservations.databaseNow(tx);
       const quota = await this.lockQuota(command, now, tx);
@@ -155,9 +150,9 @@ export class UploadImageUseCase {
       await quotas.lockStorageBudget(tx);
       const now = await reservations.databaseNow(tx);
       const quota = await this.lockQuota(command, now, tx);
-      if (quota.id !== reservation.quotaId) throw new BusinessRuleException('INVALID_STATE');
+      if (quota.id !== reservation.quotaId) throw new MediaDomainError('INVALID_STATE');
       const locked = await reservations.lockById(reservation.id, tx);
-      if (locked === null) throw new BusinessRuleException('INVALID_STATE');
+      if (locked === null) throw new MediaDomainError('INVALID_STATE');
 
       // Ném INVALID_STATE nếu hết lease hoặc tác vụ dọn đã nhận quyền: worker cũ không được commit.
       const actualBytes = result.thumbnailBytes + result.displayBytes;
@@ -203,7 +198,7 @@ export class UploadImageUseCase {
     const scope = await scopes.lockByKey(target.initialWorkshopKey, tx);
     assertScopeUsable(scope, actor.accountId, now);
     const quota = await quotas.lockScopeQuota(target.initialWorkshopKey, tx);
-    if (quota === null) throw new BusinessRuleException('UPLOAD_SCOPE_UNAVAILABLE');
+    if (quota === null) throw new MediaDomainError('UPLOAD_SCOPE_UNAVAILABLE');
     return quota;
   }
 

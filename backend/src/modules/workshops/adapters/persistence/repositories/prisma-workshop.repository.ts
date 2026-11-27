@@ -274,16 +274,34 @@ export class PrismaWorkshopRepository implements IWorkshopRepository {
   async findForProfileUpdate(
     id: bigint,
     tx: TransactionContext,
-  ): Promise<{ workshop: any; existingImagesCount: number } | null> {
+  ): Promise<{
+    workshop: any;
+    existingImagesCount: number;
+    certificates: Array<{ id: bigint; name: string; image_id: bigint }>;
+  } | null> {
     const db = this.client(tx);
-    const workshop = await db.workshop.findUnique({ where: { id } });
+    const workshop = await db.workshop.findUnique({
+      where: { id },
+      include: { certificates: { select: { id: true, name: true, image_id: true } } },
+    });
     if (!workshop) return null;
 
     const existingImagesCount = await db.image.count({
       where: { context_type: 'workshop_profile', context_id: workshop.id, is_attached: true },
     });
 
-    return { workshop, existingImagesCount };
+    return { workshop, existingImagesCount, certificates: workshop.certificates };
+  }
+
+  async findCertificatesByWorkshop(
+    workshopId: bigint,
+    tx: TransactionContext,
+  ): Promise<Array<{ id: bigint; name: string; image_id: bigint }>> {
+    return this.client(tx).certificate.findMany({
+      where: { workshop_id: workshopId },
+      select: { id: true, name: true, image_id: true },
+      orderBy: { id: 'asc' },
+    });
   }
 
   async updateProfileAndAssets(
@@ -295,7 +313,6 @@ export class PrismaWorkshopRepository implements IWorkshopRepository {
       latitude: number | null;
       longitude: number | null;
       avatarImageId: bigint | null;
-      imageIds: bigint[];
       certificates: Array<{ id?: bigint; name: string; imageId: bigint }>;
     },
     tx: TransactionContext,
@@ -315,28 +332,6 @@ export class PrismaWorkshopRepository implements IWorkshopRepository {
         avatar_image_id: data.avatarImageId,
       },
     });
-
-    await db.image.updateMany({
-      where: {
-        context_type: 'workshop_profile',
-        context_id: data.workshopId,
-        ...(data.imageIds.length > 0 ? { id: { notIn: data.imageIds } } : {}),
-        is_attached: true,
-      },
-      data: { is_attached: false, unreferenced_at: new Date() },
-    });
-
-    if (data.imageIds.length > 0) {
-      await db.image.updateMany({
-        where: { id: { in: data.imageIds } },
-        data: {
-          context_type: 'workshop_profile',
-          context_id: data.workshopId,
-          is_attached: true,
-          unreferenced_at: null,
-        },
-      });
-    }
 
     const incomingCertIds = data.certificates.filter(c => c.id).map(c => c.id!);
     await db.certificate.deleteMany({

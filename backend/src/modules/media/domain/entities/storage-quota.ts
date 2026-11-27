@@ -1,4 +1,4 @@
-import { BusinessRuleException } from '../../../../common/domain/errors/business-rule.exception';
+import { MediaDomainError } from '../errors/media-domain.error';
 
 const ZERO = BigInt(0);
 
@@ -26,7 +26,7 @@ export function reserveBytes(q: StorageQuotaState, budget: bigint): StorageQuota
   assertInvariant(q);
   assertPositive(budget);
   if (q.usedBytes + q.reservedBytes + budget > q.limitBytes) {
-    throw new BusinessRuleException('STORAGE_QUOTA_EXCEEDED', 'STORAGE_QUOTA_EXCEEDED', {
+    throw new MediaDomainError('STORAGE_QUOTA_EXCEEDED', {
       limit_bytes: q.limitBytes.toString(),
       free_bytes: (q.limitBytes - q.usedBytes - q.reservedBytes).toString(),
     });

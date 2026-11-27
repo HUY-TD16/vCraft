@@ -62,6 +62,14 @@ export class PrismaStorageQuotaRepository implements IStorageQuotaRepository {
     });
   }
 
+  async transferScopeQuotaToWorkshop(initialWorkshopKey: string, workshopId: Id, tx: TransactionContext): Promise<void> {
+    // Một câu UPDATE đổi chủ: CHECK "đúng một chủ sở hữu" luôn thỏa. Giữ nguyên quota_id và các số byte.
+    await this.runner.getClient(tx).storageQuota.update({
+      where: { initial_workshop_key: initialWorkshopKey },
+      data: { workshop_id: idToBigInt(workshopId), initial_workshop_key: null },
+    });
+  }
+
   async sumReservedBytes(tx: TransactionContext): Promise<bigint> {
     const result = await this.runner.getClient(tx).storageQuota.aggregate({ _sum: { reserved_bytes: true } });
     return result._sum.reserved_bytes ?? BigInt(0);

@@ -70,7 +70,17 @@ export interface IWorkshopRepository {
     includeAccount?: boolean,
   ): Promise<{ workshop: any; images: Array<{ id: bigint }> } | null>;
 
-  findForProfileUpdate(id: bigint, tx: TransactionContext): Promise<{ workshop: any; existingImagesCount: number } | null>;
+  findForProfileUpdate(id: bigint, tx: TransactionContext): Promise<{
+    workshop: any;
+    existingImagesCount: number;
+    certificates: Array<{ id: bigint; name: string; image_id: bigint }>;
+  } | null>;
+
+  findCertificatesByWorkshop(workshopId: bigint, tx: TransactionContext): Promise<Array<{
+    id: bigint;
+    name: string;
+    image_id: bigint;
+  }>>;
 
   updateProfileAndAssets(
     data: {
@@ -81,7 +91,6 @@ export interface IWorkshopRepository {
       latitude: number | null;
       longitude: number | null;
       avatarImageId: bigint | null;
-      imageIds: bigint[];
       certificates: Array<{ id?: bigint; name: string; imageId: bigint }>;
     },
     tx: TransactionContext,
